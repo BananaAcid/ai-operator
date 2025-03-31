@@ -4,7 +4,7 @@
 
 ## How this works
 
-It connects directly to the REST API endpoints of Ollama, OpenAI, GoogleAI (Gemini). The only dependencies are for the CLI interface.
+It connects directly to the REST API endpoints of Ollama, OpenAI, GoogleAI (Gemini). The only dependencies are for the CLI interface. (And tsx for the time being to run the bin.)
 
 1. tell the api it is creating commands and will execute them if it writes them as `<CMD>...</CMD>` in its answers
 

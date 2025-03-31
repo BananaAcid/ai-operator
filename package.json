@@ -21,7 +21,7 @@
     "test": "echo \"Error: no test specified\" && exit 1"
   },
   "bin": {
-    "baio": "./bin/baio"
+    "baio": "bin/baio"
   },
   "keywords": [
     "ai",
@@ -44,6 +44,7 @@
     "@inquirer/prompts": "^7.4.0",
     "cli-markdown": "^3.4.0",
     "inquirer-toggle": "^1.0.1",
+    "tsx": "^4.19.3",
     "yocto-spinner": "^0.2.1"
   }
 }
