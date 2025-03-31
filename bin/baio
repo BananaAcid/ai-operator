@@ -1,0 +1,8 @@
+#!/usr/bin/env node
+
+import { spawnSync } from 'node:child_process';
+import { resolve } from 'node:path';
+
+// Say our original entrance script is `app.js`
+const cmd = 'node --no-warnings=ExperimentalWarning "' + resolve(import.meta.dirname, '..', 'index.ts' + '"');
+spawnSync(cmd, { stdio: 'inherit', shell: true });

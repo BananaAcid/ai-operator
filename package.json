@@ -1,0 +1,49 @@
+{
+  "name": "baio",
+  "version": "1.0.0",
+  "description": "Simple AI operator",
+  "main": "index.ts",
+  "type": "module",
+  "engines": {
+    "node": ">=23.10"
+  },
+  "author": {
+    "name": "BananaAcid (Nabil Redmann)",
+    "email": "repo@bananaacid.de"
+  },
+  "license": "MIT",
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/BananaAcid/ai-operator.git"
+  },
+  "scripts": {
+    "start": "node --no-warnings=ExperimentalWarning --env-file-if-exists=.env index.ts",
+    "test": "echo \"Error: no test specified\" && exit 1"
+  },
+  "bin": {
+    "baio": "./bin/baio"
+  },
+  "keywords": [
+    "ai",
+    "operator",
+    "node",
+    "nodejs",
+    "rest",
+    "ollama",
+    "gemini",
+    "openai",
+    "chatgpt",
+    "googleai",
+    "es6",
+    "typescript"
+  ],
+  "devDependencies": {
+    "@types/node": "^22.13.14"
+  },
+  "dependencies": {
+    "@inquirer/prompts": "^7.4.0",
+    "cli-markdown": "^3.4.0",
+    "inquirer-toggle": "^1.0.1",
+    "yocto-spinner": "^0.2.1"
+  }
+}
