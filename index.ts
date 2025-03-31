@@ -345,10 +345,9 @@ async function init(): Promise<string> {
     {//* options
         //settings.systemPrompt = await input({ message: 'Enter your system prompt', default: settings.systemPrompt });
         settings.temperature = await input({ message: 'Enter the temperature (0 for model\'s default):', default: settings.temperature.toString() }).then(answer => parseFloat(answer));
-
+        
         settings.useAllSysEnv = await toggle({ message: 'Use all system environment variables:', default: settings.useAllSysEnv });
-        settings.systemPrompt = settings.systemPrompt.replaceAll('{{useAllSysEnv}}', settings.useAllSysEnv ? `- You are running on (system environment): ${JSON.stringify(process.env)}` : '');
-
+        
         settings.endIfDone = await toggle({ message: 'End if assumed done:', default: settings.endIfDone });
     }
     
@@ -363,7 +362,21 @@ async function init(): Promise<string> {
         }
     }
     
-    const prompt = await input({ message: 'What do you want to get done:', default: settings.defaultPrompt });
+    let prompt;
+    {//* user prompt
+        let promptArgs = process.argv.slice(2).join(' ').trim();
+        if (promptArgs) {
+            prompt = promptArgs;
+            console.log('✔ What do you want to get done:', promptArgs);
+        }
+        else
+            prompt = promptArgs || await input({ message: 'What do you want to get done:', default: settings.defaultPrompt });
+    }
+
+    {//* system prompt
+        // apply system env to system prompt or clean up the placeholder
+        settings.systemPrompt = settings.systemPrompt.replaceAll('{{useAllSysEnv}}', settings.useAllSysEnv ? `- You are running on (system environment): ${JSON.stringify(process.env)}` : '');
+    }
 
     return prompt;
 }

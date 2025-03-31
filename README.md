@@ -43,7 +43,13 @@ GEMINI_API_KEY=abcdefg1234567890 baio
 $env:GEMINI_API_KEY='abcdefg1234567890' ; baio
 ```
 
-Setting the key before running the command, will only work until the terminal is closed again.
+or ask it directly
+```bash
+baio "list all files"
+```
+
+
+Setting the api key before running the command, will only work until the terminal is closed again.
 
 You should add the keys to your Profile (Win, MacOS, Linux).
 
