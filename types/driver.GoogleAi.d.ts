@@ -31,20 +31,26 @@ declare global {
     }
 
     type GoogleAiSystemMessageItem = {
-        parts: {text:string}[],
+        parts: {text:string}[];
     };
 
     type GoogleAiMessageItem = {
-        role: string,
-        parts: {text:string}[],
+        role: string;
+        parts: {text:string}[];
     };
 
     type GoogleAiChatCompletionResult = {
+        error?: {
+            code: number;
+            message: string;
+            status: string;
+        };        
+
         candidates: {
             content: {
-                parts: {text:string}[],
-            },
-        }[],
+                parts: {text:string}[];
+            };
+        }[];
     }
 }
 

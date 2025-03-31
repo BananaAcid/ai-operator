@@ -198,6 +198,11 @@ const drivers = {
 
             DEBUG_APICALLS && console.log('DEBUG_APICALLS', 'API response', this.getUrl(this.urlChat), response);
 
+            if (response.error) {
+                console.error(response.error);
+                process.exit(3);
+            }
+
             let responseMessage = response.candidates[0].content.parts[0];
 
             const newHistory = [
