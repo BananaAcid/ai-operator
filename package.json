@@ -1,6 +1,6 @@
 {
   "name": "baio",
-  "version": "1.0.2",
+  "version": "1.0.3",
   "description": "Simple AI operator",
   "main": "index.ts",
   "type": "module",

@@ -288,24 +288,26 @@ async function doCommands(commands: string[]): Promise<string> {
 
 async function init(): Promise<string> {
     let driver:Driver = drivers[settings.driver];
-
     let askSettings = !settings.saveSettings || process.env.ASK_SETTINGS;
 
-    if (askSettings) {
+
+    if (askSettings)
+    {
         console.info(packageJSON.name + ' v' + packageJSON.version);
         console.info('ℹ️ use CTRL + D to exit at any time.');
     }
 
-    if (askSettings) {
-        
-        {//* API/Driver selection
-            let driverChoices = Object.keys(drivers).map(key => ({ name: drivers[key].name, value: key }));
-            settings.driver = await select({ message: 'Select your API:', choices: driverChoices, default: settings.driver || 'ollama' });
+    if (askSettings)
+    {//* API/Driver selection
+        let driverChoices = Object.keys(drivers).map(key => ({ name: drivers[key].name, value: key }));
+        settings.driver = await select({ message: 'Select your API:', choices: driverChoices, default: settings.driver || 'ollama' });
+    }
     
-            if (settings.driver !== 'ollama' && !drivers[settings.driver].apiKey) {
-                console.error(`🛑 ${drivers[settings.driver].name} has no API key configured in the environment`);
-                process.exit(1);
-            }
+
+    {//* api key test
+        if (settings.driver !== 'ollama' && !drivers[settings.driver].apiKey) {
+            console.error(`🛑 ${drivers[settings.driver].name} has no API key configured in the environment`);
+            process.exit(1);
         }
     }
 
@@ -323,44 +325,44 @@ async function init(): Promise<string> {
         }
     }
 
-    if (askSettings) {
+    if (askSettings)
+    {//* model selection
+        const models = await getModels();
+        let modelSelected = '';
+        if (models.length) {
+            models.push({ name: 'manual input ...', value: '' });
+            modelSelected = await select({ message: 'Select your model:', choices: models, default: settings.model || driver.defaultModel });
+        }
+        if (!models.length || !modelSelected) {
+            if (settings.driver == 'ollama')
+                console.warn('⚠️ The model you enter, will be downloaded and this process might really take a while. No progress will show.');
+            modelSelected = await input({ message: 'Enter your model to use:', default: settings.model || driver.defaultModel });
+        }
+        settings.model = modelSelected;
+    }
+    
+    if (askSettings)    
+    {//* options
+        //settings.systemPrompt = await input({ message: 'Enter your system prompt', default: settings.systemPrompt });
+        settings.temperature = await input({ message: 'Enter the temperature (0 for model\'s default):', default: settings.temperature.toString() }).then(answer => parseFloat(answer));
 
-        {//* model selection
-            const models = await getModels();
-            let modelSelected = '';
-            if (models.length) {
-                models.push({ name: 'manual input ...', value: '' });
-                modelSelected = await select({ message: 'Select your model:', choices: models, default: settings.model || driver.defaultModel });
-            }
-            if (!models.length || !modelSelected) {
-                if (settings.driver == 'ollama')
-                    console.warn('⚠️ The model you enter, will be downloaded and this process might really take a while. No progress will show.');
-                modelSelected = await input({ message: 'Enter your model to use:', default: settings.model || driver.defaultModel });
-            }
-            settings.model = modelSelected;
-        }
+        settings.useAllSysEnv = await toggle({ message: 'Use all system environment variables:', default: settings.useAllSysEnv });
+        settings.systemPrompt = settings.systemPrompt.replaceAll('{{useAllSysEnv}}', settings.useAllSysEnv ? `- You are running on (system environment): ${JSON.stringify(process.env)}` : '');
+
+        settings.endIfDone = await toggle({ message: 'End if assumed done:', default: settings.endIfDone });
+    }
     
-        {//* options
-            //settings.systemPrompt = await input({ message: 'Enter your system prompt', default: settings.systemPrompt });
-            settings.temperature = await input({ message: 'Enter the temperature (0 for model\'s default):', default: settings.temperature.toString() }).then(answer => parseFloat(answer));
-    
-            settings.useAllSysEnv = await toggle({ message: 'Use all system environment variables:', default: settings.useAllSysEnv });
-            settings.systemPrompt = settings.systemPrompt.replaceAll('{{useAllSysEnv}}', settings.useAllSysEnv ? `- You are running on (system environment): ${JSON.stringify(process.env)}` : '');
-    
-            settings.endIfDone = await toggle({ message: 'End if assumed done:', default: settings.endIfDone });
-        }
-    
-        {//* save settings
-            settings.saveSettings = await toggle({ message: `Automatically use same settings next time:`, default: settings.saveSettings });
-            // write settings if it is asked for, or if it is not asked for but already saved to remove it
-            if (settings.saveSettings || !settings.saveSettings && settingsSaved) {
-                spinner.start(`Updating settings in ${rcFilePath} ...`);
-                await writeFile(rcFilePath, JSON.stringify(settings.saveSettings ? settings : {}, null, 2), 'utf-8');
-                spinner.success();
-            }
+    if (askSettings)
+    {//* save settings
+        settings.saveSettings = await toggle({ message: `Automatically use same settings next time:`, default: settings.saveSettings });
+        // write settings if it is asked for, or if it is not asked for but already saved to remove it
+        if (settings.saveSettings || !settings.saveSettings && settingsSaved) {
+            spinner.start(`Updating settings in ${rcFilePath} ...`);
+            await writeFile(rcFilePath, JSON.stringify(settings.saveSettings ? settings : {}, null, 2), 'utf-8');
+            spinner.success();
         }
     }
-
+    
     const prompt = await input({ message: 'What do you want to get done:', default: settings.defaultPrompt });
 
     return prompt;
