@@ -1,10 +1,10 @@
 # BAIO - A simple NodeJS AI operator for commandline
 
-![image](https://gist.github.com/user-attachments/assets/5f398dfe-5e7e-4eca-b4aa-6ea003db961f)
+![428772928-5f398dfe-5e7e-4eca-b4aa-6ea003db961f](https://github.com/user-attachments/assets/105324b0-5961-4c1e-9923-00838be0eb43)
 
 ## How this works
 
-It connects directly to the REST API endpoints of Ollama, OpenAI, GoogleAI (Gemini). The only dependencies are for the CLI interface. (And tsx for the time being to run the bin.)
+It connects directly to the REST API endpoints of Ollama, OpenAI, GoogleAI (Gemini) and does not use the AI-Tools mechanism so it will work on any AI. The only dependencies are for the CLI interface. (And tsx for the time being to run the bin.)
 
 1. tell the api it is creating commands and will execute them if it writes them as `<CMD>...</CMD>` in its answers
 
