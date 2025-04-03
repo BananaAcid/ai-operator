@@ -1,4 +1,4 @@
-# BAIO - A simple NodeJS AI operator for commandline
+# BAIO - A simple AI operator for the CLI, for any LLM
 
 ![428772928-5f398dfe-5e7e-4eca-b4aa-6ea003db961f](https://github.com/user-attachments/assets/105324b0-5961-4c1e-9923-00838be0eb43)
 
