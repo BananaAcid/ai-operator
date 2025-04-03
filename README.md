@@ -24,10 +24,17 @@ A more reliable way would be to use AIs that support "tooling" (which are usuall
 
 To get data from a REST api (an url), tell it to get a property from the api url (this should trigger a command with `curl`).
 
-To get website text content in a meaningfull way, get lynx and "lynx -width=200 -dump "https://geofon.gfz-potsdam.de/eqinfo/list.php" > text.txt" or to screen.
+To get website text content in a meaningfull way, install Links2 and let it call the website.
+
+- Links2, windows download: http://links.twibright.com/download/binaries/win32/ (`links -html-numbered-links 1 -dump https://...`)
+  - powershell: add `function links2-dump($url) { . "C:\Program Files\Links\links.exe" "-html-numbered-links" 1 -dump $url }` to your `$PROFILE` file and let it be called from the operator: `links2-dump("https://...")`
+
+Alternatives:
+- lynx, download? (`lynx -width=200 -dump "https://..."`)
+- readability-cli, project: https://gitlab.com/gardenappl/readability-cli (`npx readability-cli -l force --properties text-content https://...`) (has problems with stylesheets and generates errors in the output)
+- browsh, project: https://www.brow.sh/docs/introduction/ (connects to a running firefox instance)
 
 To have it do, what it can't, tell it to use powershell or write to a powerhell script, then let it execute the script.
-
 
 ## Install
 ```bash
