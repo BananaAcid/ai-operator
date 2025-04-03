@@ -3,10 +3,11 @@
 import { spawnSync } from 'node:child_process';
 import { resolve } from 'node:path';
 
+const args = process.argv.slice(2).join(' ').trim();
 
-// const cmd = 'node --no-warnings=ExperimentalWarning "' + resolve(import.meta.dirname, '..', 'index.ts' + '"');
+// const cmd = 'node --no-warnings=ExperimentalWarning "' + resolve(import.meta.dirname, '..', 'index.ts' + '" ' + args);
 // -> Error [ERR_UNSUPPORTED_NODE_MODULES_TYPE_STRIPPING]: Stripping types is currently unsupported for files under node_modules,
 
-const cmd = 'tsx --no-warnings "' + resolve(import.meta.dirname, '..', 'index.ts' + '"');
+const cmd = 'tsx --no-warnings "' + resolve(import.meta.dirname, '..', 'index.ts' + '" ' + args);
 
 spawnSync(cmd, { stdio: 'inherit', shell: true });
