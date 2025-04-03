@@ -1,12 +1,47 @@
 #!/usr/bin/env node
 
+/**
+ * all this is needed, until nodejs allows TS files in modules
+ *
+ *  at which point we can just use:
+ *    import * from '../index.ts';
+ */
+
+
 import { spawnSync } from 'node:child_process';
 import { resolve } from 'node:path';
+import { execSync } from 'node:child_process';
 
 const args = process.argv.slice(2).join(' ').trim();
 
 // const cmd = 'node --no-warnings=ExperimentalWarning "' + resolve(import.meta.dirname, '..', 'index.ts' + '" ' + args);
 // -> Error [ERR_UNSUPPORTED_NODE_MODULES_TYPE_STRIPPING]: Stripping types is currently unsupported for files under node_modules,
+
+// fix shell detection, by moving this code here (out of the index.ts file)
+//  without this, the shell detection doesn't work and will always return 'node' or 'node.exe'
+function getInvokingShell() {
+    const isWindows = process.platform === 'win32';
+
+    try {
+        const parentPID = process.ppid;
+        let parentProcess;
+
+        if (isWindows) {
+            const command = `wmic process where ProcessId=${parentPID} get Name /value`;
+            const output = execSync(command).toString().trim();
+            parentProcess = output.split("=")[1]; // Extract the process name
+        } else {
+            parentProcess = execSync(`ps -o comm= -p ${parentPID}`).toString().trim();
+        }
+        
+        return parentProcess;
+    } catch (err) {
+        //console.error("Error detecting shell:", err);
+        return undefined;
+    }
+}
+process.env.INVOKING_SHELL = process.env.INVOKING_SHELL || getInvokingShell();
+
 
 const cmd = 'tsx --no-warnings "' + resolve(import.meta.dirname, '..', 'index.ts' + '" ' + args);
 

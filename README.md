@@ -74,6 +74,10 @@ $env:ASK_SETTINGS='true' ; baio
 
 Saving settings will directly trigger the prompt on next launch, and will not ask for any options.
 
+**Note 4:**
+
+You can set `INVOKING_SHELL` to the binary or env name of the shell to be used for execution to overwrite the currently used one (or if it constantly uses the wrong one)
+
 
 ### or locally within the project folder
 
@@ -89,11 +93,14 @@ GEMINI_API_KEY=
 
 OLLAMA_URL=
 OPENAI_URL=
+
+INVOKING_SHELL=
 ```
 
-- `OLLAMA_API_KEY` is not required for a local instance
+- `OLLAMA_API_KEY` defaults to '' and is not required for a local instance
 - `OLLAMA_URL` defaults to `http://localhost:11434`
-- `OPENAI_URL` defaults to the default server of OpenAI
+- `OPENAI_URL` defaults to the default server of OpenAI (but could be any OpenAI compatible server URL)
+- `INVOKING_SHELL` defaults to the currently used one or falls back to the system defined one.
 
 The Only difference when using the Ollama driver vs the OpenAI driver to connect to a Ollama instance is the details in the models selection. The Ollama driver will use the OpenAI driver for all other functions.
 
@@ -102,9 +109,18 @@ The Only difference when using the Ollama driver vs the OpenAI driver to connect
 
 This where you are able to modify the system prompt and last selected settings.
 
+## Debugging
+The folowing environemnt variables can be used to output debug info. All default to false.
+
+```env
+DEBUG_OUTPUT=<boolean>
+DEBUG_APICALLS=<boolean>
+DEBUG_OUTPUT_SYSTEMPROMPT=<boolean>
+```
+
 ## Helper
 
-### Ollama / powershell pull multiple models to install them
+### Ollama: use powershell to pull multiple models to install
 
 ```ps1
 $commands = @()

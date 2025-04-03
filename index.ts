@@ -7,8 +7,9 @@
  * @license ISC
  */
 
-const DEBUG_OUTPUT = false;
-const DEBUG_APICALLS = false;
+const DEBUG_OUTPUT = process.env.DEBUG_OUTPUT || false;
+const DEBUG_APICALLS = process.env.DEBUG_APICALLS || false;
+const DEBUG_OUTPUT_SYSTEMPROMPT = process.env.DEBUG_OUTPUT_SYSTEMPROMPT || false;
 
 
 //* node imports
@@ -17,6 +18,7 @@ import { exec } from 'node:child_process';
 import path from 'node:path';
 import { writeFile, readFile } from 'node:fs/promises';
 import os from 'node:os';
+import { execSync } from 'node:child_process';
 
 import cliMd from 'cli-markdown';
 
@@ -84,37 +86,38 @@ let settings: Settings = {
                 - Plattform: ${process.platform}
                 - Architecture: ${process.arch}
             - Computer Name: ${process.env.COMPUTERNAME}
-            - **Currently active commandline Shell (default used for execution):** ${process.env.SHELL ?? process.env.COMSPEC}
+            - **Default Shell (used for execution)**: {{invokingShell}}
+            - **Fallback Shell (only used for execution if default is unknown):** ${process.env.SHELL ?? process.env.COMSPEC}
             - Installed PowerShell: ${process.env.POSH_SHELL}, version ${process.env.POSH_SHELL_VERSION}
-            - User Home Directory: ${process.env.HOME}
+            - User Home Directory: ${process.env.HOME ?? process.env.USERPROFILE}
             - Current Directory: ${process.cwd()}
             {{useAllSysEnv}}
 
             ### Initial Prompt:
-            - First check what OS and Shell for execution you have available, check in "Your System Information".
+            - First check what OS and Shell for execution you have available, check in "Your System Information" for Default Shell and Fallback Shell.
             - Do **not** use <END/> in the initial prompt.
 
             ### Output Rules:
             - Explain **briefly** what you are doing and what each command does.
             - **DO NOT** use fenced code blocks (\`\`\`) for executable commands. Instead, always use:  
-            \`<CMD>command_here</CMD>\`
-            (Use **single backticks** around the <CMD> tags, but not inside them.)
+                \`<CMD>command_here</CMD>\`
+                (Use **single backticks** around the <CMD> tags, but not inside them.)
             - **If multiple commands need to be executed in sequence, combine them into one command** to maintain the shell context.  
             - Example (incorrect):  
                 \`<CMD>cd /myfolder</CMD>\`
                 \`<CMD>touch file.txt</CMD>\`
             - Example (correct):  
-                \`<CMD>cd /myfolder && touch file.txt</CMD>\`
-            - The commands must work in the current shell for execution, commands of another shell do not work. But you can call another shell, that is availabel, to execute commands.
+                \`<CMD>cd myfolder && touch file.txt</CMD>\`
+            - The commands must work in the current shell for execution, commands of another shell do not work. But you can call another shell, that is available, to execute commands.
             - If more info is needed, ask the user and **append** <NEED-MORE-INFO/>.
             - If responding to a user without generating a command, **append** <NEED-MORE-INFO/>.
 
             ### Execution Results (MUST BE USED BEFORE GENERATING A NEW RESPONSE):
             - The next prompt will provide execution results in the following format:
-            - <CMD-INPUT>command_here</CMD-INPUT> (Always included)
+                - <CMD-INPUT>command_here</CMD-INPUT> (Always included)
             - If successful: <CMD-OUTPUT>output_here</CMD-OUTPUT>  
             - If an error occurs: <CMD-ERROR>error_message_here</CMD-ERROR>
-            - Multiple execution results are separated by: \n<-----/>\n
+            - Multiple execution results are separated by: \\n<-----/>\\n
             - **Each <CMD-OUTPUT> or <CMD-ERROR> is always paired with its corresponding <CMD-INPUT>.**
             - **You cannot assume execution results or generate <CMD-INPUT> or <CMD-OUTPUT> or <-----/> yourself.**
             - **Before generating a new response, analyze the execution result:**
@@ -127,8 +130,10 @@ let settings: Settings = {
             ### Output Formatting (Mandatory):
             - **Always format your answer in markdown**.
             - **Always output final results in markdown** for readability.
-            - Be concise and keep your answers short.
-            - Prefer using **tables***, als use lists, or inline code where applicable.
+            - Be concise and keep your answers short, but do not omit important details.
+            - Prefer using **tables***, or use lists, or inline code where applicable.
+            - Do not put tables or lists inside of **fenced code blocks**.
+            - Do not put <END/> inside of single backticks or fenced code blocks.
 
             ### Completion:
             - Only append <END/> if **all tasks are successfully completed and no further action is required**.
@@ -191,7 +196,7 @@ async function api(prompt: string): Promise<promptResult> {
 
     // User output:
     // add ` before and after all <CMD> tags and after all </CMD> tags, if missing --- also remove tags
-    content = content.replaceAll(/\`*?\ *<CMD>`*?(.*?)`*?<\/CMD>\ *\`*?/g, '▶️ `$1`');
+    content = content.replaceAll(/\`*\ *<CMD>(.*?)<\/CMD>\ *\`*/g, '\n ▶️ `$1`');
     try {
         content = cliMd(content); // crashes sometimes : Cannot read properties of undefined (reading 'at') -- /node_modules/cli-html/lib/tags/code.js:12:25
     } catch (error) {}
@@ -250,6 +255,42 @@ async function getModels(): Promise<ModelSelection> {
     return models;
 }
 
+
+let invokingShell: string | undefined = null as unknown as undefined;
+/**
+ * Detects the shell that is currently running the script.
+ * If the detection fails, it returns undefined, defaulting to what ever shell nodejs defaults to for exec().
+ * If the detection succeeds, it caches the result and returns it.
+ * @returns The name of the invoking shell if it could be detected, undefined otherwise
+ */
+function getInvokingShell(overwriteInvokingShell = process.env.INVOKING_SHELL): string | undefined {
+    if (overwriteInvokingShell) invokingShell = overwriteInvokingShell;
+    if (invokingShell !== null) return invokingShell;
+
+    const isWindows = process.platform === 'win32';
+
+    try {
+        const parentPID = process.ppid;
+        let parentProcess;
+
+        if (isWindows) {
+            const command = `wmic process where ProcessId=${parentPID} get Name /value`;
+            const output = execSync(command).toString().trim();
+            parentProcess = output.split("=")[1]; // Extract the process name
+        } else {
+            parentProcess = execSync(`ps -o comm= -p ${parentPID}`).toString().trim();
+        }
+        
+        DEBUG_OUTPUT && console.log('DEBUG\n', 'Invoking shell:', parentProcess);
+
+        return invokingShell = parentProcess;
+    } catch (err) {
+        DEBUG_OUTPUT && console.error("Error detecting shell:", err);
+        return invokingShell = undefined;
+    }
+}
+
+
 /**
  * Execute commands each in a serparate process and return the results as a string.
  * Each command is executed sequentially and the results are concatenated.
@@ -266,7 +307,7 @@ async function doCommands(commands: string[]): Promise<string> {
 
         // execute command mith node and a promise and wait
         let result = await new Promise((resolve, reject) => {
-            const child = exec(command, (error, stdout, stderr) => {
+            const child = exec(command, {shell: getInvokingShell() }, (error, stdout, stderr) => {
                 if (error) {
                     reject(error);
                 } else {
@@ -285,101 +326,6 @@ async function doCommands(commands: string[]): Promise<string> {
     return results.join('\n<-----/>\n');
 }
 
-
-async function init(): Promise<string> {
-    let driver:Driver = drivers[settings.driver];
-    let askSettings = !settings.saveSettings || process.env.ASK_SETTINGS;
-
-
-    if (askSettings)
-    {
-        console.info(packageJSON.name + ' v' + packageJSON.version);
-        console.info('ℹ️ use CTRL + D to exit at any time.');
-    }
-
-    if (askSettings)
-    {//* API/Driver selection
-        let driverChoices = Object.keys(drivers).map(key => ({ name: drivers[key].name, value: key }));
-        settings.driver = await select({ message: 'Select your API:', choices: driverChoices, default: settings.driver || 'ollama' });
-    }
-    
-
-    {//* api key test
-        if (settings.driver !== 'ollama' && !drivers[settings.driver].apiKey) {
-            console.error(`🛑 ${drivers[settings.driver].name} has no API key configured in the environment`);
-            process.exit(1);
-        }
-    }
-
-    {//* connection test
-        askSettings && spinner.start(`Connecting to ${driver.name} ...`);
-        const connection = await doConnectionTest();
-
-        if (!connection) {
-            if (!askSettings) spinner.start(); // otherwise there is nothing shown
-            spinner.error(`Connection to ${driver.name} ( ${driver.getUrl(driver.urlTest)} ) failed!`);
-            process.exit(1);
-        }
-        else {
-            spinner.success(`Connection to ${driver.name} possible.`);
-        }
-    }
-
-    if (askSettings)
-    {//* model selection
-        const models = await getModels();
-        let modelSelected = '';
-        if (models.length) {
-            models.push({ name: 'manual input ...', value: '' });
-            modelSelected = await select({ message: 'Select your model:', choices: models, default: settings.model || driver.defaultModel });
-        }
-        if (!models.length || !modelSelected) {
-            if (settings.driver == 'ollama')
-                console.warn('⚠️ The model you enter, will be downloaded and this process might really take a while. No progress will show.');
-            modelSelected = await input({ message: 'Enter your model to use:', default: settings.model || driver.defaultModel });
-        }
-        settings.model = modelSelected;
-    }
-    
-    if (askSettings)    
-    {//* options
-        //settings.systemPrompt = await input({ message: 'Enter your system prompt', default: settings.systemPrompt });
-        settings.temperature = await input({ message: 'Enter the temperature (0 for model\'s default):', default: settings.temperature.toString() }).then(answer => parseFloat(answer));
-        
-        settings.useAllSysEnv = await toggle({ message: 'Use all system environment variables:', default: settings.useAllSysEnv });
-        
-        settings.endIfDone = await toggle({ message: 'End if assumed done:', default: settings.endIfDone });
-    }
-    
-    if (askSettings)
-    {//* save settings
-        settings.saveSettings = await toggle({ message: `Automatically use same settings next time:`, default: settings.saveSettings });
-        // write settings if it is asked for, or if it is not asked for but already saved to remove it
-        if (settings.saveSettings || !settings.saveSettings && settingsSaved) {
-            spinner.start(`Updating settings in ${rcFilePath} ...`);
-            await writeFile(rcFilePath, JSON.stringify(settings.saveSettings ? settings : {}, null, 2), 'utf-8');
-            spinner.success();
-        }
-    }
-    
-    let prompt;
-    {//* user prompt
-        let promptArgs = process.argv.slice(2).join(' ').trim();
-        if (promptArgs) {
-            prompt = promptArgs;
-            console.log('✔ What do you want to get done:', promptArgs);
-        }
-        else
-            prompt = promptArgs || await input({ message: 'What do you want to get done:', default: settings.defaultPrompt });
-    }
-
-    {//* system prompt
-        // apply system env to system prompt or clean up the placeholder
-        settings.systemPrompt = settings.systemPrompt.replaceAll('{{useAllSysEnv}}', settings.useAllSysEnv ? `- You are running on (system environment): ${JSON.stringify(process.env)}` : '');
-    }
-
-    return prompt;
-}
 
 
 /**
@@ -471,11 +417,112 @@ async function doPromptWithCommands(result: promptResult): Promise<string> {
 }
 
 
+async function init(): Promise<string> {
+    let driver:Driver = drivers[settings.driver];
+    let askSettings = !settings.saveSettings || process.env.ASK_SETTINGS;
+
+
+    if (askSettings)
+    {
+        console.info(packageJSON.name + ' v' + packageJSON.version);
+        console.info('ℹ️ use CTRL + D to exit at any time.');
+    }
+
+    if (askSettings)
+    {//* API/Driver selection
+        let driverChoices = Object.keys(drivers).map(key => ({ name: drivers[key].name, value: key }));
+        settings.driver = await select({ message: 'Select your API:', choices: driverChoices, default: settings.driver || 'ollama' });
+    }
+    
+
+    {//* api key test
+        if (settings.driver !== 'ollama' && !drivers[settings.driver].apiKey) {
+            console.error(`🛑 ${drivers[settings.driver].name} has no API key configured in the environment`);
+            process.exit(1);
+        }
+    }
+
+    {//* connection test
+        askSettings && spinner.start(`Connecting to ${driver.name} ...`);
+        const connection = await doConnectionTest();
+
+        if (!connection) {
+            if (!askSettings) spinner.start(); // otherwise there is nothing shown
+            spinner.error(`Connection to ${driver.name} ( ${driver.getUrl(driver.urlTest)} ) failed!`);
+            process.exit(1);
+        }
+        else {
+            spinner.success(`Connection to ${driver.name} possible.`);
+        }
+    }
+
+    if (askSettings)
+    {//* model selection
+        const models = await getModels();
+        let modelSelected = '';
+        if (models.length) {
+            models.push({ name: 'manual input ...', value: '' });
+            modelSelected = await select({ message: 'Select your model:', choices: models, default: settings.model || driver.defaultModel });
+        }
+        if (!models.length || !modelSelected) {
+            if (settings.driver == 'ollama')
+                console.warn('⚠️ The model you enter, will be downloaded and this process might really take a while. No progress will show.');
+            modelSelected = await input({ message: 'Enter your model to use:', default: settings.model || driver.defaultModel });
+        }
+        settings.model = modelSelected;
+    }
+    
+    if (askSettings)    
+    {//* options
+        //settings.systemPrompt = await input({ message: 'Enter your system prompt', default: settings.systemPrompt });
+        settings.temperature = await input({ message: 'Enter the temperature (0 for model\'s default):', default: settings.temperature.toString() }).then(answer => parseFloat(answer));
+        
+        settings.useAllSysEnv = await toggle({ message: 'Use all system environment variables:', default: settings.useAllSysEnv });
+        
+        settings.endIfDone = await toggle({ message: 'End if assumed done:', default: settings.endIfDone });
+    }
+    
+    if (askSettings)
+    {//* save settings
+        settings.saveSettings = await toggle({ message: `Automatically use same settings next time:`, default: settings.saveSettings });
+        // write settings if it is asked for, or if it is not asked for but already saved to remove it
+        if (settings.saveSettings || (!settings.saveSettings && settingsSaved)) {
+            spinner.start(`Updating settings in ${rcFilePath} ...`);
+            await writeFile(rcFilePath, JSON.stringify(settings.saveSettings ? settings : {}, null, 2), 'utf-8');
+            spinner.success();
+        }
+    }
+    
+    let prompt;
+    {//* user prompt
+        let promptArgs = process.argv.slice(2).join(' ').trim();
+        if (promptArgs) {
+            prompt = promptArgs;
+            DEBUG_OUTPUT && console.log('✔ What do you want to get done:', promptArgs);
+        }
+        else
+            prompt = promptArgs || await input({ message: 'What do you want to get done:', default: settings.defaultPrompt });
+    }
+
+    {//* system prompt
+        // apply invoking shell to system prompt
+        settings.systemPrompt = settings.systemPrompt.replaceAll('{{invokingShell}}', getInvokingShell() ?? 'unknown');
+
+        // apply system env to system prompt or clean up the placeholder
+        settings.systemPrompt = settings.systemPrompt.replaceAll('{{useAllSysEnv}}', settings.useAllSysEnv ? `- You are running on (system environment): ${JSON.stringify(process.env)}` : '');
+
+        DEBUG_OUTPUT_SYSTEMPROMPT && console.log('DEBUG\n', 'systemPrompt:', settings.systemPrompt);
+    }
+
+    return prompt;
+}
+
+
 // MAIN
 {
     let prompt = await init();
 
-    let resultPrompt: promptResult = {answer: '', answerFull: '', commands: [], needMoreInfo: false, isEnd: false};
+    let resultPrompt: promptResult;
 
 
     while (true) {
