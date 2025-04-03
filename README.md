@@ -30,6 +30,7 @@ To get website text content in a meaningfull way, install Links2 and let it call
   - powershell: add `function links2-dump($url) { . "C:\Program Files\Links\links.exe" "-html-numbered-links" 1 -dump $url }` to your `$PROFILE` file and let it be called from the operator: `links2-dump("https://...")`
 
 Alternatives:
+- elinks, download: https://github.com/rkd77/elinks/releases (`elinks -dump 1 https://...`)
 - lynx, download? (`lynx -width=200 -dump "https://..."`)
 - readability-cli, project: https://gitlab.com/gardenappl/readability-cli (`npx readability-cli -l force --properties text-content https://...`) (has problems with stylesheets and generates errors in the output)
 - browsh, project: https://www.brow.sh/docs/introduction/ (connects to a running firefox instance)
