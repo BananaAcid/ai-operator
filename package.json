@@ -1,6 +1,6 @@
 {
   "name": "baio",
-  "version": "1.0.7",
+  "version": "1.0.8",
   "description": "Simple AI operator for the CLI, for any LLM",
   "main": "index.ts",
   "type": "module",
@@ -39,10 +39,10 @@
     "typescript"
   ],
   "devDependencies": {
-    "@types/node": "^22.13.14"
+    "@types/node": "^22.14.0"
   },
   "dependencies": {
-    "@inquirer/prompts": "^7.4.0",
+    "@inquirer/prompts": "^7.4.1",
     "cli-markdown": "^3.4.0",
     "inquirer-toggle": "^1.0.1",
     "tsx": "^4.19.3",
