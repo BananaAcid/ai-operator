@@ -516,27 +516,27 @@ async function init(): Promise<string> {
 
         console.info(`baio [-vhdmtaseucr] ["prompt string"]
 
--v, --version
--h, -?, --help
+  -v, --version
+  -h, -?, --help
 
--d, --driver <api-driver>        select driver (ollama, openai, googleai)
--m, --model <model-name>         select model
--t, --temp <int>                 temperature
+  -d, --driver <api-driver>        select driver (ollama, openai, googleai)
+  -m, --model <model-name>         select model
+  -t, --temp <int>                 temperature
 
--a, --ask                        reconfigure to ask everything again
-    --no-ask                     ... to disable
--s, --sysenv                     allow to use the complete system environment
-    --no-sysenv                  ... to disable
--e, --end                        end promping if assumed done
-    --no-end                     ... to disable
+  -a, --ask                        reconfigure to ask everything again
+      --no-ask                     ... to disable
+  -s, --sysenv                     allow to use the complete system environment
+      --no-sysenv                  ... to disable
+  -e, --end                        end promping if assumed done
+      --no-end                     ... to disable
 
--u, --update                     update user config (save config)
--c, --config                     config only, do not prompt. 
--r, --reset                      reset (remove) config
-`       );
+  -u, --update                     update user config (save config)
+  -c, --config                     config only, do not prompt. 
+  -r, --reset                      reset (remove) config
+`);
 
-        console.info('Paths');
-        console.info(`baio config path: ${rcFilePath}`);
+        console.info('');
+        console.info(`Settings config path: ${rcFilePath}`);
         console.info(`Environment config path: ${rcEnvFilePath}`);
 
         process.exit(0);
