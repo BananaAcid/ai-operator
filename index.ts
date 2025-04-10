@@ -69,6 +69,7 @@ const args = await new Promise<ReturnType<typeof parseArgs>>(resolve => resolve(
     options: {
         version: { short: 'v', type: 'boolean' }, // DO NOT USE DEFAULTS in .OPTIONS{}
         help:    { short: 'h', type: 'boolean' },
+        help2:   { short: '?', type: 'boolean' },
         
         driver:  { short: 'd', type: 'string'  },
         model:   { short: 'm', type: 'string'  },
@@ -91,6 +92,7 @@ const argsReMap = {
     end: 'endIfDone',
     update: 'saveSettings',
     temp: 'temperature',
+    help2: 'help',
 };
 //! .values always includes all options with their default values, only .tokens does not but is missing the values.
 //!   And options does not allow for a key name (only long and short arg name)
@@ -515,7 +517,7 @@ async function init(): Promise<string> {
         console.info(`baio [-vhdmtaseucr] ["prompt string"]
 
 -v, --version
--h, --help
+-h, -?, --help
 
 -d, --driver <api-driver>        select driver (ollama, openai, googleai)
 -m, --model <model-name>         select model
