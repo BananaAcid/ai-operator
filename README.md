@@ -154,27 +154,27 @@ This where you are able to modify the system prompt and last selected settings.
 ```
 baio [-vhdmtaseucr] ["prompt string"]
 
--v, --version
--h, --help
+  -v, --version
+  -h, -?, --help
+  
+  -d, --driver <api-driver>        select driver (ollama, openai, googleai)
+  -m, --model <model-name>         select model
+  -t, --temp <int>                 temperature
+  
+  -a, --ask                        reconfigure to ask everything again
+      --no-ask                     ... to disable
+  -s, --sysenv                     allow to use the complete system environment
+      --no-sysenv                  ... to disable
+  -e, --end                        end promping if assumed done
+      --no-end                     ... to disable
+  
+  -u, --update                     update user config (save config)
+  -c, --config                     config only, do not prompt.
+  -r, --reset                      reset (remove) config
 
--d, --driver <api-driver>        select driver (ollama, openai, googleai)
--m, --model <model-name>         select model
--t, --temp <int>                 temperature
 
--a, --ask                        reconfigure to ask everything again
-    --no-ask                     ... to disable
--s, --sysenv                     allow to use the complete system environment
-    --no-sysenv                  ... to disable
--e, --end                        end promping if assumed done
-    --no-end                     ... to disable
-
--u, --update                     update user config (save config)
--c, --config                     config only, do not prompt.
--r, --reset                      reset (remove) config
-
-Paths
-baio config path: ..................\.baiorc
-Environment config path: ..................\.baioenvrc
+Settings config path: ................../.baiorc
+Environment config path: ................../.baioenvrc
 ```
 
 
