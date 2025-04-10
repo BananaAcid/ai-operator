@@ -1,6 +1,6 @@
 {
   "name": "baio",
-  "version": "1.0.6",
+  "version": "1.0.7",
   "description": "Simple AI operator for the CLI, for any LLM",
   "main": "index.ts",
   "type": "module",
@@ -11,6 +11,7 @@
     "name": "BananaAcid (Nabil Redmann)",
     "email": "repo@bananaacid.de"
   },
+  "homepage": "https://github.com/BananaAcid/ai-operator",
   "license": "MIT",
   "repository": {
     "type": "git",

@@ -91,14 +91,13 @@ const drivers = {
 
             DEBUG_OUTPUT && console.log('models', models);
 
-
             let modelSelection:ModelSelection = models.map(model => ({ name: `${model.id} (${model.owned_by})`, value: model.id }));
 
             return modelSelection;
         },
 
 
-        async getChatResponse(settings: Settings, history: any, prompt: string): Promise<ChatResponse> {
+        async getChatResponse(settings: Settings, history: any[], prompt: string): Promise<ChatResponse> {
             let resultOrig;
 
             const response = await fetch(this.urlChat, {
@@ -130,12 +129,15 @@ const drivers = {
 
             let responseMessage = response.choices[0].message;
 
-            history.push({ role: 'user', content: prompt });
-            history.push({ role: responseMessage.role /* == 'asistent' */, content: responseMessage.content });
+            const newHistory = [
+                ...history,
+                { role: 'user', content: prompt },
+                { role: responseMessage.role /* == 'asistent' */, content: responseMessage.content }
+            ];
             
             return {
                 contentRaw: responseMessage.content,
-                history,
+                history: newHistory,
             }
         },
 
@@ -143,8 +145,10 @@ const drivers = {
 
 
     googleai: {
+        // public interfaces of the google ai services: https://github.com/googleapis/googleapis/tree/master/google/ai/generativelanguage
+
         name: 'Google AI',
-        urlTest: 'https://api.openai.com/',
+        urlTest: 'https://generativelanguage.googleapis.com/v1beta/models/?key=', // unlucky: there is no test endpoint
         urlChat: 'https://generativelanguage.googleapis.com/v1beta/models/{{model}}:generateContent?key=',
         urlModels: 'https://generativelanguage.googleapis.com/v1beta/models/?key=',
         defaultModel: 'gemini-2.0-flash',
@@ -152,6 +156,9 @@ const drivers = {
 
 
         getUrl(url, model=''):string {
+            if (process.env.GEMINI_URL)
+                url = url.replace('https://generativelanguage.googleapis.com/v1beta', process.env.GEMINI_URL);
+            
             return url.replaceAll('{{model}}', model) + this.apiKey;
         },
     
@@ -169,7 +176,7 @@ const drivers = {
             return modelSelection;
         },
 
-        async getChatResponse(settings: Settings, history: any, prompt: string): Promise<ChatResponse> {
+        async getChatResponse(settings: Settings, history: any[], prompt: string): Promise<ChatResponse> {
             let resultOrig;
 
             const response = await fetch(this.getUrl(this.urlChat, settings.model), {

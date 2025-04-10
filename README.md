@@ -51,15 +51,19 @@ GEMINI_API_KEY=abcdefg1234567890 baio
 $env:GEMINI_API_KEY='abcdefg1234567890' ; baio
 ```
 
-or ask it directly
+or ask it directly (env must be set)
 ```bash
 baio "list all files"
 ```
 
+without installation:
+```bash
+npx -y baio "list all files"
+```
 
 Setting the api key before running the command, will only work until the terminal is closed again.
 
-You should add the keys to your Profile (Win, MacOS, Linux).
+You should add the keys to your Profile (Win, MacOS, Linux), or in the `.bashenvrc` (see below: Env Config).
 
 **Note:**
 
@@ -89,11 +93,25 @@ You can set `INVOKING_SHELL` to the binary or env name of the shell to be used f
 
 ### or locally within the project folder
 
+For development, within the projects folder use:
+
 ```bash
 npm start
 ```
 
-## Config
+For testing:
+```bash
+node bin/baio
+```
+
+### `drivers.ts`
+
+This file holds Ollama, OpenAI and Googles API in simple selfcontained files.
+
+No dependencies are used: it uses `fetch()` to connect to the REST API endpoints of the mentioned APIs.
+
+
+## Env Config
 ```env
 OLLAMA_API_KEY=
 OPENAI_API_KEY=
@@ -101,6 +119,7 @@ GEMINI_API_KEY=
 
 OLLAMA_URL=
 OPENAI_URL=
+GEMINI_URL=
 
 INVOKING_SHELL=
 ```
@@ -108,14 +127,56 @@ INVOKING_SHELL=
 - `OLLAMA_API_KEY` defaults to '' and is not required for a local instance
 - `OLLAMA_URL` defaults to `http://localhost:11434`
 - `OPENAI_URL` defaults to the default server of OpenAI (but could be any OpenAI compatible server URL)
-- `INVOKING_SHELL` defaults to the currently used one or falls back to the system defined one.
+- `GEMINI_URL` defaults to the default server of google's API `https://generativelanguage.googleapis.com/v1beta` (not v1, because v1 is missing the systemprompt option)
+- `INVOKING_SHELL` defaults to the currently used one (from which baio is called) or falls back to the system defined default one.
 
 The Only difference when using the Ollama driver vs the OpenAI driver to connect to a Ollama instance is the details in the models selection. The Ollama driver will use the OpenAI driver for all other functions.
+
+**Note:**
+
+These env variables can be set at the user's homefolder in `.baioenvrc` and will be loaded in the beginning.
+
+bash:
+```bash
+echo "GEMINI_API_KEY=abcdefg1234567" >> $HOME/.baioenvrc
+```
+powershell:
+```powershell
+echo "GEMINI_API_KEY=abcdefg1234567" >> $env:USERPROFILE\.baioenvrc
+```
 
 ### Selected settings
 ... are saved in the user's home folder in `.baiorc`
 
 This where you are able to modify the system prompt and last selected settings.
+
+## Shell arguments
+```
+baio [-vhdmtaseucr] ["prompt string"]
+
+-v, --version
+-h, --help
+
+-d, --driver <api-driver>        select driver (ollama, openai, googleai)
+-m, --model <model-name>         select model
+-t, --temp <int>                 temperature
+
+-a, --ask                        reconfigure to ask everything again
+    --no-ask                     ... to disable
+-s, --sysenv                     allow to use the complete system environment
+    --no-sysenv                  ... to disable
+-e, --end                        end promping if assumed done
+    --no-end                     ... to disable
+
+-u, --update                     update user config (save config)
+-c, --config                     config only, do not prompt.
+-r, --reset                      reset (remove) config
+
+Paths
+baio config path: ..................\.baiorc
+Environment config path: ..................\.baioenvrc
+```
+
 
 ## Debugging
 The folowing environemnt variables can be used to output debug info. All default to false.
@@ -123,19 +184,24 @@ The folowing environemnt variables can be used to output debug info. All default
 ```env
 DEBUG_OUTPUT=<boolean>
 DEBUG_APICALLS=<boolean>
+DEBUG_SYSTEMPROMPT=<boolean>
 DEBUG_OUTPUT_SYSTEMPROMPT=<boolean>
 ```
 
+`DEBUG_SYSTEMPROMPT` prompts you to optionally overwrite the system prompt. And it outputs it (all of it). And it would be saved if modified and `automatically use settings next time` is selected.
+
 ## Helper
 
-### Ollama: use powershell to pull multiple models to install
+### Ollama: pull multiple models to install
 
 ```ps1
+#!powershell
+
 $commands = @()
-$commands += {ollama pull deepseek-r1:8b}
-$commands += {ollama pull deepseek-r1:14b}
+$commands += {ollama pull gemma3:12b}
+$commands += {ollama pull JOSIEFIED-Qwen2.5}
 $commands += {ollama pull phi4}
-$commands += {ollama pull exaone-deep}
+$commands += {ollama pull deepseek-r1:8b}
 $commands += {ollama pull command-r7b}
 
 foreach($command in $commands){
@@ -148,4 +214,26 @@ While (@(Get-Job | Where { $_.State -eq "Running" }).Count -ne 0)
    Get-Job    #Just showing all the jobs
    Start-Sleep -Seconds 1
 }
+```
+
+```bash
+#!/bin/bash
+
+commands=(
+    "ollama pull gemma3:12b"
+    "ollama pull JOSIEFIED-Qwen2.5"
+    "ollama pull phi4"
+    "ollama pull deepseek-r1:8b"
+    "ollama pull command-r7b"
+)
+
+for cmd in "${commands[@]}"; do
+    eval "$cmd" &
+done
+
+while [ $(jobs -p | wc -l) -gt 0 ]; do
+    echo "Waiting for background jobs..."
+    jobs
+    sleep 1
+done
 ```
