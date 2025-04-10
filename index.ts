@@ -556,7 +556,7 @@ async function init(): Promise<string> {
     
 
     {//* api key test
-        if (settings.driver !== 'ollama' && !drivers[settings.driver].apiKey) {
+        if (settings.driver !== 'ollama' && !drivers[settings.driver].apiKey()) {
             console.error(`🛑 ${drivers[settings.driver].name} has no API key configured in the environment`);
             process.exit(1);
         }

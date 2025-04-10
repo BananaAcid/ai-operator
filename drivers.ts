@@ -27,7 +27,7 @@ const drivers = {
         urlChat: 'http://localhost:11434/v1/chat/completions', // OpenAI comaptible API
         urlModels: 'http://localhost:11434/api/tags',  // more details about the models
         defaultModel: 'goekdenizguelmez/JOSIEFIED-Qwen2.5:latest', // default model
-        apiKey: process.env.OLLAMA_API_KEY, // ollama local does not need a key, but you could use a hosted service, that requires a key
+        apiKey: () => process.env.OLLAMA_API_KEY, // ollama local does not need a key, but you could use a hosted service, that requires a key
 
 
         getUrl(url): string {
@@ -42,7 +42,7 @@ const drivers = {
                 method: 'GET',
                 headers: {
                     'Content-Type': 'application/json',
-                    ...(this.apiKey ? {'Authorization': `Bearer ${this.apiKey}`} : {}),
+                    ...(this.apiKey ? {'Authorization': `Bearer ${this.apiKey()}`} : {}),
                 },
             }).then( response => response.json() ).catch( error => console.error(error) ) as OllamaResultModels|undefined;
 
@@ -69,7 +69,7 @@ const drivers = {
         urlChat: 'https://api.openai.com/v1/chat/completions',
         urlModels: 'https://api.openai.com/v1/models',
         defaultModel: 'gpt-3.5-turbo',
-        apiKey: process.env.OPENAI_API_KEY,
+        apiKey: () => process.env.OPENAI_API_KEY,
     
         getUrl(url): string {
             if (process.env.OPENAI_URL)
@@ -83,7 +83,7 @@ const drivers = {
                 method: 'GET',
                 headers: {
                     'Content-Type': 'application/json',
-                    ...(this.apiKey ? {'Authorization': `Bearer ${this.apiKey}`} : {}),
+                    ...(this.apiKey ? {'Authorization': `Bearer ${this.apiKey()}`} : {}),
                 },
             }).then( response => response.json() ).catch( error => console.error(error) ) as OpenAiResultModels|undefined;
 
@@ -152,14 +152,14 @@ const drivers = {
         urlChat: 'https://generativelanguage.googleapis.com/v1beta/models/{{model}}:generateContent?key=',
         urlModels: 'https://generativelanguage.googleapis.com/v1beta/models/?key=',
         defaultModel: 'gemini-2.0-flash',
-        apiKey: process.env.GEMINI_API_KEY,
+        apiKey: () => process.env.GEMINI_API_KEY,
 
 
         getUrl(url, model=''):string {
             if (process.env.GEMINI_URL)
                 url = url.replace('https://generativelanguage.googleapis.com/v1beta', process.env.GEMINI_URL);
             
-            return url.replaceAll('{{model}}', model) + this.apiKey;
+            return url.replaceAll('{{model}}', model) + this.apiKey();
         },
     
         async getModels(settings: Settings): Promise<ModelSelection> {
