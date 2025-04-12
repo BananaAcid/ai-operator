@@ -50,17 +50,17 @@ declare global {
 
 
   type OpenAiRequest = {
-    model: string,
+    model: string;
     options: {
-        temperature?: number,
-    },
-    messages: OpenAiMessageItem[],
-    stream: boolean,
+        temperature?: number;
+    };
+    messages: OpenAiMessageItem[];
+    stream: boolean;
   };
 
   type OpenAiMessageItem = {
-      role: string,
-      content: string,
+      role: string;
+      content: string;
   };
 
 }

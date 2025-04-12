@@ -11,10 +11,11 @@
 import packageJSON from './package.json' with { type: 'json' };
 import { exec } from 'node:child_process';
 import path from 'node:path';
-import { writeFile, readFile, unlink } from 'node:fs/promises';
+import { writeFile, readFile, unlink, glob, access } from 'node:fs/promises';
 import os from 'node:os';
 import { execSync } from 'node:child_process';
 import { parseArgs } from 'node:util';
+import fs from 'node:fs';
 
 import cliMd from 'cli-markdown';
 
@@ -34,10 +35,15 @@ process.on('uncaughtException', (error) => { if (error instanceof Error && (erro
 //process.removeAllListeners('warning');
 
 
+//* File + Paths
+const RC_ENVFILE = path.join(os.homedir(), '.baioenvrc');
+const RC_FILE = path.join(os.homedir(), '.baiorc');
+const RC_AGENTS_PATH = path.join(os.homedir(), '.baio', 'agents');
+
+
 //* get user dot env
 // node:parseEnv sucks really badly.
-const rcEnvFilePath = path.join(os.homedir(), '.baioenvrc');
-(await readFile(rcEnvFilePath, 'utf-8').catch(_ => '')).split('\n').map(line => line.trim()).filter(line => line.length > 0 && !line.startsWith('#')).map(line => line.split(/=(.*)/).map(part => part.trim())).filter(line => line[1].length > 0).forEach(line => process.env[line[0].toUpperCase().replaceAll(' ', '_')] = line[1]);
+(await readFile(RC_ENVFILE, 'utf-8').catch(_ => '')).split('\n').map(line => line.trim()).filter(line => line.length > 0 && !line.startsWith('#')).map(line => line.split(/=(.*)/).map(part => part.trim())).filter(line => line[1].length > 0).forEach(line => process.env[line[0].toUpperCase().replaceAll(' ', '_')] = line[1]);
 
 
 //* set DEBUG consts
@@ -67,7 +73,7 @@ type Driver = typeof drivers[keyof typeof drivers];
 const args = await new Promise<ReturnType<typeof parseArgs>>(resolve => resolve(parseArgs({
     allowPositionals: true,
     options: {
-        version: { short: 'v', type: 'boolean' }, // DO NOT USE DEFAULTS in .OPTIONS{}
+        version: { short: 'v', type: 'boolean' },
         help:    { short: 'h', type: 'boolean' },
         help2:   { short: '?', type: 'boolean' },
         
@@ -75,13 +81,16 @@ const args = await new Promise<ReturnType<typeof parseArgs>>(resolve => resolve(
         model:   { short: 'm', type: 'string'  },
         temp:    { short: 't', type: 'string'  },
 
-        ask:     { short: 'a', type: 'boolean' },
+        agent:   { short: 'a', type: 'string'  },
+
+        ask:     { short: 'q', type: 'boolean' },
         sysenv:  { short: 's', type: 'boolean' },
         end:     { short: 'e', type: 'boolean' },
 
         config:  { short: 'c', type: 'boolean' },
         update:  { short: 'u', type: 'boolean' },
         reset:   { short: 'r', type: 'boolean' },
+        'reset-prompts': {     type: 'boolean' },
     }, 
     //tokens: true,
     allowNegative: true,
@@ -118,20 +127,18 @@ if (settingsArgs.temperature) {
 
 
 //* load saved settings
-const rcFilePath = path.join(os.homedir(), '.baiorc');
 let settingsSaved: Settings|undefined;
 if (settingsArgs.reset)
-    await unlink(rcFilePath).catch(_ => {});
+    await unlink(RC_FILE).catch(_ => undefined);
 else
-    settingsSaved = await readFile(rcFilePath, 'utf-8').then(JSON.parse).catch(_ => {}) as Settings;
+    settingsSaved = await readFile(RC_FILE, 'utf-8').then(JSON.parse).catch(_ => undefined) as Settings;
 
 
 //* default settings
 let settingsDefault: Settings = {
     driver: 'googleai',
-    // each driver has a default model, this can be overriden here
-    model: '',      // BEST: gemma3:12b (12.2B)  FASTEST: goekdenizguelmez/JOSIEFIED-Qwen2.5:latest (7.6B)   IS OK: phi4:latest (14.7B)
-    temperature: 0,   // 0.7
+    model: '',              // BEST: gemma3:12b (12.2B)  FASTEST: goekdenizguelmez/JOSIEFIED-Qwen2.5:latest (7.6B)   IS OK: phi4:latest (14.7B)
+    temperature: 0,         // use something like 0.7
 
     useAllSysEnv: false,    // use all system environment variables in the system prompt
     endIfDone: true,        // don't allow the AI to end the conversation (it would, if it thinks it is done)
@@ -139,10 +146,8 @@ let settingsDefault: Settings = {
     saveSettings: false,    // save settings to the .baiorc file -- if this is true, the options will not be asked
 
     defaultPrompt: 'list all details of files in directory', 
-        // 1. get origin property from the api https://httpbin.org/get and only save the origin value to "info.txt" in the current folder. to sucessfully end: the saved value must be an IP adress
-        // 2. read the info.txt and check if the content is an IP
 
-    fixitPrompt: `Something went wrong! Ensure all steps are followed, results are validated, and commands are properly executed. Reevaluate the goal after each action and make sure to append <END/> only when the task is fully completed. Try again with a different approach, and if more information is needed, request it.`,
+    fixitPrompt: `Something went wrong! Ensure all steps are followed, commands are properly formatted as by the output rules, results are validated, and commands are properly executed. Reevaluate the goal after each action and make sure to append <END/> only when the task is fully completed. Try again with a different approach, and if more information is needed, request it.`,
 
     systemPrompt: `
         You are a helpful AI operator that generates and validates command-line commands. 
@@ -158,7 +163,7 @@ let settingsDefault: Settings = {
         - **Default Shell (used for execution)**: {{invokingShell}}
         - **Fallback Shell (only used for execution if default is unknown):** ${process.env.SHELL ?? process.env.COMSPEC}
         - Installed PowerShell: ${process.env.POSH_SHELL}, version ${process.env.POSH_SHELL_VERSION}
-        - User Home Directory: ${process.env.HOME ?? process.env.USERPROFILE}
+        - User's Home Directory (user home folder): ${process.env.HOME ?? process.env.USERPROFILE}
         - Current Directory: ${process.cwd()}
         {{useAllSysEnv}}
 
@@ -180,6 +185,7 @@ let settingsDefault: Settings = {
         - The commands must work in the current shell for execution, commands of another shell do not work. But you can call another shell, that is available, to execute commands.
         - If more info is needed, ask the user and **append** <NEED-MORE-INFO/>.
         - If responding to a user without generating a command, **append** <NEED-MORE-INFO/>.
+        - If asked to read a website or url, you need to do so.
 
         ### Execution Results (MUST BE USED BEFORE GENERATING A NEW RESPONSE):
         - The next prompt will provide execution results in the following format:
@@ -213,26 +219,67 @@ let settingsDefault: Settings = {
         - **Ensure all output has been verified and actions have been taken**. If no further steps are required and the task is complete, append <END/> at the end.
 
         ### Helpers:
-        - Getting an REST-API, create a command by using curl and proccess the <CMD-OUTPUT> afterwards.
-            - Make sure it uses the correct shell and parameters.
-            - You might use Invoke-WebRequest (Powershell), HTTPie or similar tools, if they are installed and curl is unavailable.
-            - usually use the "accept: application/json" header.
-        - To install links2 on windows, check use the links from the archives at http://links.twibright.com/download.php . You need to download the needed file from the provided urls archive. After installing, make sure it is usable (binary basename is 'links') and if not make the binary usable.
-        - To install links2 on linux or mac, use an installed system packagemanager.
-        - Always use links2 with following params '-html-numbered-links 1 -dump' before appending the url.
-        - To find something on the internet use duckduckgo with search term ('https://duckduckgo.com/?q=' + searchterm) and use links2 (if available) or parse the result to read the website contents.
+        - **Asked to fetch a REST API**:  
+            - Use the Mime-Type \`application/json\`
+            - Prefer \`curl\` to send requests. Use: \`curl -s -H "Accept: application/json" <url>\`
+            - If \`curl\` is unavailable, fallback to \`Invoke-WebRequest\` (PowerShell) or \`httpie\`, if installed.
+            - Ensure correct shell syntax and parameter usage.
+            - Always post-process \`<CMD-OUTPUT>\` for relevance.
+        - **Asked to install \`links2\`**:
+            - **Windows**:  
+                - Download from: [http://links.twibright.com/download.php](http://links.twibright.com/download.php)  
+                - Extract the archive and ensure the binary (\`links\`) is in the system \`PATH\` or directly executable.
+            - **Linux**:  
+                - Install via system package manager: \`sudo apt install links2\`
+            - **MacOS (with Homebrew)**: \`brew install links2\`
+        - **Asked or needed to use \`links2\`**:
+            - Always run: \`links -html-numbered-links 1 -dump <url>\`
+            - The command name for links2 is: \`links\`
+        - **Asked to search the Web**:
+            - Use DuckDuckGo for queries: \`https://duckduckgo.com/?q=<search_term>\`
+            - Prefer \`links2\` to read the content if available, or parse the HTML output directly.
+        - **Asked to create an \`@agent\`**:
+            - @agents are markdown files with text prompts for this AI for a later use, and do not contain any programming.
+            - You can create agents in the previously mentioned "User's Home Directory" in  \`./.baio/agents\`.
+            - The @agent example file is:
+                ---
+                tags: key1, key2, key3, and_other_keys 
+                dateCreated: isodatestr
+                ---
+                I_will_do_something_prompt_texts_here
+            - If asked to create an @agent, you will need to:
+                1. Ask what it should be named in a single word, and what it should do (the action will be a prompt for later use)
+                2. Create command to create a new file in the previously mentioned "User's Home Directory" in \`./.baio/agents/<agent_name>.md\` that contains the users prompt (be detailed) and will be phrased like "I do somwthing"
+
+        {{useAgent}}
 
         Follow these rules strictly to ensure accurate command execution and validation.
     `,
+    version: packageJSON.version,
 };
+
+//* handle updating prompts / resetting prompts
+if (settingsSaved !== undefined && !settingsArgs['reset-prompts'] && !settingsArgs['reset'] && (!settingsSaved.version || (settingsSaved.version && settingsSaved.version !== settingsDefault.version))) {
+    if (settingsDefault.defaultPrompt !== settingsSaved.defaultPrompt || settingsDefault.fixitPrompt !== settingsSaved.fixitPrompt || settingsDefault.systemPrompt !== settingsSaved.systemPrompt) {
+        settingsArgs['reset-prompts'] = await toggle({ message: `Update saved system prompts from your previous version to the current version:`, default: true });
+    }
+}
+
+
+//* merge settings
 let settings: Settings = {
     ...settingsDefault,
     ...settingsSaved ?? {},
-    // only add settingsArgs if the key is allready in settingsDefault (filters out version and others)
-    ...Object.entries(settingsDefault).reduce((acc, [k, v]) => settingsArgs[k] ? { ...acc, [k]: settingsArgs[k] } : acc, {})
+    // only add settingsArgs if the key is already in settingsDefault (filters out version and others)
+    ...Object.entries(settingsDefault).reduce((acc, [k, v]) => settingsArgs[k] ? { ...acc, [k]: settingsArgs[k] } : acc, {}),
+    // handle --reset-prompts 
+    ...(settingsArgs['reset-prompts'] ? {defaultPrompt: settingsDefault.defaultPrompt, fixitPrompt: settingsDefault.fixitPrompt, systemPrompt: settingsDefault.systemPrompt, version: settingsDefault.version } : {}),
 };
 
+
+//* initialize AI history
 let history: MessageItem[] = [];
+
 
 /**
  * Calls the ollama AI with the given prompt and history and returns the answer including any commands.
@@ -270,6 +317,13 @@ async function api(prompt: string): Promise<promptResult> {
         commands.push(match[1]);
     }
 
+    // go for agents, that are created by the ai
+    const matchesHelpers = content.matchAll(/\`?\ *<AGENT-DEFINITION NAME="(.*?)">(.*?)<\/AGENT-DEFINITION>\ *\`?/g);
+    let helpers: promptHelper[] = [];
+    for (const match of matchesHelpers) {
+        helpers.push({type: 'agent', name: match[1], definition: match[2]});
+    }
+
     // User output:
     // add ` before and after all <CMD> tags and after all </CMD> tags, if missing --- also remove tags
     content = content.replaceAll(/\`*\ *<CMD>(.*?)<\/CMD>\ *\`*/g, '\n ▶️ `$1`');
@@ -280,11 +334,13 @@ async function api(prompt: string): Promise<promptResult> {
     return {
         answerFull: contentRaw, // for thinking models debugging
         answer: content,
+        helpers,
         commands,
         needMoreInfo: contentRaw.indexOf('<NEED-MORE-INFO/>') > -1,
         isEnd: contentRaw.indexOf('<END/>') > -1,
     };
 }
+
 
 /**
  * Tests the connection to the currently set API.
@@ -304,6 +360,7 @@ async function doConnectionTest(): Promise<boolean> {
 
     return response;
 }
+
 
 /**
  * Fetches the models from the currently set API.
@@ -367,6 +424,45 @@ function getInvokingShell(overwriteInvokingShell = process.env.INVOKING_SHELL): 
 }
 
 
+
+/**
+ * Returns a selection of agents, or an empty array if none are selected.
+ * If the option --agent is given, it returns an array with one element, the file path of the agent.
+ * If no agent is given as an option, the function returns a selection of all agent files (*.md) in RC_AGENTS_PATH.
+ * @returns A selection of agents. Each element is an object with the properties name and value, where name is the name of the agent and value is the path to the agent file.
+ */
+async function getAgents(): Promise<AgentSelection> {
+    let agents: AgentSelection = [];
+
+    // get *.md files from RC_AGENTS_PATH, if there are any, show a selection
+    const agentFiles: fs.Dirent[] = [];
+    for await (const file of glob('*.md', { cwd: RC_AGENTS_PATH, withFileTypes: true })) agentFiles.push(file);
+    
+    if (settingsArgs['agent']) {
+        const file = path.join(RC_AGENTS_PATH, settingsArgs['agent'] + '.md');
+        //const exists = await access(file).catch(() => undefined);
+
+        const filename = (settingsArgs['agent'] + '.md').toLowerCase();
+
+        // find the file in agentFiles (compare lowercase, so the user can use `--agent` without taking care off the case)
+        const fileFound = agentFiles.find(file => file.name.toLowerCase() === filename);
+
+        if (!fileFound) { // if (!exists)
+            console.error(`🛑 Agent ${settingsArgs['agent']} file ${file} not found!`);
+            return [];
+        }
+
+        agents.push({name: settingsArgs['agent'], value: file});
+    }
+    else {
+        
+        agents = agentFiles.map(file => ({ name: file.name.replace('.md', ''), value: path.join(file.parentPath, file.name) }))
+    }
+
+    return agents;
+}
+
+
 /**
  * Execute commands each in a serparate process and return the results as a string.
  * Each command is executed sequentially and the results are concatenated.
@@ -403,7 +499,6 @@ async function doCommands(commands: string[]): Promise<string> {
 }
 
 
-
 /**
  * Wrapper to output the api result to the console 
  * @param prompt 
@@ -421,6 +516,7 @@ async function doPrompt(prompt: string): Promise<promptResult> {
     return result;
 }
 
+
 /**
  * Take the result of the api call and either execute the commands or ask the user for more info
  * 
@@ -437,8 +533,6 @@ async function doPromptWithCommands(result: promptResult): Promise<string> {
 
     if (!result.commands.length) {
 
-        console.log('⚠️ No commands found in response, no execution will be performed.');
-
         /**
          *  check if there was a <NEED-MORE-INFO/> in the response
          *  if yes, ask the user for more info and do the prompt again
@@ -450,6 +544,8 @@ async function doPromptWithCommands(result: promptResult): Promise<string> {
             // ... need to loop back to the prompt ("chat")
         }
         else {
+            console.log('⚠️ No commands found in response, no execution will be performed.');
+
             // do the fixit prompt, because there was no command
             resultCommands = settings.fixitPrompt;
         }
@@ -493,6 +589,10 @@ async function doPromptWithCommands(result: promptResult): Promise<string> {
 }
 
 
+/**
+ * Initializes the prompt by asking the user for settings and returns the prompt
+ * @returns the prompt
+ */
 async function init(): Promise<string> {
     let driver:Driver = drivers[settings.driver];
     let askSettings = settingsArgs['ask'] ?? (process.env.ASK_SETTINGS || !settings.saveSettings);
@@ -523,7 +623,9 @@ async function init(): Promise<string> {
   -m, --model <model-name>         select model
   -t, --temp <int>                 temperature
 
-  -a, --ask                        reconfigure to ask everything again
+  -a, --agent <agent-name>         select an agent, a set of prompts for specific tasks
+
+  -q, --ask                        reconfigure to ask everything again
       --no-ask                     ... to disable
   -s, --sysenv                     allow to use the complete system environment
       --no-sysenv                  ... to disable
@@ -533,11 +635,13 @@ async function init(): Promise<string> {
   -u, --update                     update user config (save config)
   -c, --config                     config only, do not prompt. 
   -r, --reset                      reset (remove) config
+  --reset-prompts                  reset prompts only (use this after an update)
 `);
 
         console.info('');
-        console.info(`Settings config path: ${rcFilePath}`);
-        console.info(`Environment config path: ${rcEnvFilePath}`);
+        console.info(`Settings config path: ${RC_FILE}`);
+        console.info(`Environment config path: ${RC_ENVFILE}`);
+        console.info(`Agents config path: ${RC_AGENTS_PATH}`);
 
         process.exit(0);
     }
@@ -610,11 +714,37 @@ async function init(): Promise<string> {
 
         // write settings if it is asked for, or if it is not asked for but already saved to remove it
         if (settingsArgs['update'] ?? (settings.saveSettings || (!settings.saveSettings && settingsSaved))) {
-            spinner.start(`Updating settings in ${rcFilePath} ...`);
-            await writeFile(rcFilePath, JSON.stringify(settingsArgs['update'] ?? settings.saveSettings ? settings : {}, null, 2), 'utf-8');
-            spinner.success();
+
+            // make extra sure, there is a difference between settings and saveSettings or param was used to save
+            let isDiff = settingsSaved === undefined || settingsArgs['update'] || Object.keys(settings).reduce((acc, key) => acc || settings[key] !== settingsSaved[key], false);
+
+            if (isDiff) {
+                spinner.start(`Updating settings in ${RC_FILE} ...`);
+                await writeFile(RC_FILE, JSON.stringify(settingsArgs['update'] ?? settings.saveSettings ? settings : {}, null, 2), 'utf-8');
+                spinner.success();
+            }
         }
     }
+
+    //*** the following options are NOT saved, but can add to settings ***
+
+    let agentContent;
+    {//* agent
+        const agents = await getAgents();
+        let agentFile = '';
+
+        if (agents.length)
+            agentFile = settingsArgs['agent'] ? agents[0].value: await select({ message: 'Select an agent:', choices: [{ name: '- none -', value: '' }, ...agents ] });
+        
+        if (agentFile) {
+            agentContent = await readFile(agentFile, 'utf-8').catch(_ => undefined);
+            // get from file content the content from after the second '---' if available or everything from the beginning (if formating is broken)
+            agentContent = '**Very important master rules, that must be followed and can overrule the rules from before:**\n' + (agentContent.split('---\n')[2] || agentContent);
+        }
+    }
+
+    
+    //*** now its execution time ***
     
     let prompt;
     {//* user prompt
@@ -635,6 +765,8 @@ async function init(): Promise<string> {
         // apply system env to system prompt or clean up the placeholder
         settings.systemPrompt = settings.systemPrompt.replaceAll('{{useAllSysEnv}}', settings.useAllSysEnv ? `- You are running on (system environment): ${JSON.stringify(process.env)}` : '');
 
+        settings.systemPrompt = settings.systemPrompt.replaceAll('{{useAgent}}', agentContent ? `---\n${agentContent}\n---\n` : '');
+
         DEBUG_OUTPUT_SYSTEMPROMPT && console.log('DEBUG\n', 'systemPrompt:', settings.systemPrompt);
     }
 
@@ -642,7 +774,7 @@ async function init(): Promise<string> {
 }
 
 
-// MAIN
+//* MAIN
 {
     let prompt = await init();
 

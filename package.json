@@ -1,6 +1,6 @@
 {
   "name": "baio",
-  "version": "1.0.9",
+  "version": "1.0.10",
   "description": "Simple AI operator for the CLI, for any LLM",
   "main": "index.ts",
   "type": "module",
@@ -19,7 +19,11 @@
   },
   "scripts": {
     "start": "node --no-warnings=ExperimentalWarning --env-file-if-exists=.env index.ts",
-    "test": "echo \"Error: no test specified\" && exit 1"
+    "test": "node ./bin/baio",
+    "config:create": "node ./bin/baio --config --update --no-ask",
+    "config:remove": "node ./bin/baio --config --reset --no-ask",
+    "test:prompts": "node ./bin/baio --config --reset-prompts --no-ask --agent ChickenTalk",
+    "postinstall": "node ./bin/baio --config --no-ask"
   },
   "bin": {
     "baio": "bin/baio"
@@ -39,7 +43,7 @@
     "typescript"
   ],
   "devDependencies": {
-    "@types/node": "^22.14.0"
+    "@types/node": "^22.14.1"
   },
   "dependencies": {
     "@inquirer/prompts": "^7.4.1",

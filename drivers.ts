@@ -108,7 +108,7 @@ const drivers = {
                     ...(this.apiKey ? {'Authorization': `Bearer ${this.apiKey}`} : {}),
                 },
                 body: JSON.stringify<OpenAiRequest>({
-                    model: settings.model,
+                    model: settings.model || this.defaultModel,
                     options: {
                         ... (settings.temperature > 0 ? { temperature: settings.temperature } : {}),
                     },
@@ -179,7 +179,7 @@ const drivers = {
         async getChatResponse(settings: Settings, history: any[], prompt: string): Promise<ChatResponse> {
             let resultOrig;
 
-            const response = await fetch(this.getUrl(this.urlChat, settings.model), {
+            const response = await fetch(this.getUrl(this.urlChat, settings.model || this.defaultModel), {
                 method: 'POST',
                 headers: {
                     'Content-Type': 'application/json',

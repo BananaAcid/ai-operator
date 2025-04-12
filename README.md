@@ -21,24 +21,6 @@ It connects directly to the REST API endpoints of Ollama, OpenAI, GoogleAI (Gemi
 Yes, a more reliable way would be to use AIs that support "tooling" (which are usually big AIs)
 - ... the tooling commands would then be as separate data from the response message
 
-## Usage Notes
-
-To get data from a REST api (an url), tell it to get a property from the api url (this should trigger a command with `curl`).
-
-To get website text content in a meaningfull way, install Links2 and let it call the website.
-
-- Links2, windows download: http://links.twibright.com/download/binaries/win32/ (`links -html-numbered-links 1 -dump https://...`)
-  - powershell: add `function links2-dump($url) { . "C:\Program Files\Links\links.exe" "-html-numbered-links" 1 -dump $url }` to your `$PROFILE` file and let it be called from the operator: `links2-dump("https://...")`
-  - other OSs do have them at their default package managers
-
-Alternatives:
-- elinks, download: https://github.com/rkd77/elinks/releases (`elinks -dump 1 https://...`)
-- lynx,  (`lynx -width=200 -dump "https://..."`)
-- readability-cli, project: https://gitlab.com/gardenappl/readability-cli (`npx readability-cli -l force --properties text-content https://...`) (has problems with stylesheets and generates errors in the output)
-- browsh, project: https://www.brow.sh/docs/introduction/ (connects to a running firefox instance)
-
-To have it do, what it can't, tell it to use powershell or write to a powerhell script, then let it execute the script.
-
 ## Install
 ```bash
 npm -g baio
@@ -53,7 +35,7 @@ GEMINI_API_KEY=abcdefg1234567890 baio
 $env:GEMINI_API_KEY='abcdefg1234567890' ; baio
 ```
 
-or ask it directly without extra prompting (env must be set)
+or ask it directly without extra prompting (key env must be set)
 ```bash
 baio "list all files"
 ```
@@ -67,11 +49,31 @@ Setting the api key before running the command, will only work until the termina
 
 You should add the keys to your Profile (Win, MacOS, Linux), or in the `.bashenvrc` (see below: Env Config).
 
+### or locally within the project folder
+
+For development, within the projects folder use:
+
+```bash
+npm start
+```
+
+For testing:
+```bash
+node bin/baio
+```
+
+
+## Usage Notes
+
+**Info:**
+
+Subseqent starts, after `Automatically use same settings next time:` **`yes`** will just prompt and show no extra info.
+
 **Note:**
 
-If you unselect the commands (press spacebar) and no command is left and you press enter, you get a text prompt to be able to write anything else.
+If you unselect the suggested commands (press spacebar or a) so no command is selected anymore and you press enter, you get a text prompt to be able to provide more info (if the suggestions are crap) or to change what should happen next.
 
-Useful if the AI wants to execute the same command over and over again.
+Useful if the AI wants to execute the same command over and over again or just doesn't get it right. (You could tell it to look it up online or tell it what command or file to use.)
 
 **Note 2:**
 
@@ -89,25 +91,30 @@ Saving settings will directly go to the prompt on next launch, and will not ask 
 
 You can set `INVOKING_SHELL` to the binary or env name of the shell to be used for execution to overwrite the currently used one (or if it constantly uses the wrong one)
 
+**Note 5:**
 
-### or locally within the project folder
+To get data from a REST API (an url), tell it to get a property from the API url (this should trigger a command with `curl`).
 
-For development, within the projects folder use:
+To get website text content in a meaningfull way (and with a little amount of tokens), install Links2 and let it call the website.
 
-```bash
-npm start
-```
+- Links2, windows download: http://links.twibright.com/download/binaries/win32/ (`links -html-numbered-links 1 -dump https://...`)
+  - powershell: add `function links2-dump($url) { . "C:\Program Files\Links\links.exe" "-html-numbered-links" 1 -dump $url }` to your `$PROFILE` file and let it be called from the operator: `links2-dump("https://...")`
+  - other OSs do have them at their default package managers
 
-For testing:
-```bash
-node bin/baio
-```
+Alternatives:
+- elinks, download: https://github.com/rkd77/elinks/releases (`elinks -dump 1 https://...`)
+- lynx,  (`lynx -width=200 -dump "https://..."`)
+- readability-cli, project: https://gitlab.com/gardenappl/readability-cli (`npx readability-cli -l force --properties text-content https://...`) (has problems with stylesheets and generates errors in the output)
+- browsh, project: https://www.brow.sh/docs/introduction/ (connects to a running firefox instance)
 
-### `drivers.ts`
+**Note 6:**
 
-This file holds Ollama, OpenAI and Googles API in simple selfcontained files.
+To have it do, what it can't, tell it to use powershell or write to a powerhell script, then let it execute the script.
 
-No dependencies are used: it uses `fetch()` to connect to the REST API endpoints of the mentioned APIs.
+
+### Agents
+
+You can ask to create an `@agent`. It will ask for prompts that will make the agent and will save them in the user's home folder in `.baio/agents/`. Example: `create an @agent` or `create an @agent where you talk like a chicken`
 
 
 ## Env Config
@@ -135,7 +142,7 @@ The Only difference when using the Ollama driver vs the OpenAI driver to connect
 
 **Note:**
 
-These env variables can be set at the user's homefolder in `.baioenvrc` and will be loaded in the beginning.
+These env variables can be set at the user's home folder in `.baioenvrc` and will be loaded in the beginning.
 
 bash:
 ```bash
@@ -165,7 +172,7 @@ This where you are able to modify the system prompt and last selected settings.
 
 ## Shell arguments
 ```
-baio [-vhdmtaseucr] ["prompt string"]
+baio [-vhdmtqseucr] ["prompt string"]
 
   -v, --version
   -h, -?, --help
@@ -173,8 +180,10 @@ baio [-vhdmtaseucr] ["prompt string"]
   -d, --driver <api-driver>        select driver (ollama, openai, googleai)
   -m, --model <model-name>         select model
   -t, --temp <int>                 temperature
+
+  -a, --agent <agent-name>         select an agent, a set of prompts for specific tasks
   
-  -a, --ask                        reconfigure to ask everything again
+  -q, --ask                        ask every setting again
       --no-ask                     ... to disable
   -s, --sysenv                     allow to use the complete system environment
       --no-sysenv                  ... to disable
@@ -184,10 +193,12 @@ baio [-vhdmtaseucr] ["prompt string"]
   -u, --update                     update user config (save config)
   -c, --config                     config only, do not prompt.
   -r, --reset                      reset (remove) config
+  --reset-prompts                  reset prompts only (use this after an update)
 
 
 Settings config path: ................../.baiorc
 Environment config path: ................../.baioenvrc
+Agents config path: ................../.baio/agents/
 ```
 
 
@@ -202,6 +213,16 @@ DEBUG_OUTPUT_SYSTEMPROMPT=<boolean>
 ```
 
 `DEBUG_SYSTEMPROMPT` prompts you to optionally overwrite the system prompt. And it outputs it (all of it). And it would be saved if modified and `automatically use settings next time` is selected.
+
+
+## `drivers.ts`
+
+This file holds Ollama, OpenAI and Googles API in simple selfcontained files.
+
+No dependencies are used: it uses `fetch()` to connect to the REST API endpoints of the mentioned APIs.
+
+Feel free to use these in your projects.
+
 
 ## Helper
 
@@ -250,3 +271,12 @@ while [ $(jobs -p | wc -l) -gt 0 ]; do
     sleep 1
 done
 ```
+
+## Main Changes
+
+I am mainly using `GEMINI 2.0 Flash` for prompt engineering. Feel free to send in optimized versions as issues.
+
+
+| Version | Change Description |
+|---------|---|
+| v1.0.10 | Argument change: `-a` to `-q`, added @agents |
