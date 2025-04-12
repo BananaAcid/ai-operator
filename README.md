@@ -6,19 +6,20 @@
 
 It connects directly to the REST API endpoints of Ollama, OpenAI, GoogleAI (Gemini) and does not use the AI-Tools mechanism so it will work on any AI. The only dependencies are for the CLI interface. (And tsx for the time being to run the bin.)
 
-1. tell the api it is creating commands and will execute them if it writes them as `<CMD>...</CMD>` in its answers
+### internal proccess
+1. Tellng the api (using its systemprompt) to create commands and it will execute them if it writes them as `<CMD>...</CMD>` in its answers
 
-2. get the AI text:
+2. Get the AI response:
     - extract the strings within the `<CMD>...</CMD>` tags
-    - execute the commands (for simplicity, each command is spawned in a new shell context)
+    - execute the commands locally (for simplicity, each command is spawned in a new shell context)
 
-3. return the results as text to the API
+3. return the execution results as text to the API
     - ... this will work with any AI, as long as it folows the rules for creating commands and processing the results
 
 **Note:**
 
-A more reliable way would be to use AIs that support "tooling" (which are usually big AIs)
-- ... the tooling commands would be as seperate data from the test message in the JSON response
+Yes, a more reliable way would be to use AIs that support "tooling" (which are usually big AIs)
+- ... the tooling commands would then be as separate data from the response message
 
 ## Usage Notes
 
@@ -28,10 +29,11 @@ To get website text content in a meaningfull way, install Links2 and let it call
 
 - Links2, windows download: http://links.twibright.com/download/binaries/win32/ (`links -html-numbered-links 1 -dump https://...`)
   - powershell: add `function links2-dump($url) { . "C:\Program Files\Links\links.exe" "-html-numbered-links" 1 -dump $url }` to your `$PROFILE` file and let it be called from the operator: `links2-dump("https://...")`
+  - other OSs do have them at their default package managers
 
 Alternatives:
 - elinks, download: https://github.com/rkd77/elinks/releases (`elinks -dump 1 https://...`)
-- lynx, download? (`lynx -width=200 -dump "https://..."`)
+- lynx,  (`lynx -width=200 -dump "https://..."`)
 - readability-cli, project: https://gitlab.com/gardenappl/readability-cli (`npx readability-cli -l force --properties text-content https://...`) (has problems with stylesheets and generates errors in the output)
 - browsh, project: https://www.brow.sh/docs/introduction/ (connects to a running firefox instance)
 
@@ -51,7 +53,7 @@ GEMINI_API_KEY=abcdefg1234567890 baio
 $env:GEMINI_API_KEY='abcdefg1234567890' ; baio
 ```
 
-or ask it directly (env must be set)
+or ask it directly without extra prompting (env must be set)
 ```bash
 baio "list all files"
 ```
@@ -75,16 +77,13 @@ Useful if the AI wants to execute the same command over and over again.
 
 If you saved the settings, but you want to be able to be asked again, use:
 ```bash
-# MacOS, Linux
-ASK_SETTINGS=true baio
-
-# powershell
-$env:ASK_SETTINGS='true' ; baio
+# MacOS, Linux, Powershell, CMD
+baio --ask
 ```
 
 **Note 3:**
 
-Saving settings will directly trigger the prompt on next launch, and will not ask for any options.
+Saving settings will directly go to the prompt on next launch, and will not ask for any options.
 
 **Note 4:**
 
@@ -122,6 +121,7 @@ OPENAI_URL=
 GEMINI_URL=
 
 INVOKING_SHELL=
+ASK_SETTINGS=
 ```
 
 - `OLLAMA_API_KEY` defaults to '' and is not required for a local instance
@@ -129,6 +129,7 @@ INVOKING_SHELL=
 - `OPENAI_URL` defaults to the default server of OpenAI (but could be any OpenAI compatible server URL)
 - `GEMINI_URL` defaults to the default server of google's API `https://generativelanguage.googleapis.com/v1beta` (not v1, because v1 is missing the systemprompt option)
 - `INVOKING_SHELL` defaults to the currently used one (from which baio is called) or falls back to the system defined default one.
+- `ASK_SETTINGS` defaults to the true or the selected setting (use this to always force to ask for the setting)
 
 The Only difference when using the Ollama driver vs the OpenAI driver to connect to a Ollama instance is the details in the models selection. The Ollama driver will use the OpenAI driver for all other functions.
 
@@ -144,6 +145,18 @@ powershell:
 ```powershell
 echo "GEMINI_API_KEY=abcdefg1234567" >> $env:USERPROFILE\.baioenvrc
 ```
+
+**Note:**
+You can set an env temporarily before running baio:
+
+```bash
+# MacOS, Linux
+OLLAMA_API_KEY=sdfghjk45678 OLLAMA_URL=http://localhost:11434 baio
+
+# powershell
+$env:OLLAMA_API_KEY='sdfghjk45678' ; $env:OLLAMA_URL='http://localhost:11434' ; baio
+``
+
 
 ### Selected settings
 ... are saved in the user's home folder in `.baiorc`
