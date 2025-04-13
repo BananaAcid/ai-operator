@@ -162,7 +162,7 @@ OLLAMA_API_KEY=sdfghjk45678 OLLAMA_URL=http://localhost:11434 baio
 
 # powershell
 $env:OLLAMA_API_KEY='sdfghjk45678' ; $env:OLLAMA_URL='http://localhost:11434' ; baio
-``
+```
 
 
 ### Selected settings
@@ -279,4 +279,4 @@ I am mainly using `GEMINI 2.0 Flash` for prompt engineering. Feel free to send i
 
 | Version | Change Description |
 |---------|---|
-| v1.0.10 | Argument change: `-a` to `-q`, added @agents |
+| v1.0.11 | Argument change: `-a` to `-q`, added @agents |
