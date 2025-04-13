@@ -179,10 +179,11 @@ baio [-vhdmtqseucr] ["prompt string"]
   
   -d, --driver <api-driver>        select driver (ollama, openai, googleai)
   -m, --model <model-name>         select model
-  -t, --temp <int>                 temperature
+  -t, --temp <float>               temperature e.g. 0.7 (0 for model default)
 
   -a, --agent <agent-name>         select an agent, a set of prompts for specific tasks
-  
+  -a *, --agent *                  ask for agent with list, even if it would not
+
   -q, --ask                        ask every setting again
       --no-ask                     ... to disable
   -s, --sysenv                     allow to use the complete system environment

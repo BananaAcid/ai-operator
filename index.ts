@@ -258,8 +258,9 @@ let settingsDefault: Settings = {
     version: packageJSON.version,
 };
 
+
 //* handle updating prompts / resetting prompts
-if (settingsSaved !== undefined && !settingsArgs['reset-prompts'] && !settingsArgs['reset'] && (!settingsSaved.version || (settingsSaved.version && settingsSaved.version !== settingsDefault.version))) {
+if (settingsSaved !== undefined && !settingsArgs['version'] && !settingsArgs['help'] && !settingsArgs['reset-prompts'] && !settingsArgs['reset'] && (!settingsSaved.version || (settingsSaved.version && settingsSaved.version !== settingsDefault.version))) {
     if (settingsDefault.defaultPrompt !== settingsSaved.defaultPrompt || settingsDefault.fixitPrompt !== settingsSaved.fixitPrompt || settingsDefault.systemPrompt !== settingsSaved.systemPrompt) {
         settingsArgs['reset-prompts'] = await toggle({ message: `Update saved system prompts from your previous version to the current version:`, default: true });
     }
@@ -438,7 +439,7 @@ async function getAgents(): Promise<AgentSelection> {
     const agentFiles: fs.Dirent[] = [];
     for await (const file of glob('*.md', { cwd: RC_AGENTS_PATH, withFileTypes: true })) agentFiles.push(file);
     
-    if (settingsArgs['agent']) {
+    if (settingsArgs['agent'] && settingsArgs['agent'] !== '*') {
         const file = path.join(RC_AGENTS_PATH, settingsArgs['agent'] + '.md');
         //const exists = await access(file).catch(() => undefined);
 
@@ -455,7 +456,7 @@ async function getAgents(): Promise<AgentSelection> {
         agents.push({name: settingsArgs['agent'], value: file});
     }
     else {
-        
+        if (settingsArgs['agent']) settingsArgs['agent'] = null;
         agents = agentFiles.map(file => ({ name: file.name.replace('.md', ''), value: path.join(file.parentPath, file.name) }))
     }
 
@@ -480,11 +481,10 @@ async function doCommands(commands: string[]): Promise<string> {
         // execute command mith node and a promise and wait
         let result = await new Promise((resolve, reject) => {
             const child = exec(command, {shell: getInvokingShell() }, (error, stdout, stderr) => {
-                if (error) {
+                if (error)
                     reject(error);
-                } else {
+                else
                     resolve(stdout);
-                }
             });
         })
         .then(stdout => '<CMD-OUTPUT>' + stdout + '</CMD-OUTPUT>')
@@ -563,7 +563,6 @@ async function doPromptWithCommands(result: promptResult): Promise<string> {
             return resultCommands;
         }
 
-        //const execNow = await toggle({ message: 'Execute commands now?', default: false });
         const execNow = true;
 
         if (execNow) {
@@ -621,9 +620,10 @@ async function init(): Promise<string> {
 
   -d, --driver <api-driver>        select driver (ollama, openai, googleai)
   -m, --model <model-name>         select model
-  -t, --temp <int>                 temperature
+  -t, --temp <float>               temperature e.g. 0.7 (0 for model default)
 
   -a, --agent <agent-name>         select an agent, a set of prompts for specific tasks
+  -a *, --agent *                  ask for agent with list, even if it would not
 
   -q, --ask                        reconfigure to ask everything again
       --no-ask                     ... to disable
@@ -726,7 +726,9 @@ async function init(): Promise<string> {
         }
     }
 
+    
     //*** the following options are NOT saved, but can add to settings ***
+
 
     let agentContent;
     {//* agent
@@ -734,7 +736,7 @@ async function init(): Promise<string> {
         let agentFile = '';
 
         if (agents.length)
-            agentFile = settingsArgs['agent'] ? agents[0].value: await select({ message: 'Select an agent:', choices: [{ name: '- none -', value: '' }, ...agents ] });
+            agentFile = settingsArgs['agent'] ? agents[0].value : (!askSettings && settingsArgs['agent']!==null ? '' : await select({ message: 'Select an agent:', choices: [{ name: '- none -', value: '' }, ...agents ] }));
         
         if (agentFile) {
             agentContent = await readFile(agentFile, 'utf-8').catch(_ => undefined);
@@ -746,6 +748,7 @@ async function init(): Promise<string> {
     
     //*** now its execution time ***
     
+
     let prompt;
     {//* user prompt
         if (settingsArgs['config']) process.exit(0);

@@ -23,7 +23,8 @@
     "config:create": "node ./bin/baio --config --update --no-ask",
     "config:remove": "node ./bin/baio --config --reset --no-ask",
     "test:prompts": "node ./bin/baio --config --reset-prompts --no-ask --agent ChickenTalk",
-    "postinstall": "node ./bin/baio --config --no-ask"
+    "postinstall": "npm run updatecheck",
+    "updatecheck": "node ./bin/baio --config --no-ask"
   },
   "bin": {
     "baio": "bin/baio"
