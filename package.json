@@ -31,6 +31,8 @@
   "keywords": [
     "ai",
     "operator",
+    "agent",
+    "aiagent",
     "node",
     "nodejs",
     "rest",
@@ -40,7 +42,11 @@
     "chatgpt",
     "googleai",
     "es6",
-    "typescript"
+    "typescript",
+    "ts",
+    "cli",
+    "terminal",
+    "ki"
   ],
   "devDependencies": {
     "@types/node": "^22.14.1"
