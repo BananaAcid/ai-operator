@@ -23,6 +23,9 @@ It connects directly to the REST API endpoints of Ollama, OpenAI, Google's AI an
 Yes, a more reliable way would be to use AIs that support "tooling" (which are usually big AIs)
 
 ## Install
+
+⚠️ Make sure, you have Node JS v23.10 or newer installed.
+
 ```bash
 npm -g baio
 ```
