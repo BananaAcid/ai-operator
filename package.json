@@ -47,7 +47,9 @@
     "ts",
     "cli",
     "terminal",
-    "ki"
+    "shell",
+    "ki",
+    "copilot"
   ],
   "devDependencies": {
     "@types/node": "^22.14.1"
@@ -59,6 +61,7 @@
     "launch-editor": "^2.10.0",
     "open": "^10.1.0",
     "tsx": "^4.19.3",
+    "typescript": "^5.8.3",
     "yocto-spinner": "^0.2.1"
   },
   "overrides": {

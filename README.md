@@ -4,6 +4,8 @@
 
 ## How this works
 
+**It is a AI copilot for any of your terminals, on MacOS, Linux, Windows for GoogleAI (Gemini), OpenAI (ChatGPT), Ollama (any LLM) and OpenAI-Compatible APIs.**
+
 It connects directly to the REST API endpoints of Ollama, OpenAI, GoogleAI (Gemini) and does not use the AI-Tools mechanism so it will work on any AI. The only dependencies are related to the CLI interface. (And tsx for the time being to run the bin.)
 
 ### internal proccess
