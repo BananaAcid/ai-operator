@@ -371,3 +371,4 @@ I am mainly using `GEMINI 2.0 Flash` for prompt engineering. Feel free to send i
 |---------|---|
 | v1.0.11 | Argument change: `-a` to `-q`, added @agents |
 | v1.0.13 | Argument added: `--open`, Fix: endIfDone:false asks for next objective |
+| v1.0.15 | Changed TSX to be used implicitly from the included version |
