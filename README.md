@@ -4,29 +4,56 @@
 
 ## How this works
 
-It connects directly to the REST API endpoints of Ollama, OpenAI, GoogleAI (Gemini) and does not use the AI-Tools mechanism so it will work on any AI. The only dependencies are for the CLI interface. (And tsx for the time being to run the bin.)
+It connects directly to the REST API endpoints of Ollama, OpenAI, GoogleAI (Gemini) and does not use the AI-Tools mechanism so it will work on any AI. The only dependencies are related to the CLI interface. (And tsx for the time being to run the bin.)
 
 ### internal proccess
-1. Tellng the api (using its systemprompt) to create commands and it will execute them if it writes them as `<CMD>...</CMD>` in its answers
+1. Tellng the AI's API (using its system prompt) to create commands and it will execute them if it writes them as `<CMD>...</CMD>` in its answers
 
-2. Get the AI response:
+2. Get the AI's response:
     - extract the strings within the `<CMD>...</CMD>` tags
     - execute the commands locally (for simplicity, each command is spawned in a new shell context)
 
-3. return the execution results as text to the API
+3. Return the execution results as text to the API
     - ... this will work with any AI, as long as it folows the rules for creating commands and processing the results
 
 **Note:**
 
 Yes, a more reliable way would be to use AIs that support "tooling" (which are usually big AIs)
-- ... the tooling commands would then be as separate data from the response message
 
 ## Install
 ```bash
 npm -g baio
 ```
 
-use
+Simple setup: set any API key or settings in `.bashenvrc` (see below: Env Config)
+```bash
+baio --open env
+```
+
+**OPTIONAL:** Auto configure with GEMINI (after you entered the KEY in `--open env`), or just run `baio` and it will guide you through the options.
+```bash
+baio --reset --config --update --no-ask
+
+√ Updating settings in .../.baiorc ...
+```
+
+## Usage
+
+If env is set, just run it:
+```bash
+baio
+```
+
+If it was run once and you selected `Automatically use same settings next time:` **`yes`**, you can also use:
+```bash
+baio "list all files"
+```
+
+**Careful:** depending on your shell, you can not use specific characters as they have a special meaning (need escaping if possible). In such cases, just run `baio` and enter your prompt.
+
+### Test usage
+
+Test with setting an API key only for one time use:
 ```bash
 # MacOS, Linux
 GEMINI_API_KEY=abcdefg1234567890 baio
@@ -35,32 +62,24 @@ GEMINI_API_KEY=abcdefg1234567890 baio
 $env:GEMINI_API_KEY='abcdefg1234567890' ; baio
 ```
 
-or ask it directly without extra prompting (key env must be set)
-```bash
-baio "list all files"
-```
-
 without installation:
 ```bash
-npx -y baio "list all files"
+# MacOS, Linux
+GEMINI_API_KEY=abcdefg1234567890 npx -y baio "list all files"
+
+# powershell
+$env:GEMINI_API_KEY='abcdefg1234567890' ; npx -y baio "list all files"
 ```
 
 Setting the api key before running the command, will only work until the terminal is closed again.
 
-You should add the keys to your Profile (Win, MacOS, Linux), or in the `.bashenvrc` (see below: Env Config).
+You should add the keys to your Profile (Win, MacOS, Linux), or in the `.bashenvrc` (see below: Env Config). To open the `.bashenvrc` in an editor you can use `baio --open env`
 
-### or locally within the project folder
+## Info about API Keys (free)
 
-For development, within the projects folder use:
+Google AI gemini for free (and unlimited): https://aistudio.google.com/apikey (any google account needed) - this is the most powerful option.
 
-```bash
-npm start
-```
-
-For testing:
-```bash
-node bin/baio
-```
+Ollama is free anyways, just install it (https://ollama.com/download) and within this tool, just accept the default model.
 
 
 ## Usage Notes
@@ -142,7 +161,11 @@ The Only difference when using the Ollama driver vs the OpenAI driver to connect
 
 **Note:**
 
-These env variables can be set at the user's home folder in `.baioenvrc` and will be loaded in the beginning.
+These env variables can be set at the user's home folder in `.baioenvrc` and will be loaded in the beginning. If set in `.bashenvrc`, they will overwrite any envs set in the user profile or those set before start.
+
+To open the `.bashenvrc` in an editor you can use `baio --open env`
+
+Or Manually:
 
 bash:
 ```bash
@@ -172,29 +195,32 @@ This where you are able to modify the system prompt and last selected settings.
 
 ## Shell arguments
 ```
-baio [-vhdmtqseucr] ["prompt string"]
+baio [-vhdmtaqseucr] ["prompt string"]
 
   -v, --version
   -h, -?, --help
-  
-  -d, --driver <api-driver>        select driver (ollama, openai, googleai)
-  -m, --model <model-name>         select model
-  -t, --temp <float>               temperature e.g. 0.7 (0 for model default)
 
-  -a, --agent <agent-name>         select an agent, a set of prompts for specific tasks
-  -a *, --agent *                  ask for agent with list, even if it would not
+  -d, --driver <api-driver>    select a driver (ollama, openai, googleai)
+  -m, --model <model-name>     select a model
+  -t, --temp <float>           set a temperature, e.g. 0.7 (0 for model default)
 
-  -q, --ask                        ask every setting again
-      --no-ask                     ... to disable
-  -s, --sysenv                     allow to use the complete system environment
-      --no-sysenv                  ... to disable
-  -e, --end                        end promping if assumed done
-      --no-end                     ... to disable
+  -a, --agent <agent-name>     select an agent, a set of prompts for specific tasks
+  -a *, --agent *              ask for agent with a list, even if it would not
+
+  -q, --ask                    reconfigure to ask everything again
+      --no-ask                 ... to disable
+  -s, --sysenv                 allow to use the complete system environment
+      --no-sysenv              ... to disable
+  -e, --end                    end promping if assumed done
+      --no-end                 ... to disable
+
+  -u, --update                 update user config (save config)
+  -c, --config                 config only, do not prompt.
   
-  -u, --update                     update user config (save config)
-  -c, --config                     config only, do not prompt.
-  -r, --reset                      reset (remove) config
-  --reset-prompts                  reset prompts only (use this after an update)
+  -r, --reset                  reset (remove) config
+  --reset-prompts              reset prompts only (use this after an update)
+
+  --open <config>              open the file in the default editor or the agents path (env, config, agents)
 
 
 Settings config path: ................../.baiorc
@@ -216,13 +242,27 @@ DEBUG_OUTPUT_SYSTEMPROMPT=<boolean>
 `DEBUG_SYSTEMPROMPT` prompts you to optionally overwrite the system prompt. And it outputs it (all of it). And it would be saved if modified and `automatically use settings next time` is selected.
 
 
+## Development
+
+For development (using a `.env` within the folder), within the projects folder use:
+
+```bash
+npm start
+```
+
+For testing:
+```bash
+node bin/baio --reset-prompts ...
+```
+
+
 ## `drivers.ts`
 
 This file holds Ollama, OpenAI and Googles API in simple selfcontained files.
 
 No dependencies are used: it uses `fetch()` to connect to the REST API endpoints of the mentioned APIs.
 
-Feel free to use these in your projects.
+Feel free to use these in your own projects.
 
 
 ## Helper
@@ -281,3 +321,4 @@ I am mainly using `GEMINI 2.0 Flash` for prompt engineering. Feel free to send i
 | Version | Change Description |
 |---------|---|
 | v1.0.11 | Argument change: `-a` to `-q`, added @agents |
+| v1.0.13 | Argument added: `--open`, Fix: endIfDone:false asks for next objective |

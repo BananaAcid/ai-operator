@@ -11,13 +11,15 @@
 import packageJSON from './package.json' with { type: 'json' };
 import { exec } from 'node:child_process';
 import path from 'node:path';
-import { writeFile, readFile, unlink, glob, access } from 'node:fs/promises';
+import { writeFile, readFile, unlink, glob, access, mkdir } from 'node:fs/promises';
 import os from 'node:os';
 import { execSync } from 'node:child_process';
 import { parseArgs } from 'node:util';
 import fs from 'node:fs';
 
 import cliMd from 'cli-markdown';
+import launchEditor from 'launch-editor';
+import open from 'open';
 
 import { input, select, checkbox } from '@inquirer/prompts';
 import { default as tgl } from 'inquirer-toggle';
@@ -38,7 +40,8 @@ process.on('uncaughtException', (error) => { if (error instanceof Error && (erro
 //* File + Paths
 const RC_ENVFILE = path.join(os.homedir(), '.baioenvrc');
 const RC_FILE = path.join(os.homedir(), '.baiorc');
-const RC_AGENTS_PATH = path.join(os.homedir(), '.baio', 'agents');
+const RC_PATH = path.join(os.homedir(), '.baio');
+const RC_AGENTS_PATH = path.join(RC_PATH, 'agents');
 
 
 //* get user dot env
@@ -91,6 +94,8 @@ const args = await new Promise<ReturnType<typeof parseArgs>>(resolve => resolve(
         update:  { short: 'u', type: 'boolean' },
         reset:   { short: 'r', type: 'boolean' },
         'reset-prompts': {     type: 'boolean' },
+
+        open:    {             type: 'string'  },
     }, 
     //tokens: true,
     allowNegative: true,
@@ -246,10 +251,10 @@ let settingsDefault: Settings = {
                 tags: key1, key2, key3, and_other_keys 
                 dateCreated: isodatestr
                 ---
-                I_will_do_something_prompt_texts_here
+                You_will_do_something_prompt_texts_here
             - If asked to create an @agent, you will need to:
                 1. Ask what it should be named in a single word, and what it should do (the action will be a prompt for later use)
-                2. Create command to create a new file in the previously mentioned "User's Home Directory" in \`./.baio/agents/<agent_name>.md\` that contains the users prompt (be detailed) and will be phrased like "I do somwthing"
+                2. Create command to create a new file in the previously mentioned "User's Home Directory" in \`./.baio/agents/<agent_name>.md\` that contains the users prompt (elaborate on the action) and will be phrased like "You will do something"
 
         {{useAgent}}
 
@@ -260,9 +265,13 @@ let settingsDefault: Settings = {
 
 
 //* handle updating prompts / resetting prompts
-if (settingsSaved !== undefined && !settingsArgs['version'] && !settingsArgs['help'] && !settingsArgs['reset-prompts'] && !settingsArgs['reset'] && (!settingsSaved.version || (settingsSaved.version && settingsSaved.version !== settingsDefault.version))) {
+if (settingsSaved !== undefined && !settingsArgs['version'] && !settingsArgs['help'] && !settingsArgs['reset-prompts'] && !settingsArgs['reset'] && !settingsArgs['open'] && (!settingsSaved.version || (settingsSaved.version && settingsSaved.version !== settingsDefault.version))) {
     if (settingsDefault.defaultPrompt !== settingsSaved.defaultPrompt || settingsDefault.fixitPrompt !== settingsSaved.fixitPrompt || settingsDefault.systemPrompt !== settingsSaved.systemPrompt) {
-        settingsArgs['reset-prompts'] = await toggle({ message: `Update saved system prompts from your previous version to the current version:`, default: true });
+        const isNonInteractive = !process.stdin.isTTY; /* || process.env.npm_lifecycle_event === 'postinstall' || process.env.npm_lifecycle_event === 'install'; */
+        if (isNonInteractive)
+            console.info('The system propmpts have been updated. To update saved system prompts from your previous version to the current version, use: `baio --reset-prompts`' );
+        else
+            settingsArgs['reset-prompts'] = await toggle({ message: `Update saved system prompts from your previous version to the current version:`, default: true });
     }
 }
 
@@ -543,6 +552,10 @@ async function doPromptWithCommands(result: promptResult): Promise<string> {
 
             // ... need to loop back to the prompt ("chat")
         }
+        else if(result.isEnd) {
+            // the main loop decided not to exit (settings.endIfDone == false), so we ask for more info
+            resultCommands = await input({ message: 'What do you want to do next:' });
+        }
         else {
             console.log('⚠️ No commands found in response, no execution will be performed.');
 
@@ -602,6 +615,55 @@ async function init(): Promise<string> {
         process.exit(0);
     }
 
+    if (settingsArgs['open'])
+    {
+        console.info(packageJSON.name,'v' + packageJSON.version);
+
+        switch (settingsArgs['open']) {
+
+            // launchEditor: open files that do no exist is not possible
+            // https://github.com/yyx990803/launch-editor/issues/93
+
+            case 'env':
+                if (!fs.existsSync(RC_ENVFILE)) writeFile(RC_ENVFILE, '# To enable the Google API (GEMINI) key, remove the "#" and enter a correct key\n#GEMINI_API_KEY=abcdefg1234567890', 'utf-8');
+                console.info(`✔ Opening ${RC_ENVFILE}`);
+                launchEditor(RC_ENVFILE, (f,e) => console.error(e, f));
+                await new Promise(resolve => setTimeout(resolve, 5000)); // windows explorer needs some time to start up ...
+
+                break;
+
+            case 'config':
+                if (!fs.existsSync(RC_FILE)) {
+                    console.error(`🛑 You have to run at least once and choose to 'Automatically use same settings next time' or use --update, for ${RC_FILE} to exist`);
+                    process.exit(1);
+                }
+                console.info(`✔ Opening ${RC_FILE}`);
+                launchEditor(RC_FILE);
+                break;
+
+            //? special hidden case, will only work if an editor is open that supports opening folders, like vscode / sublime / textwrangler
+            case 'pathfiles': 
+                mkdir(RC_PATH, { recursive: true }).catch(() => {});
+                console.info(`✔ Opening ${RC_PATH}`);
+                launchEditor(RC_PATH);
+                break;
+
+            case 'agents':
+                mkdir(RC_AGENTS_PATH, { recursive: true }).catch(() => {});
+                console.info(`✔ Opening ${RC_AGENTS_PATH}`);
+                await open(RC_AGENTS_PATH); // await does not wait for subprocess to finish spawning
+                await new Promise(resolve => setTimeout(resolve, 1000)); // windows explorer needs some time to start up ...
+                break;
+
+            default:
+                console.error(`🛑 Unknown option: ${settingsArgs['open']}`);
+        }
+
+        // give launchEditor a chance to spawn the editor proccess
+        await new Promise(resolve => setTimeout(resolve, 100));
+        process.exit(0);
+    }
+
     if (settingsArgs['help'])
     {
         console.info(packageJSON.name,'v' + packageJSON.version);
@@ -613,29 +675,32 @@ async function init(): Promise<string> {
         console.info(packageJSON.homepage);
         console.info('\n');
 
-        console.info(`baio [-vhdmtaseucr] ["prompt string"]
+        console.info(`baio [-vhdmtaqseucr] ["prompt string"]
 
   -v, --version
   -h, -?, --help
 
-  -d, --driver <api-driver>        select driver (ollama, openai, googleai)
-  -m, --model <model-name>         select model
-  -t, --temp <float>               temperature e.g. 0.7 (0 for model default)
+  -d, --driver <api-driver>    select a driver (ollama, openai, googleai)
+  -m, --model <model-name>     select a model
+  -t, --temp <float>           set a temperature, e.g. 0.7 (0 for model default)
 
-  -a, --agent <agent-name>         select an agent, a set of prompts for specific tasks
-  -a *, --agent *                  ask for agent with list, even if it would not
+  -a, --agent <agent-name>     select an agent, a set of prompts for specific tasks
+  -a *, --agent *              ask for agent with a list, even if it would not
 
-  -q, --ask                        reconfigure to ask everything again
-      --no-ask                     ... to disable
-  -s, --sysenv                     allow to use the complete system environment
-      --no-sysenv                  ... to disable
-  -e, --end                        end promping if assumed done
-      --no-end                     ... to disable
+  -q, --ask                    reconfigure to ask everything again
+      --no-ask                 ... to disable
+  -s, --sysenv                 allow to use the complete system environment
+      --no-sysenv              ... to disable
+  -e, --end                    end promping if assumed done
+      --no-end                 ... to disable
 
-  -u, --update                     update user config (save config)
-  -c, --config                     config only, do not prompt. 
-  -r, --reset                      reset (remove) config
-  --reset-prompts                  reset prompts only (use this after an update)
+  -u, --update                 update user config (save config)
+  -c, --config                 config only, do not prompt.
+
+  -r, --reset                  reset (remove) config
+  --reset-prompts              reset prompts only (use this after an update)
+
+  --open <config>              open the file in the default editor or the agents path (env, config, agents)
 `);
 
         console.info('');

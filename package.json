@@ -1,6 +1,6 @@
 {
   "name": "baio",
-  "version": "1.0.12",
+  "version": "1.0.13",
   "description": "Simple AI operator for the CLI, for any LLM",
   "main": "index.ts",
   "type": "module",
@@ -56,7 +56,17 @@
     "@inquirer/prompts": "^7.4.1",
     "cli-markdown": "^3.4.0",
     "inquirer-toggle": "^1.0.1",
+    "launch-editor": "^2.10.0",
+    "open": "^10.1.0",
     "tsx": "^4.19.3",
     "yocto-spinner": "^0.2.1"
+  },
+  "overrides": {
+    "cli-html": {
+      "term-size": "terminal-size"
+    }
+  },
+  "resolutions": {
+    "cli-html/term-size": "terminal-size"
   }
 }
