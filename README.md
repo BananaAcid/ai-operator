@@ -88,52 +88,83 @@ Ollama is free anyways, just install it (https://ollama.com/download) and within
 
 Subseqent starts, after `Automatically use same settings next time:` **`yes`** will just prompt and show no extra info.
 
-**Note:**
+### You do not want to execute any suggested command, but a prompt
 
 If you unselect the suggested commands (press spacebar or a) so no command is selected anymore and you press enter, you get a text prompt to be able to provide more info (if the suggestions are crap) or to change what should happen next.
 
 Useful if the AI wants to execute the same command over and over again or just doesn't get it right. (You could tell it to look it up online or tell it what command or file to use.)
 
-**Note 2:**
+
+### I want to edit the settings / env
+
+```bash
+baio --help
+```
+
+will list the paths.
+
+These can be opened with
+```
+baio --open env
+baio --open config
+baio --open agents
+```
+
+### You want to do multiple tasks without loosing the context
+
+Use `--no-end` or choose `End if assumed done:` **`no`** to keep it running. It will ask what to do next if it thinks it completed a task.
+
+### Agents
+
+You can ask to create an `@agent`. It will ask for prompts that will make the agent and will save them in the user's home folder in `.baio/agents/`. 
+
+Example: `create an @agent` or `create an @agent (name: ChickenTalker) where you talk like a chicken`
+
+To be able to select an agent, while not to ask for all settings, you can use `--agent *` or `-a *`
+
+Example: `baio -a *`
+
+You can open the folder in your file manager to edit the files using: `baio --open agents`
+
+### Do not ask for settings every time
+
+Saving settings with `Automatically use same settings next time:` **`yes`** (or `--update`)  will directly go to the prompt on next launch, and will not ask for any options.
+
+Or use `baio --no-ask`
+
+### ... Ask again
 
 If you saved the settings, but you want to be able to be asked again, use:
 ```bash
-# MacOS, Linux, Powershell, CMD
 baio --ask
 ```
 
-**Note 3:**
+### Wrong shell for suggested commands
 
-Saving settings will directly go to the prompt on next launch, and will not ask for any options.
+You can set the environemnt variable `INVOKING_SHELL` to the binary or env name of the shell to be used for execution to overwrite the currently used one (or if it constantly uses the wrong one)
+See below: Env Config.
 
-**Note 4:**
+### How to get internet data
 
-You can set `INVOKING_SHELL` to the binary or env name of the shell to be used for execution to overwrite the currently used one (or if it constantly uses the wrong one)
+#### JSON:
+To get data from a **REST API** (json from an url), tell it to get a property from the API url (this should trigger a command with `curl`).
 
-**Note 5:**
-
-To get data from a REST API (an url), tell it to get a property from the API url (this should trigger a command with `curl`).
-
+#### Website:
 To get website text content in a meaningfull way (and with a little amount of tokens), install Links2 and let it call the website.
 
 - Links2, windows download: http://links.twibright.com/download/binaries/win32/ (`links -html-numbered-links 1 -dump https://...`)
   - powershell: add `function links2-dump($url) { . "C:\Program Files\Links\links.exe" "-html-numbered-links" 1 -dump $url }` to your `$PROFILE` file and let it be called from the operator: `links2-dump("https://...")`
   - other OSs do have them at their default package managers
 
-Alternatives:
+Alternative tools to install:
 - elinks, download: https://github.com/rkd77/elinks/releases (`elinks -dump 1 https://...`)
 - lynx,  (`lynx -width=200 -dump "https://..."`)
 - readability-cli, project: https://gitlab.com/gardenappl/readability-cli (`npx readability-cli -l force --properties text-content https://...`) (has problems with stylesheets and generates errors in the output)
 - browsh, project: https://www.brow.sh/docs/introduction/ (connects to a running firefox instance)
 
-**Note 6:**
+### It doesnt know how to do something
 
 To have it do, what it can't, tell it to use powershell or write to a powerhell script, then let it execute the script.
-
-
-### Agents
-
-You can ask to create an `@agent`. It will ask for prompts that will make the agent and will save them in the user's home folder in `.baio/agents/`. Example: `create an @agent` or `create an @agent where you talk like a chicken`
 
 
 ## Env Config

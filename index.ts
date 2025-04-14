@@ -281,7 +281,7 @@ let settings: Settings = {
     ...settingsDefault,
     ...settingsSaved ?? {},
     // only add settingsArgs if the key is already in settingsDefault (filters out version and others)
-    ...Object.entries(settingsDefault).reduce((acc, [k, v]) => settingsArgs[k] ? { ...acc, [k]: settingsArgs[k] } : acc, {}),
+    ...Object.entries(settingsDefault).reduce((acc, [k, v]) => settingsArgs[k] !== undefined ? { ...acc, [k]: settingsArgs[k] } : acc, {}),
     // handle --reset-prompts 
     ...(settingsArgs['reset-prompts'] ? {defaultPrompt: settingsDefault.defaultPrompt, fixitPrompt: settingsDefault.fixitPrompt, systemPrompt: settingsDefault.systemPrompt, version: settingsDefault.version } : {}),
 };
