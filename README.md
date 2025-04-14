@@ -4,7 +4,7 @@
 
 ## How this works
 
-**It is a AI copilot for any of your terminals, on MacOS, Linux, Windows for GoogleAI (Gemini), OpenAI (ChatGPT), Ollama (any LLM) and OpenAI-Compatible APIs.**
+**It is an AI copilot for any of your terminals, on MacOS, Linux, Windows for GoogleAI (Gemini), OpenAI (ChatGPT), Ollama (any LLM) and OpenAI-Compatible APIs.**
 
 It connects directly to the REST API endpoints of Ollama, OpenAI, GoogleAI (Gemini) and does not use the AI-Tools mechanism so it will work on any AI. The only dependencies are related to the CLI interface. (And tsx for the time being to run the bin.)
 
@@ -27,7 +27,7 @@ Yes, a more reliable way would be to use AIs that support "tooling" (which are u
 npm -g baio
 ```
 
-Simple setup: set any API key or settings in `.bashenvrc` (see below: Env Config)
+Simple setup: set any API key or settings in `.baioenvrc` (see below: Env Config)
 ```bash
 baio --open env
 ```
@@ -75,7 +75,7 @@ $env:GEMINI_API_KEY='abcdefg1234567890' ; npx -y baio "list all files"
 
 Setting the api key before running the command, will only work until the terminal is closed again.
 
-You should add the keys to your Profile (Win, MacOS, Linux), or in the `.bashenvrc` (see below: Env Config). To open the `.bashenvrc` in an editor you can use `baio --open env`
+You should add the keys to your Profile (Win, MacOS, Linux), or in the `.baioenvrc` (see below: Env Config). To open the `.baioenvrc` in an editor you can use `baio --open env`
 
 ## Info about API Keys (free)
 
@@ -112,7 +112,7 @@ baio --open config
 baio --open agents
 ```
 
-### You want to do multiple tasks without loosing the context
+### You want to do multiple tasks without losing the context
 
 Use `--no-end` or choose `End if assumed done:` **`no`** to keep it running. It will ask what to do next if it thinks it completed a task.
 
@@ -194,9 +194,9 @@ The Only difference when using the Ollama driver vs the OpenAI driver to connect
 
 **Note:**
 
-These env variables can be set at the user's home folder in `.baioenvrc` and will be loaded in the beginning. If set in `.bashenvrc`, they will overwrite any envs set in the user profile or those set before start.
+These env variables can be set at the user's home folder in `.baioenvrc` and will be loaded in the beginning. If set in `.baioenvrc`, they will overwrite any envs set in the user profile or those set before start.
 
-To open the `.bashenvrc` in an editor you can use `baio --open env`
+To open the `.baioenvrc` in an editor you can use `baio --open env`
 
 Or Manually:
 
@@ -244,7 +244,7 @@ baio [-vhdmtaqseucr] ["prompt string"]
       --no-ask                 ... to disable
   -s, --sysenv                 allow to use the complete system environment
       --no-sysenv              ... to disable
-  -e, --end                    end promping if assumed done
+  -e, --end                    end prompting if assumed done
       --no-end                 ... to disable
 
   -u, --update                 update user config (save config)
@@ -263,7 +263,7 @@ Agents config path: ................../.baio/agents/
 
 
 ## Debugging
-The folowing environment variables can be used to output debug info. All default to false.
+The following environment variables can be used to output debug info. All default to false.
 
 ```env
 DEBUG_OUTPUT=<boolean>
