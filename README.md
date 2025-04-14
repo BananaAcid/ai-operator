@@ -4,9 +4,9 @@
 
 ## How this works
 
-**It is an AI copilot for any of your terminals, on MacOS, Linux, Windows for GoogleAI (Gemini), OpenAI (ChatGPT), Ollama (any LLM) and OpenAI-Compatible APIs.**
+**It is an AI copilot for any of your terminals, on MacOS, Linux, Windows for Google's AI (Gemini), OpenAI (ChatGPT), Ollama (any LLM) and OpenAI-Compatible APIs.**
 
-It connects directly to the REST API endpoints of Ollama, OpenAI, GoogleAI (Gemini) and does not use the AI-Tools mechanism so it will work on any AI. The only dependencies are related to the CLI interface. (And tsx for the time being to run the bin.)
+It connects directly to the REST API endpoints of Ollama, OpenAI, Google's AI and does not use the AI-Tools mechanism so it will work on any AI. The only dependencies are related to the CLI interface. (And tsx for the time being to run the bin.)
 
 ### internal process
 1. Telling the AI's API (using its system prompt) to create commands and it will execute them if it writes them as `<CMD>...</CMD>` in its answers
@@ -60,7 +60,7 @@ Test with setting an API key only for one time use:
 # MacOS, Linux
 GEMINI_API_KEY=abcdefg1234567890 baio
 
-# powershell
+# PowerShell
 $env:GEMINI_API_KEY='abcdefg1234567890' ; baio
 ```
 
@@ -69,7 +69,7 @@ without installation:
 # MacOS, Linux
 GEMINI_API_KEY=abcdefg1234567890 npx -y baio "list all files"
 
-# powershell
+# PowerShell
 $env:GEMINI_API_KEY='abcdefg1234567890' ; npx -y baio "list all files"
 ```
 
@@ -155,7 +155,7 @@ To get data from a **REST API** (json from an url), tell it to get a property fr
 To get website text content in a meaningful way (and with a little amount of tokens), install Links2 and let it call the website.
 
 - Links2, windows download: http://links.twibright.com/download/binaries/win32/ (`links -html-numbered-links 1 -dump https://...`)
-  - powershell: add `function links2-dump($url) { . "C:\Program Files\Links\links.exe" "-html-numbered-links" 1 -dump $url }` to your `$PROFILE` file and let it be called from the operator: `links2-dump("https://...")`
+  - PowerShell: add `function links2-dump($url) { . "C:\Program Files\Links\links.exe" "-html-numbered-links" 1 -dump $url }` to your `$PROFILE` file and let it be called from the operator: `links2-dump("https://...")`
   - other OSs do have them at their default package managers
 
 Alternative tools to install:
@@ -166,7 +166,7 @@ Alternative tools to install:
 
 ### It doesn't know how to do something
 
-To have it do, what it can't, tell it to use powershell or write to a powershell script, then let it execute the script.
+To have it do, what it can't, tell it to use PowerShell or write to a PowerShell script, then let it execute the script.
 
 
 ## Env Config
@@ -204,7 +204,7 @@ bash:
 ```bash
 echo "GEMINI_API_KEY=abcdefg1234567" >> $HOME/.baioenvrc
 ```
-powershell:
+PowerShell:
 ```powershell
 echo "GEMINI_API_KEY=abcdefg1234567" >> $env:USERPROFILE\.baioenvrc
 ```
@@ -216,7 +216,7 @@ You can set an env temporarily before running baio:
 # MacOS, Linux
 OLLAMA_API_KEY=sdfghjk45678 OLLAMA_URL=http://localhost:11434 baio
 
-# powershell
+# PowerShell
 $env:OLLAMA_API_KEY='sdfghjk45678' ; $env:OLLAMA_URL='http://localhost:11434' ; baio
 ```
 
