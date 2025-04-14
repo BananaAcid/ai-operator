@@ -1,10 +1,8 @@
 /**
- * node_ai_operator
- * 
- * Mainly for Ollama, commandline based
+ * BAIO - A simple AI operator for the CLI, for any LLM
  * 
  * @author Nabil Redmann <repo@bananaacid.de>
- * @license ISC
+ * @license MIT
  */
 
 //* node imports
@@ -265,10 +263,11 @@ let settingsDefault: Settings = {
 };
 
 
-//* handle updating prompts / resetting prompts
-if (settingsSaved !== undefined && !settingsArgs['version'] && !settingsArgs['help'] && !settingsArgs['reset-prompts'] && !settingsArgs['reset'] && !settingsArgs['open'] && (!settingsSaved.version || (settingsSaved.version && settingsSaved.version !== settingsDefault.version))) {
+//* handle updating prompts / resetting prompts (if it is not an arg that loads to prompting or if the versions differ)
+if (settingsSaved !== undefined && !settingsArgs['version'] && !settingsArgs['help'] && !settingsArgs['reset-prompts'] && !settingsArgs['reset'] && !settingsArgs['open'] && (settingsSaved.version !== settingsDefault.version)) {
+    //* really check if the prompts have changed
     if (settingsDefault.defaultPrompt !== settingsSaved.defaultPrompt || settingsDefault.fixitPrompt !== settingsSaved.fixitPrompt || settingsDefault.systemPrompt !== settingsSaved.systemPrompt) {
-        const isNonInteractive = !process.stdin.isTTY; /* || process.env.npm_lifecycle_event === 'postinstall' || process.env.npm_lifecycle_event === 'install'; */
+        const isNonInteractive = !process.stdin.isTTY || process.env.npm_lifecycle_event === 'postinstall' || process.env.npm_lifecycle_event === 'install';
         if (isNonInteractive)
             console.info('The system propmpts have been updated. To update saved system prompts from your previous version to the current version, use: `baio --reset-prompts`' );
         else
