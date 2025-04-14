@@ -93,12 +93,15 @@ Ollama is free anyways, just install it (https://ollama.com/download) and within
 
 Subsequent starts, after `Automatically use same settings next time:` **`yes`** will just prompt and show no extra info.
 
+### You see the commands but something is wrong
+
+Sometimes, the command output is not formatted correctly and the AI does not get the hang of it. Just exit and prompt again (this usually happens right from the beginning or not at all).
+
 ### You do not want to execute any suggested command, but a prompt
 
 If you unselect the suggested commands (press spacebar or a) so no command is selected anymore and you press enter, you get a text prompt to be able to provide more info (if the suggestions are crap) or to change what should happen next.
 
 Useful if the AI wants to execute the same command over and over again or just doesn't get it right. (You could tell it to look it up online or tell it what command or file to use.)
-
 
 ### I want to edit the settings / env
 
