@@ -8,15 +8,15 @@
 
 It connects directly to the REST API endpoints of Ollama, OpenAI, GoogleAI (Gemini) and does not use the AI-Tools mechanism so it will work on any AI. The only dependencies are related to the CLI interface. (And tsx for the time being to run the bin.)
 
-### internal proccess
-1. Tellng the AI's API (using its system prompt) to create commands and it will execute them if it writes them as `<CMD>...</CMD>` in its answers
+### internal process
+1. Telling the AI's API (using its system prompt) to create commands and it will execute them if it writes them as `<CMD>...</CMD>` in its answers
 
 2. Get the AI's response:
     - extract the strings within the `<CMD>...</CMD>` tags
     - execute the commands locally (for simplicity, each command is spawned in a new shell context)
 
 3. Return the execution results as text to the API
-    - ... this will work with any AI, as long as it folows the rules for creating commands and processing the results
+    - ... this will work with any AI, as long as it follows the rules for creating commands and processing the results
 
 **Note:**
 
@@ -88,7 +88,7 @@ Ollama is free anyways, just install it (https://ollama.com/download) and within
 
 **Info:**
 
-Subseqent starts, after `Automatically use same settings next time:` **`yes`** will just prompt and show no extra info.
+Subsequent starts, after `Automatically use same settings next time:` **`yes`** will just prompt and show no extra info.
 
 ### You do not want to execute any suggested command, but a prompt
 
@@ -143,7 +143,7 @@ baio --ask
 
 ### Wrong shell for suggested commands
 
-You can set the environemnt variable `INVOKING_SHELL` to the binary or env name of the shell to be used for execution to overwrite the currently used one (or if it constantly uses the wrong one)
+You can set the environment variable `INVOKING_SHELL` to the binary or env name of the shell to be used for execution to overwrite the currently used one (or if it constantly uses the wrong one)
 See below: Env Config.
 
 ### How to get internet data
@@ -152,7 +152,7 @@ See below: Env Config.
 To get data from a **REST API** (json from an url), tell it to get a property from the API url (this should trigger a command with `curl`).
 
 #### Website:
-To get website text content in a meaningfull way (and with a little amount of tokens), install Links2 and let it call the website.
+To get website text content in a meaningful way (and with a little amount of tokens), install Links2 and let it call the website.
 
 - Links2, windows download: http://links.twibright.com/download/binaries/win32/ (`links -html-numbered-links 1 -dump https://...`)
   - powershell: add `function links2-dump($url) { . "C:\Program Files\Links\links.exe" "-html-numbered-links" 1 -dump $url }` to your `$PROFILE` file and let it be called from the operator: `links2-dump("https://...")`
@@ -164,9 +164,9 @@ Alternative tools to install:
 - readability-cli, project: https://gitlab.com/gardenappl/readability-cli (`npx readability-cli -l force --properties text-content https://...`) (has problems with stylesheets and generates errors in the output)
 - browsh, project: https://www.brow.sh/docs/introduction/ (connects to a running firefox instance)
 
-### It doesnt know how to do something
+### It doesn't know how to do something
 
-To have it do, what it can't, tell it to use powershell or write to a powerhell script, then let it execute the script.
+To have it do, what it can't, tell it to use powershell or write to a powershell script, then let it execute the script.
 
 
 ## Env Config
@@ -263,7 +263,7 @@ Agents config path: ................../.baio/agents/
 
 
 ## Debugging
-The folowing environemnt variables can be used to output debug info. All default to false.
+The folowing environment variables can be used to output debug info. All default to false.
 
 ```env
 DEBUG_OUTPUT=<boolean>
@@ -362,7 +362,7 @@ while [ $(jobs -p | wc -l) -gt 0 ]; do
 done
 ```
 
-## Main Changes
+## Major Changes
 
 I am mainly using `GEMINI 2.0 Flash` for prompt engineering. Feel free to send in optimized versions as issues.
 
