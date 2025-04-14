@@ -267,11 +267,27 @@ The folowing environemnt variables can be used to output debug info. All default
 DEBUG_OUTPUT=<boolean>
 DEBUG_APICALLS=<boolean>
 DEBUG_SYSTEMPROMPT=<boolean>
+DEBUG_OUTPUT_EXECUTION=<boolean>
 DEBUG_OUTPUT_SYSTEMPROMPT=<boolean>
 ```
 
 `DEBUG_SYSTEMPROMPT` prompts you to optionally overwrite the system prompt. And it outputs it (all of it). And it would be saved if modified and `automatically use settings next time` is selected.
 
+### prompt triggers
+
+To trigger these, if you are not on a prompt, you need to **unselect any command and press enter** to fall back to the prompt, **then enter** one of the following:
+
+`/exit`, `/quit`, `/q` will exit (like CTRL+D or CTRL+C).
+
+`/debug:response` will show what the API generated and what the tool understood.
+
+`/debug:exec` will show what the system got returned from the shell. It might help you debug strange situations.
+
+`/debug:get <.baiorc-key>` will get the current value of the key. If you output the system prompt, be warned: it will spam the shell output.
+
+`/debug:set <.baiorc-key> <JSON_formatted_value>` will overwrite a setting, but will not work with useAllSysEnv (is systemPrompt is already generated with this), saveSettings (saved already).
+
+`/debug:settings` will get all the current values of settings. Be warned: it will spam the shell output.
 
 ## Development
 

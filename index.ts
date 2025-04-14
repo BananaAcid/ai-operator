@@ -53,6 +53,7 @@ const RC_AGENTS_PATH = path.join(RC_PATH, 'agents');
 const DEBUG_OUTPUT = process.env.DEBUG_OUTPUT || false;
 const DEBUG_APICALLS = process.env.DEBUG_APICALLS || false;
 const DEBUG_SYSTEMPROMPT = process.env.DEBUG_SYSTEMPROMPT || false;
+const DEBUG_OUTPUT_EXECUTION = process.env.DEBUG_OUTPUT_EXECUTION || false;
 const DEBUG_OUTPUT_SYSTEMPROMPT = process.env.DEBUG_OUTPUT_SYSTEMPROMPT || false;
 
 
@@ -473,6 +474,7 @@ async function getAgents(): Promise<AgentSelection> {
 }
 
 
+let doCommandsLastResult = '';
 /**
  * Execute commands each in a serparate process and return the results as a string.
  * Each command is executed sequentially and the results are concatenated.
@@ -504,7 +506,7 @@ async function doCommands(commands: string[]): Promise<string> {
         spinner.success();
     }
 
-    return results.join('\n<-----/>\n');
+    return doCommandsLastResult = results.join('\n<-----/>\n');
 }
 
 
@@ -581,7 +583,7 @@ async function doPromptWithCommands(result: promptResult): Promise<string> {
         if (execNow) {
             resultCommands = await doCommands(commands);
 
-            DEBUG_OUTPUT && console.info('DEBUG\n', resultCommands);
+            (DEBUG_OUTPUT || DEBUG_OUTPUT_EXECUTION) && console.info('DEBUG\n', resultCommands);
 
             // ... go and evaluate the commands result
         }
@@ -598,6 +600,53 @@ async function doPromptWithCommands(result: promptResult): Promise<string> {
     }
 
     return resultCommands;
+}
+
+
+/**
+ * Evaluates a given prompt string and executes corresponding debug commands.
+ *
+ * This function checks if the provided prompt matches specific debug commands.
+ * It performs actions such as logging the result, executing stored commands,
+ * retrieving or setting configuration settings, and exiting the process.
+ *
+ * @param prompt - The command prompt string to evaluate.
+ * @param resultPrompt - The result from the API call to be potentially logged.
+ * @returns A boolean indicating whether a recognized command was executed.
+ */
+function promptTrigger(prompt: string, resultPrompt: promptResult): boolean {
+    if (prompt === '/debug:result') {
+        console.log(resultPrompt);
+        return true;
+    }
+    if (prompt === '/debug:exec') {
+        console.log(doCommandsLastResult);
+        return true;
+    }
+    if (prompt === '/debug:settings') {
+        console.log(`settings =`, settings);
+        return true;
+    }
+    if (prompt.startsWith('/debug:get ')) {
+        const key = prompt.split(/(?<!\\)\s+/)[1];
+        console.log(`settings.${key} =`, settings[key]);
+        return true;
+    }
+    if (prompt.startsWith('/debug:set ')) {
+        //* will not work with useAllSysEnv (is systemPrompt is already generated with this), saveSettings (saved already)
+        //*  /debug:set <.baiorc-key> JSON_formatted_value
+        const args = prompt.split(/(?<!\\)\s+/).filter(arg => arg.length > 0);
+        const key = args[1];
+        const value = JSON.parse(args.slice(2).join(' '));
+        if (key in settings) settings[key] = value;
+        else console.error(`Unknown setting: ${key}`);
+        return true;
+    }
+    if (prompt === '/exit' || prompt === '/quit' || prompt === '/q') {
+        process.exit(0);
+    }
+
+    return false;
 }
 
 
@@ -842,19 +891,19 @@ async function init(): Promise<string> {
 }
 
 
+
 //* MAIN
 {
     let prompt = await init();
-
     let resultPrompt: promptResult;
-
 
     while (true) {
         resultPrompt = await doPrompt(prompt);
         
         if (settings.endIfDone && resultPrompt.isEnd) break;
-
-        prompt = await doPromptWithCommands(resultPrompt);
+        
+        do prompt = await doPromptWithCommands(resultPrompt);
+        while (promptTrigger(prompt, resultPrompt));
     }
 
 
