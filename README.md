@@ -31,7 +31,7 @@ baio --open env
 ```
 
 **OPTIONAL:** Auto configure with GEMINI (after you entered the KEY in `--open env`), or just run `baio` and it will guide you through the options.
-```bash
+```
 baio --reset --config --update --no-ask
 
 √ Updating settings in .../.baiorc ...
