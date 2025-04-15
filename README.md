@@ -234,7 +234,7 @@ This where you are able to modify the system prompt and last selected settings.
 
 ## Shell arguments
 ```
-baio [-vhdmtaqseucr] ["prompt string"]
+baio [-vhdmtaqseiucr] ["prompt string"]
 
   -v, --version
   -h, -?, --help
@@ -250,16 +250,19 @@ baio [-vhdmtaqseucr] ["prompt string"]
       --no-ask                 ... to disable
   -s, --sysenv                 allow to use the complete system environment
       --no-sysenv              ... to disable
-  -e, --end                    end prompting if assumed done
+  -e, --end                    end promping if assumed done
       --no-end                 ... to disable
+
+  -i, --import <filename>      import context from a history file or list files select from
+  -i *, --import *             ask for history file with a list, even if it would not
 
   -u, --update                 update user config (save config)
   -c, --config                 config only, do not prompt.
-  
+
   -r, --reset                  reset (remove) config
   --reset-prompts              reset prompts only (use this after an update)
 
-  --open <config>              open the file in the default editor or the agents path (env, config, agents)
+  --open <config>              open the file in the default editor or the agents path (env, config, agents, history)
 
 
 Settings config path: ................../.baiorc
@@ -296,6 +299,9 @@ To trigger these, if you are not on a prompt, you need to **unselect any command
 `/debug:set <.baiorc-key> <JSON_formatted_value>` will overwrite a setting, but will not work with useAllSysEnv (is systemPrompt is already generated with this), saveSettings (saved already).
 
 `/debug:settings` will get all the current values of settings. Be warned: it will spam the shell output.
+
+`/history:export [<filename>]` will export the current context to a file with date-time as name or an optional custom filename.
+`/history:import [<filename>]` will import the context from a history file or show a file selection.
 
 ## Development
 
@@ -378,3 +384,4 @@ I am mainly using `GEMINI 2.0 Flash` for prompt engineering. Feel free to send i
 | v1.0.11 | Argument change: `-a` to `-q`, added @agents |
 | v1.0.13 | Argument added: `--open`, Fix: endIfDone:false asks for next objective |
 | v1.0.15 | Changed TSX to be used implicitly from the included version |
+| v1.0.17 | Prompt trigger added `/history:export [<filename>]` and `/history:import [<filename>]`, Argument added: `--import` (history) |

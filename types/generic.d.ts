@@ -28,13 +28,14 @@ declare global {
         version: string;
     };
 
-    type inquirerSelection = Array<{
+    type InquirerSelection = Array<{
         name: string;
         value: string
     }>;
 
-    type ModelSelection = inquirerSelection;
-    type AgentSelection = inquirerSelection;
+    type ModelSelection = InquirerSelection;
+    type AgentSelection = InquirerSelection;
+    type HistorySelection = InquirerSelection;
 
     type ChatResponse = {
         contentRaw: string;
@@ -42,6 +43,12 @@ declare global {
     }
 
     type MessageItem = OpenAiMessageItem | GoogleAiMessageItem;
+
+    type HistoryFile = {
+        version: Settings['version'];
+        historyStyle: any; //drivers[any].historyStyle (history style should match the driver's key)
+        history: any[];
+    }
 }
 
 export {};

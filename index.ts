@@ -9,7 +9,7 @@
 import packageJSON from './package.json' with { type: 'json' };
 import { exec } from 'node:child_process';
 import path from 'node:path';
-import { writeFile, readFile, unlink, glob, access, mkdir } from 'node:fs/promises';
+import { writeFile, readFile, unlink, glob, mkdir } from 'node:fs/promises';
 import os from 'node:os';
 import { execSync } from 'node:child_process';
 import { parseArgs } from 'node:util';
@@ -40,6 +40,7 @@ const RC_ENVFILE = path.join(os.homedir(), '.baioenvrc');
 const RC_FILE = path.join(os.homedir(), '.baiorc');
 const RC_PATH = path.join(os.homedir(), '.baio');
 const RC_AGENTS_PATH = path.join(RC_PATH, 'agents');
+const RC_HISTORY_PATH = path.join(RC_PATH, 'history');
 
 
 //* get user dot env
@@ -88,6 +89,8 @@ const args = await new Promise<ReturnType<typeof parseArgs>>(resolve => resolve(
         ask:     { short: 'q', type: 'boolean' },
         sysenv:  { short: 's', type: 'boolean' },
         end:     { short: 'e', type: 'boolean' },
+
+        import:  { short: 'i', type: 'string'  }, // history import
 
         config:  { short: 'c', type: 'boolean' },
         update:  { short: 'u', type: 'boolean' },
@@ -333,6 +336,12 @@ async function api(prompt: string): Promise<promptResult> {
     for (const match of matchesHelpers) {
         helpers.push({type: 'agent', name: match[1], definition: match[2]});
     }
+
+    // clean <END/> tags, because sometimes they are within strange places
+    content = content.replaceAll(/<END\/>/g, '');
+
+    // clean <NEED-MORE-INFO/> tags, because sometimes they are within strange places
+    content = content.replaceAll(/<NEED-MORE-INFO\/>/g, '');
 
     // User output:
     // add ` before and after all <CMD> tags and after all </CMD> tags, if missing --- also remove tags
@@ -602,6 +611,43 @@ async function doPromptWithCommands(result: promptResult): Promise<string> {
 }
 
 
+async function importHistory(filename: string, isAsk: boolean = false): Promise<boolean> {
+    if (filename.startsWith('"') && filename.endsWith('"')) filename = filename.slice(1, -1); // "file name" is possible
+        
+    if (!filename) {
+        const historyFilesChoices: HistorySelection = [];
+        for await (const file of glob('*.json', { cwd: RC_HISTORY_PATH, withFileTypes: true }))
+            historyFilesChoices.push({ name: file.name.replace('.json', ''), value: path.join(file.parentPath, file.name) });
+
+        if (!historyFilesChoices.length) {
+            !isAsk && console.error('🛑 No history files found');
+            return true;
+        }
+        filename = await select({ message: 'Select a history file to load:', choices: [{ name: '- none -', value: '' }, ...historyFilesChoices] });
+    }
+    if (filename === '') return true; // by choice
+
+    let filePath = path.resolve(RC_HISTORY_PATH, filename);
+    if (filePath && !path.extname(filePath)) filePath += '.json';
+    const historyContent = await readFile(filePath, 'utf-8').catch(_ => undefined);
+
+    if (!historyContent)
+        console.error(`🛑 Could not read history file ${filePath}`);
+    else {
+        let content = JSON.parse(historyContent) as HistoryFile;
+
+        let driver: Driver = drivers[settings.driver];
+        if (content.historyStyle !== driver.historyStyle)
+            console.error(`🛑 Importing history failed. File ${filePath} has an incompatible history style (${drivers[content.historyStyle]?.name ?? content.historyStyle}) than the current API ${driver.name}.`);
+        else {
+            console.log(`💾 Imported history from ${filePath}`);
+            history = content.history;
+        }
+    }
+    return true;
+}
+
+
 /**
  * Evaluates a given prompt string and executes corresponding debug commands.
  *
@@ -613,7 +659,7 @@ async function doPromptWithCommands(result: promptResult): Promise<string> {
  * @param resultPrompt - The result from the API call to be potentially logged.
  * @returns A boolean indicating whether a recognized command was executed.
  */
-function promptTrigger(prompt: string, resultPrompt: promptResult): boolean {
+async function promptTrigger(prompt: string, resultPrompt: promptResult): Promise<boolean> {
     if (prompt === '/debug:result') {
         console.log(resultPrompt);
         return true;
@@ -641,10 +687,32 @@ function promptTrigger(prompt: string, resultPrompt: promptResult): boolean {
         else console.error(`Unknown setting: ${key}`);
         return true;
     }
+    if (prompt.startsWith('/history:export')) {
+        const key = prompt.split(/(?<!\\)\s+/).filter(arg => arg.length > 0).slice(1).join(' ');
+        let filename = key || (new Date()).toLocaleString().replace(/[ :]/g, '-').replace(/,/g, '')+`_${settings.driver}_${settings.model.replace(/[^a-zA-Z0-9_-]/g, '_')}`;
+        if (filename.startsWith('"') && filename.endsWith('"')) filename = filename.slice(1, -1); // "file name" is possible
+        if (filename && !path.extname(filename)) filename += '.json';
+
+        const historyPath = path.join(RC_HISTORY_PATH, filename);
+        mkdir(RC_HISTORY_PATH, { recursive: true }).catch(_ => {});
+        let saved = await writeFile(historyPath, JSON.stringify({ version: settings.version, historyStyle: drivers[settings.driver].historyStyle, history}, null, 2), 'utf-8').then(_ => true).catch(e => e.message);
+
+        if (saved !== true)
+            console.error(`🛑 Failed to save history to ${historyPath}: ${saved}`);
+        else
+            console.log(`💾 Exported history to ${historyPath}`);
+        return true;
+    }
+    if (prompt.startsWith('/history:import')) {
+        let filename = prompt.split(/(?<!\\)\s+/).filter(arg => arg.length > 0).slice(1).join(' ');
+
+        return importHistory(filename);
+    }
     if (prompt === '/exit' || prompt === '/quit' || prompt === '/q') {
         process.exit(0);
     }
 
+    // default
     return false;
 }
 
@@ -693,15 +761,22 @@ async function init(): Promise<string> {
 
             //? special hidden case, will only work if an editor is open that supports opening folders, like vscode / sublime / textwrangler
             case 'pathfiles': 
-                mkdir(RC_PATH, { recursive: true }).catch(() => {});
+                mkdir(RC_PATH, { recursive: true }).catch(_ => {});
                 console.info(`✔ Opening ${RC_PATH}`);
                 launchEditor(RC_PATH);
                 break;
 
             case 'agents':
-                mkdir(RC_AGENTS_PATH, { recursive: true }).catch(() => {});
+                mkdir(RC_AGENTS_PATH, { recursive: true }).catch(_ => {});
                 console.info(`✔ Opening ${RC_AGENTS_PATH}`);
                 await open(RC_AGENTS_PATH); // await does not wait for subprocess to finish spawning
+                await new Promise(resolve => setTimeout(resolve, 1000)); // windows explorer needs some time to start up ...
+                break;
+
+            case 'history':
+                mkdir(RC_HISTORY_PATH, { recursive: true }).catch(_ => {});
+                console.info(`✔ Opening ${RC_HISTORY_PATH}`);
+                await open(RC_HISTORY_PATH); // await does not wait for subprocess to finish spawning
                 await new Promise(resolve => setTimeout(resolve, 1000)); // windows explorer needs some time to start up ...
                 break;
 
@@ -725,7 +800,7 @@ async function init(): Promise<string> {
         console.info(packageJSON.homepage);
         console.info('\n');
 
-        console.info(`baio [-vhdmtaqseucr] ["prompt string"]
+        console.info(`baio [-vhdmtaqseiucr] ["prompt string"]
 
   -v, --version
   -h, -?, --help
@@ -744,13 +819,16 @@ async function init(): Promise<string> {
   -e, --end                    end promping if assumed done
       --no-end                 ... to disable
 
+  -i, --import <filename>      import context from a history file or list files select from
+  -i *, --import *             ask for history file with a list, even if it would not
+
   -u, --update                 update user config (save config)
   -c, --config                 config only, do not prompt.
 
   -r, --reset                  reset (remove) config
   --reset-prompts              reset prompts only (use this after an update)
 
-  --open <config>              open the file in the default editor or the agents path (env, config, agents)
+  --open <config>              open the file in the default editor or the agents path (env, config, agents, history)
 `);
 
         console.info('');
@@ -862,8 +940,15 @@ async function init(): Promise<string> {
 
     
     //*** now its execution time ***
-    
 
+
+    {//* import context from history files
+        if (settingsArgs['import'])
+            await importHistory(settingsArgs['import'] !== '*' ? settingsArgs['import'] : '');
+        else if (askSettings)
+            await importHistory('', true);
+    }
+    
     let prompt;
     {//* user prompt
         if (settingsArgs['config']) process.exit(0);
@@ -898,13 +983,14 @@ async function init(): Promise<string> {
     let prompt = await init();
     let resultPrompt: promptResult;
 
+
     while (true) {
         resultPrompt = await doPrompt(prompt);
         
         if (settings.endIfDone && resultPrompt.isEnd) break;
         
         do prompt = await doPromptWithCommands(resultPrompt);
-        while (promptTrigger(prompt, resultPrompt));
+        while (await promptTrigger(prompt, resultPrompt));
     }
 
 

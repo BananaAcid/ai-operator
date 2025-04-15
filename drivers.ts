@@ -28,6 +28,7 @@ const drivers = {
         urlModels: 'http://localhost:11434/api/tags',  // more details about the models
         defaultModel: 'goekdenizguelmez/JOSIEFIED-Qwen2.5:latest', // default model
         apiKey: () => process.env.OLLAMA_API_KEY, // ollama local does not need a key, but you could use a hosted service, that requires a key
+        historyStyle: 'openai',
 
 
         getUrl(url): string {
@@ -70,7 +71,9 @@ const drivers = {
         urlModels: 'https://api.openai.com/v1/models',
         defaultModel: 'gpt-3.5-turbo',
         apiKey: () => process.env.OPENAI_API_KEY,
-    
+        historyStyle: 'openai',
+
+
         getUrl(url): string {
             if (process.env.OPENAI_URL)
                 return url.replace('https://api.openai.com', process.env.OPENAI_URL);
@@ -153,6 +156,7 @@ const drivers = {
         urlModels: 'https://generativelanguage.googleapis.com/v1beta/models/?key=',
         defaultModel: 'gemini-2.0-flash',
         apiKey: () => process.env.GEMINI_API_KEY,
+        historyStyle: 'googleai',
 
 
         getUrl(url, model=''):string {
