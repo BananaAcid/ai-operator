@@ -22,7 +22,8 @@
     "test": "node ./bin/baio",
     "config:create": "node ./bin/baio --config --update --no-ask",
     "config:remove": "node ./bin/baio --config --reset --no-ask",
-    "test:prompts": "node ./bin/baio --config --reset-prompts --no-ask --agent ChickenTalk",
+    "config:promptsreset": "node ./bin/baio --prompts-reset",
+    "test:prompts": "node ./bin/baio --no-config --reset-prompts --no-ask --agent ChickenTalk",
     "postinstall": "npm run updatecheck",
     "updatecheck": "node ./bin/baio --config --no-ask"
   },
@@ -59,7 +60,7 @@
     "cli-markdown": "^3.4.0",
     "inquirer-toggle": "^1.0.1",
     "launch-editor": "^2.10.0",
-    "open": "^10.1.0",
+    "open": "^10.1.1",
     "tsx": "^4.19.3",
     "yocto-spinner": "^0.2.1"
   },

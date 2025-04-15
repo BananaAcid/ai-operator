@@ -135,7 +135,7 @@ let settingsSaved: Settings|undefined;
 if (settingsArgs.reset)
     await unlink(RC_FILE).catch(_ => undefined);
 else
-    settingsSaved = await readFile(RC_FILE, 'utf-8').then(JSON.parse).catch(_ => undefined) as Settings;
+    settingsSaved = await readFile(RC_FILE, 'utf-8').then(c => c ? JSON.parse(c): undefined).catch(_ => undefined) as Settings;
 
 
 //* default settings
@@ -267,7 +267,7 @@ let settingsDefault: Settings = {
 if (settingsSaved !== undefined && !settingsArgs['version'] && !settingsArgs['help'] && !settingsArgs['reset-prompts'] && !settingsArgs['reset'] && !settingsArgs['open'] && (settingsSaved.version !== settingsDefault.version)) {
     //* really check if the prompts have changed
     if (settingsDefault.defaultPrompt !== settingsSaved.defaultPrompt || settingsDefault.fixitPrompt !== settingsSaved.fixitPrompt || settingsDefault.systemPrompt !== settingsSaved.systemPrompt) {
-        const isNonInteractive = !process.stdin.isTTY || process.env.npm_lifecycle_event === 'postinstall' || process.env.npm_lifecycle_event === 'install';
+        const isNonInteractive = !process.stdin.isTTY || process.env.npm_lifecycle_event === 'updatecheck';
         if (isNonInteractive)
             console.info('The system propmpts have been updated. To update saved system prompts from your previous version to the current version, use: `baio --reset-prompts`' );
         else
@@ -656,6 +656,8 @@ function promptTrigger(prompt: string, resultPrompt: promptResult): boolean {
 async function init(): Promise<string> {
     let driver:Driver = drivers[settings.driver];
     let askSettings = settingsArgs['ask'] ?? (process.env.ASK_SETTINGS || !settings.saveSettings);
+    if (settingsArgs['reset-prompts'] === true) { askSettings = settingsArgs['ask'] ?? false; settingsArgs['config'] = settingsArgs['config'] ?? true; } // do not ask for settings and prompt, if we are resetting the prompts so the other commands are not needed
+
 
     if (settingsArgs['version'])
     {
@@ -826,7 +828,7 @@ async function init(): Promise<string> {
             settings.saveSettings = await toggle({ message: `Automatically use same settings next time:`, default: settings.saveSettings });
 
         // write settings if it is asked for, or if it is not asked for but already saved to remove it
-        if (settingsArgs['update'] ?? (settings.saveSettings || (!settings.saveSettings && settingsSaved))) {
+        if ((settingsArgs['reset-prompts'] && settingsSaved !== undefined) || (settingsArgs['update'] ?? (settings.saveSettings || (!settings.saveSettings && settingsSaved)))) {
 
             // make extra sure, there is a difference between settings and saveSettings or param was used to save
             let isDiff = settingsSaved === undefined || settingsArgs['update'] || Object.keys(settings).reduce((acc, key) => acc || settings[key] !== settingsSaved[key], false);
