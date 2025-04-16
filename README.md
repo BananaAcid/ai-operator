@@ -93,6 +93,18 @@ Ollama is free anyways, just install it (https://ollama.com/download) and within
 
 Subsequent starts, after `Automatically use same settings next time:` **`yes`** will just prompt and show no extra info.
 
+### Enter multiline content
+
+Use the prompt trigger `:w` to get a new editor window where you can enter any content.
+
+see below: Prompt Triggers
+
+### Save the last AI output
+
+Use the prompt trigger `:r` to get a new editor window with last AI answer.
+
+see below: Prompt Triggers
+
 ### You see the commands but something is wrong
 
 Sometimes, the command output is not formatted correctly and the AI does not get the hang of it. Just exit and prompt again (this usually happens right from the beginning or not at all).
@@ -284,24 +296,24 @@ DEBUG_OUTPUT_SYSTEMPROMPT=<boolean>
 
 `DEBUG_SYSTEMPROMPT` prompts you to optionally overwrite the system prompt. And it outputs it (all of it). And it would be saved if modified and `automatically use settings next time` is selected.
 
-### prompt triggers
+### Prompt Triggers
 
 To trigger these, if you are not on a prompt, you need to **unselect any command and press enter** to fall back to the prompt, **then enter** one of the following:
 
-`/exit`, `/quit`, `/q` will exit (like CTRL+D or CTRL+C).
+| Trigger | Short | Description |
+|---|---|---|
+| `/:help`                       | `:h` | Shows this help. |
+| `/:read`                       | `:r` | Opens the default editor for a multiline input. |
+| `/:write`                      | `:w` | Opens the default editor to show the last AI output. Use to save to a file. |
+| `/debug:response`              |        | Shows what the API generated and what the tool understood. |
+| `/debug:exec`                  |        | Shows what the system got returned from the shell. Helps debug strange situations. |
+| `/debug:get <.baiorc-key>`     |        | Gets the current value of the key. Outputs the system prompt, may spam the shell output. |
+| `/debug:set <.baiorc-key> <value>` |    | Overwrites a setting. value must be a JSON formatted value. |
+| `/debug:settings`              |        | Gets all the current values of settings. May spam the shell output. |
+| `/history:export [<filename>]` | `:hi [<filename>]` | Exports the current context to a file with date-time as name or an optional custom filename. |
+| `/history:import [<filename>]` | `:he [<filename>]` | Imports the context from a history file or shows a file selection. |
+| `/:quit`, `/:exit`           | `:q` | Will exit (CTRL+D or CTRL+C will also work). |
 
-`/debug:response` will show what the API generated and what the tool understood.
-
-`/debug:exec` will show what the system got returned from the shell. It might help you debug strange situations.
-
-`/debug:get <.baiorc-key>` will get the current value of the key. If you output the system prompt, be warned: it will spam the shell output.
-
-`/debug:set <.baiorc-key> <JSON_formatted_value>` will overwrite a setting, but will not work with useAllSysEnv (is systemPrompt is already generated with this), saveSettings (saved already).
-
-`/debug:settings` will get all the current values of settings. Be warned: it will spam the shell output.
-
-`/history:export [<filename>]` will export the current context to a file with date-time as name or an optional custom filename.
-`/history:import [<filename>]` will import the context from a history file or show a file selection.
 
 ## Development
 
@@ -378,10 +390,10 @@ done
 
 I am mainly using `GEMINI 2.0 Flash` for prompt engineering. Feel free to send in optimized versions as issues.
 
-
 | Version | Change Description |
 |---------|---|
 | v1.0.11 | Argument change: `-a` to `-q`, added @agents |
 | v1.0.13 | Argument added: `--open`, Fix: endIfDone:false asks for next objective |
 | v1.0.15 | Changed TSX to be used implicitly from the included version |
 | v1.0.17 | Prompt trigger added `/history:export [<filename>]` and `/history:import [<filename>]`, Argument added: `--import` (history) |
+| v1.0.19 | fixed first prompt did not accept prompt triggers, changed triggers (renamed '/:exit', '/:quit', ':q'), added triggers (':h', ':r', '/:read', ':w', '/:write') |

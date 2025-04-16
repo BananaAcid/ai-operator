@@ -19,7 +19,7 @@ import cliMd from 'cli-markdown';
 import launchEditor from 'launch-editor';
 import open from 'open';
 
-import { input, select, checkbox } from '@inquirer/prompts';
+import { input, select, checkbox, editor } from '@inquirer/prompts';
 import { default as tgl } from 'inquirer-toggle';
 //@ts-ignore
 const toggle = tgl.default;
@@ -69,6 +69,7 @@ import './types/driver.Ollama.d.ts';
 import './types/driver.OpenAi.d.ts';
 import './types/driver.GoogleAi.d.ts';
 import './types/JSON.d.ts';
+import { text } from 'node:stream/consumers';
 type Driver = typeof drivers[keyof typeof drivers];
 
 
@@ -570,10 +571,24 @@ async function doPrompt(prompt: string): Promise<promptResult> {
  * @param result the result of the api call
  * @returns the user input or the result of the commands execution
  */
-async function doPromptWithCommands(result: promptResult): Promise<string> {
+async function doPromptWithCommands(result: promptResult|undefined): Promise<string> {
     let resultCommands = "";
 
-    if (!result.commands.length) {
+    if (result === undefined) {
+        let prompt;
+        //* get inital user prompt
+        if (settingsArgs['config']) process.exit(0);
+
+        if (argsPrompt) {
+            prompt = argsPrompt;
+            DEBUG_OUTPUT && console.log('✔ What do you want to get done:', argsPrompt);
+        }
+        else
+            prompt = argsPrompt || await input({ message: 'What do you want to get done:', default: settings.defaultPrompt });
+    
+        resultCommands = prompt;
+    }
+    else if (!result.commands.length) {
 
         /**
          *  check if there was a <NEED-MORE-INFO/> in the response
@@ -682,7 +697,28 @@ async function importHistory(filename: string, isAsk: boolean = false): Promise<
  * @param resultPrompt - The result from the API call to be potentially logged.
  * @returns A boolean indicating whether a recognized command was executed.
  */
-async function promptTrigger(prompt: string, resultPrompt: promptResult): Promise<boolean> {
+async function promptTrigger(prompt: string, resultPrompt?: promptResult): Promise<boolean> {
+
+    if (prompt === ':h' || prompt === '/:help') {
+        console.log(cliMd(`Possible prompt triggers
+
+| Trigger | Short | Description |
+|---|---|---|
+| \`/:help\`                       | \`:h\` | Shows this help. |
+| \`/:read\`                       | \`:r\` | Opens the default editor for a multiline input. |
+| \`/:write\`                      | \`:w\` | Opens the default editor to show the last AI output. Use to save to a file. |
+| \`/debug:response\`              |        | Shows what the API generated and what the tool understood. |
+| \`/debug:exec\`                  |        | Shows what the system got returned from the shell. Helps debug strange situations. |
+| \`/debug:get <.baiorc-key>\`     |        | Gets the current value of the key. Outputs the system prompt, may spam the shell output. |
+| \`/debug:set <.baiorc-key> <value>\` |    | Overwrites a setting. value must be a JSON formatted value. |
+| \`/debug:settings\`              |        | Gets all the current values of settings. May spam the shell output. |
+| \`/history:export [<filename>]\` | \`:hi [<filename>]\` | Exports the current context to a file with date-time as name or an optional custom filename. |
+| \`/history:import [<filename>]\` | \`:he [<filename>]\` | Imports the context from a history file or shows a file selection. |
+| \`/:quit\`, \`/:exit\`           | \`:q\` | Will exit (CTRL+D or CTRL+C will also work). |
+        `));
+        
+        return true;
+    }
     if (prompt === '/debug:result') {
         console.log(resultPrompt);
         return true;
@@ -710,7 +746,7 @@ async function promptTrigger(prompt: string, resultPrompt: promptResult): Promis
         else console.error(`Unknown setting: ${key}`);
         return true;
     }
-    if (prompt.startsWith('/history:export')) {
+    if (prompt.startsWith('/history:export') || prompt.startsWith(':he')) {
         const key = prompt.split(/(?<!\\)\s+/).filter(arg => arg.length > 0).slice(1).join(' ');
         let filename = key || (new Date()).toLocaleString().replace(/[ :]/g, '-').replace(/,/g, '')+`_${settings.driver}_${settings.model.replace(/[^a-zA-Z0-9_-]/g, '_')}`;
         if (filename.startsWith('"') && filename.endsWith('"')) filename = filename.slice(1, -1); // "file name" is possible
@@ -726,12 +762,38 @@ async function promptTrigger(prompt: string, resultPrompt: promptResult): Promis
             console.log(`💾 Exported history to ${historyPath}`);
         return true;
     }
-    if (prompt.startsWith('/history:import')) {
+    if (prompt.startsWith('/history:import') || prompt.startsWith(':hi')) {
         let filename = prompt.split(/(?<!\\)\s+/).filter(arg => arg.length > 0).slice(1).join(' ');
 
         return importHistory(filename);
     }
-    if (prompt === '/exit' || prompt === '/quit' || prompt === '/q') {
+    if (prompt === '/:read' || prompt === ':r') {
+        const value = await editor({
+            message: 'Waiting for your input in the editor.',
+            waitForUseInput: false,
+            theme: { style: { help: _ => `Enter your multiline content in the editor, save the file and close it.`, } }
+        }).catch(_ => undefined);
+        if (value) {
+            prompt = value || '';
+            return false;
+        }
+        return true;
+    }
+    if (prompt === '/:write' || prompt === ':w') {
+        const value = await editor({
+            message: 'Waiting for you to close the editor.',
+            waitForUseInput: false,
+            theme: { style: { help: _ => ``, } },
+            default: resultPrompt?.answer,
+            postfix: '.md',
+        }).catch(_ => undefined);
+        if (value) {
+            prompt = value || '';
+            return false;
+        }
+        return true;
+    }
+    if (prompt === '/:exit' || prompt === '/:quit' || prompt === ':q') {
         process.exit(0);
     }
 
@@ -744,7 +806,7 @@ async function promptTrigger(prompt: string, resultPrompt: promptResult): Promis
  * Initializes the prompt by asking the user for settings and returns the prompt
  * @returns the prompt
  */
-async function init(): Promise<string> {
+async function init() {
     let driver:Driver = drivers[settings.driver];
     let askSettings = settingsArgs['ask'] ?? (process.env.ASK_SETTINGS || !settings.saveSettings);
     if (settingsArgs['reset-prompts'] === true) { askSettings = settingsArgs['ask'] ?? false; settingsArgs['config'] = settingsArgs['config'] ?? true; } // do not ask for settings and prompt, if we are resetting the prompts so the other commands are not needed
@@ -972,18 +1034,6 @@ async function init(): Promise<string> {
             await importHistory('', true);
     }
     
-    let prompt;
-    {//* user prompt
-        if (settingsArgs['config']) process.exit(0);
-
-        if (argsPrompt) {
-            prompt = argsPrompt;
-            DEBUG_OUTPUT && console.log('✔ What do you want to get done:', argsPrompt);
-        }
-        else
-            prompt = argsPrompt || await input({ message: 'What do you want to get done:', default: settings.defaultPrompt });
-    }
-
     {//* system prompt
         // apply invoking shell to system prompt
         settings.systemPrompt = settings.systemPrompt.replaceAll('{{invokingShell}}', getInvokingShell() ?? 'unknown');
@@ -1005,24 +1055,23 @@ async function init(): Promise<string> {
 
         DEBUG_OUTPUT_SYSTEMPROMPT && console.log('DEBUG\n', 'systemPrompt:', settings.systemPrompt);
     }
-
-    return prompt;
 }
 
 
 //* MAIN
 {
-    let prompt = await init();
-    let resultPrompt: promptResult;
+    await init();
+    let resultPrompt: promptResult|undefined = undefined;
+    let prompt = '';
 
 
     while (true) {
+        do prompt = await doPromptWithCommands(resultPrompt);
+        while (await promptTrigger(prompt, resultPrompt));
+
         resultPrompt = await doPrompt(prompt);
         
         if (settings.endIfDone && resultPrompt.isEnd) break;
-        
-        do prompt = await doPromptWithCommands(resultPrompt);
-        while (await promptTrigger(prompt, resultPrompt));
     }
 
 
