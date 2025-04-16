@@ -302,18 +302,19 @@ To trigger these, if you are not on a prompt, you need to **unselect any command
 
 | Trigger | Short | Description |
 |---|---|---|
-| `/:help`                       | `:h` | Shows this help. |
-| `/:read`                       | `:r` | Opens the default editor for a multiline input. |
-| `/:write`                      | `:w` | Opens the default editor to show the last AI output. Use to save to a file. |
-| `/:end` [<boolean>]            |        | Toggles end if assumed done, or turns it on or off. |
-| `/debug:response`              |        | Shows what the API generated and what the tool understood. |
-| `/debug:exec`                  |        | Shows what the system got returned from the shell. Helps debug strange situations. |
-| `/debug:get <.baiorc-key>`     |        | Gets the current value of the key. Outputs the system prompt, may spam the shell output. |
-| `/debug:set <.baiorc-key> <value>` |    | Overwrites a setting. value must be a JSON formatted value. |
-| `/debug:settings`              |        | Gets all the current values of settings. May spam the shell output. |
-| `/history:export [<filename>]` | `:hi [<filename>]` | Exports the current context to a file with date-time as name or an optional custom filename. |
-| `/history:import [<filename>]` | `:he [<filename>]` | Imports the context from a history file or shows a file selection. |
-| `/:quit`, `/:exit`           | `:q` | Will exit (CTRL+D or CTRL+C will also work). |
+| `/:help`                           | `:h` | Shows this help. |
+| `/:read`                           | `:r` | Opens the default editor for a multiline input. |
+| `/:write`                          | `:w` | Opens the default editor to show the last AI output. Use to save to a file. |
+| `/:end [<boolean>]`                |        | Toggles end if assumed done, or turns it on or off. |
+| `/debug:response`                  |        | Shows what the API generated and what the tool understood. |
+| `/debug:exec`                      |        | Shows what the system got returned from the shell. Helps debug strange situations. |
+| `/debug:get <.baiorc-key>`         |        | Gets the current value of the key. Outputs the system prompt, may spam the shell output. |
+| `/debug:set <.baiorc-key> <value>` |        | Overwrites a setting. value must be a JSON formatted value. |
+| `/debug:settings`                  |        | Gets all the current values of settings. May spam the shell output. |
+| `/history:export [<filename>]`     | `:hi [<filename>]`    | Exports the current context to a file with date-time as name or an optional custom filename. |
+| `/history:export:md [<filename>]`  | `:he:md [<filename>]` | Exports the current context to a markdown file for easier reading (can not be imported). |
+| `/history:import [<filename>]`     | `:he [<filename>]`    | Imports the context from a history file or shows a file selection. |
+| `/:quit`, `/:exit`               | `:q` | Will exit (CTRL+D or CTRL+C will also work). |
 
 
 ## Development
@@ -397,4 +398,4 @@ I am mainly using `GEMINI 2.0 Flash` for prompt engineering. Feel free to send i
 | v1.0.13 | Argument added: `--open`, Fix: endIfDone:false asks for next objective |
 | v1.0.15 | Changed TSX to be used implicitly from the included version |
 | v1.0.17 | Prompt trigger added `/history:export [<filename>]` and `/history:import [<filename>]`, Argument added: `--import` (history) |
-| v1.0.19 | fixed first prompt did not accept prompt triggers, changed triggers (renamed `/:exit`, `/:quit`, `:q`), added triggers (`:h`, `:r`, `/:read`, `:w`, `/:write`, `/:end `) |
+| v1.0.19 | fixed first prompt did not accept prompt triggers, changed triggers (renamed `/:exit`, `/:quit`, `:q`), added triggers (`:h`, `:r`, `/:read`, `:w`, `/:write`, `/:end`, `/history:export:md` ) |

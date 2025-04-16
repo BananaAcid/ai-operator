@@ -683,18 +683,19 @@ async function promptTrigger(prompt: string, resultPrompt?: promptResult): Promi
         console.log(cliMd(`Possible prompt triggers\n
 | Trigger | Short | Description |
 |---|---|---|
-| \`/:help\`                       | \`:h\` | Shows this help. |
-| \`/:read\`                       | \`:r\` | Opens the default editor for a multiline input. |
-| \`/:write\`                      | \`:w\` | Opens the default editor to show the last AI output. Use to save to a file. |
-| \`/:end [<boolean>]\`            |        | Toggles end if assumed done, or turns it on or off. |
-| \`/debug:response\`              |        | Shows what the API generated and what the tool understood. |
-| \`/debug:exec\`                  |        | Shows what the system got returned from the shell. Helps debug strange situations. |
-| \`/debug:get <.baiorc-key>\`     |        | Gets the current value of the key. Outputs the system prompt, may spam the shell output. |
-| \`/debug:set <.baiorc-key> <value>\` |    | Overwrites a setting. value must be a JSON formatted value. |
-| \`/debug:settings\`              |        | Gets all the current values of settings. May spam the shell output. |
-| \`/history:export [<filename>]\` | \`:hi [<filename>]\` | Exports the current context to a file with date-time as name or an optional custom filename. |
-| \`/history:import [<filename>]\` | \`:he [<filename>]\` | Imports the context from a history file or shows a file selection. |
-| \`/:quit\`, \`/:exit\`           | \`:q\` | Will exit (CTRL+D or CTRL+C will also work). |
+| \`/:help\`                           | \`:h\` | Shows this help. |
+| \`/:read\`                           | \`:r\` | Opens the default editor for a multiline input. |
+| \`/:write\`                          | \`:w\` | Opens the default editor to show the last AI output. Use to save to a file. |
+| \`/:end [<boolean>]\`                |        | Toggles end if assumed done, or turns it on or off. |
+| \`/debug:response\`                  |        | Shows what the API generated and what the tool understood. |
+| \`/debug:exec\`                      |        | Shows what the system got returned from the shell. Helps debug strange situations. |
+| \`/debug:get <.baiorc-key>\`         |        | Gets the current value of the key. Outputs the system prompt, may spam the shell output. |
+| \`/debug:set <.baiorc-key> <value>\` |        | Overwrites a setting. value must be a JSON formatted value. |
+| \`/debug:settings\`                  |        | Gets all the current values of settings. May spam the shell output. |
+| \`/history:export [<filename>]\`     | \`:hi [<filename>]\`    | Exports the current context to a file with date-time as name or an optional custom filename. |
+| \`/history:export:md [<filename>]\`  | \`:he:md [<filename>]\` | Exports the current context to a markdown file for easier reading (can not be imported). |
+| \`/history:import [<filename>]\`     | \`:he [<filename>]\`    | Imports the context from a history file or shows a file selection. |
+| \`/:quit\`, \`/:exit\`               | \`:q\` | Will exit (CTRL+D or CTRL+C will also work). |
         `));
         return true;
     }
@@ -725,15 +726,50 @@ async function promptTrigger(prompt: string, resultPrompt?: promptResult): Promi
         else console.error(`Unknown setting: ${key}`);
         return true;
     }
+    let exportType='json';
+    if (prompt.startsWith('/history:export:md') || prompt.startsWith(':he:md')) {
+        exportType = 'md';
+    }
     if (prompt.startsWith('/history:export') || prompt.startsWith(':he')) {
         const key = prompt.split(/(?<!\\)\s+/).filter(arg => arg.length > 0).slice(1).join(' ');
         let filename = key || (new Date()).toLocaleString().replace(/[ :]/g, '-').replace(/,/g, '')+`_${settings.driver}_${settings.model.replace(/[^a-zA-Z0-9_-]/g, '_')}`;
         if (filename.startsWith('"') && filename.endsWith('"')) filename = filename.slice(1, -1); // "file name" is possible
-        if (filename && !filename.toLowerCase().endsWith('.json')) filename += '.json';
+        mkdir(RC_HISTORY_PATH, { recursive: true }).catch(_ => {});
+
+        let content = '';
+        if (exportType == 'json') {
+            if (!filename.toLowerCase().endsWith('.json')) filename += '.json';
+            content = JSON.stringify({ version: settings.version, historyStyle: drivers[settings.driver].historyStyle, history}, null, 2);
+        }
+        else if (exportType == 'md') {
+            if (!filename.toLowerCase().endsWith('.json')) filename += '.md';
+            //content =  a flattened object, where all keys that do not have a child, will be inlcuded with key:content
+            let contentStrings:string[] = [];
+            function walk(obj) {
+                for (const key in obj) {
+                    if (typeof obj[key] === 'string') {
+                        contentStrings.push(obj[key]);
+                    } else {
+                        walk(obj[key]);
+                    }
+                }
+            }
+            walk(history);
+            contentStrings = contentStrings
+                // remove role strings
+                .filter(item => !['user', 'model', 'library', 'assistant'].includes(item))
+                // remove ansi escape codes (cli output colors and alike)
+                .map(item => item.replace(/[\u001b\u009b][[()#;?]*(?:[0-9]{1,4}(?:;[0-9]{0,4})*)?[0-9A-ORZcf-nqry=><]/g,""));
+
+            // add separators
+            content = contentStrings.join( '\n'.repeat(4) + '-'.repeat(30) + '\n'.repeat(4) );
+
+            console.log(`⚠️ This type of history can NOT be imported and is only for viewing.`);
+        }
 
         const historyPath = path.join(RC_HISTORY_PATH, filename);
-        mkdir(RC_HISTORY_PATH, { recursive: true }).catch(_ => {});
-        let saved = await writeFile(historyPath, JSON.stringify({ version: settings.version, historyStyle: drivers[settings.driver].historyStyle, history}, null, 2), 'utf-8').then(_ => true).catch(e => e.message);
+
+        let saved = await writeFile(historyPath, content, 'utf-8').then(_ => true).catch(e => e.message);
 
         if (saved !== true)
             console.error(`🛑 Failed to save history to ${historyPath}: ${saved}`);
