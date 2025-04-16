@@ -154,9 +154,28 @@ let settingsDefault: Settings = {
 
     defaultPrompt: 'list all details of files in directory', 
 
-    fixitPrompt: `Something went wrong! Ensure all steps are followed, commands are properly formatted as by the output rules, results are validated, and commands are properly executed. Reevaluate the goal after each action and make sure to append <END/> only when the task is fully completed. Try again with a different approach, and if more information is needed, request it.`,
+    //fixitPrompt: `Something went wrong! Ensure all steps are followed, commands are properly formatted as by the output rules, results are validated, and commands are properly executed. Reevaluate the goal after each action and make sure to append <END/> only when the task is fully completed. Try again with a different approach, and if more information is needed, request it.`,
+
+    fixitPrompt: `
+        Something went wrong! Analyze the previous output carefully.
+
+        It seems like the GOAL was to output a command. Check if a command was ATTEMPTED, even if it's not correctly formatted.
+
+        If a command was attempted, DOUBLE-CHECK the output for the \`<CMD>command_here</CMD>\` formatting:
+            *   Are the <CMD> and </CMD> tags present and correctly spelled?
+            *   Is there any extra text or whitespace inside the tags that should be removed?
+            *   Do not use fenced code blocks (\`\`\`) for executable commands.
+            *   Is the cammand promperly escaped so that it can be executed?
+            If the formatting is incorrect, REWRITE the output with the CORRECT \`<CMD>command_here</CMD>\` formatting. Only output the corrected answer and do not add any additional descriptions.
+
+        If not:
+        Ensure all steps are followed, results are validated, and commands are properly executed.
+        Reevaluate the goal after each action and make sure to append <END/> only when the task is fully completed.
+        Try again with a different approach, and if more information is needed, request it.
+    `,
 
     systemPrompt: `
+        Your name is Baio.
         You are a helpful AI operator that generates and validates command-line commands. 
         You create commandline commands for your system and validate the result. The commands will automatically be executed on the host system with the next prompt by your doing.
         You want to solve the users prompt with concise and meaningful commandline commands and avoid guessing or duplicates and supply executable commands that will be executed.
@@ -171,7 +190,8 @@ let settingsDefault: Settings = {
         - **Fallback Shell (only used for execution if default is unknown):** ${process.env.SHELL ?? process.env.COMSPEC}
         - Installed PowerShell: ${process.env.POSH_SHELL}, version ${process.env.POSH_SHELL_VERSION}
         - User's Home Directory (user home folder): ${process.env.HOME ?? process.env.USERPROFILE}
-        - Current Directory: ${process.cwd()}
+        - Current Working Directory (cwd, here you are always): ${process.cwd()}
+        {{linksIsInstalled}}
         {{useAllSysEnv}}
 
         ### Initial Prompt:
@@ -182,7 +202,6 @@ let settingsDefault: Settings = {
         - Explain **briefly** what you are doing and what each command does.
         - **DO NOT** use fenced code blocks (\`\`\`) for executable commands. Instead, always use:  
             \`<CMD>command_here</CMD>\`
-            (Use **single backticks** around the <CMD> tags, but not inside them.)
         - **If multiple commands need to be executed in sequence, combine them into one command** to maintain the shell context.  
         - Example (incorrect):  
             \`<CMD>cd /myfolder</CMD>\`
@@ -234,15 +253,18 @@ let settingsDefault: Settings = {
             - Always post-process \`<CMD-OUTPUT>\` for relevance.
         - **Asked to install \`links2\`**:
             - **Windows**:  
-                - Download from: [http://links.twibright.com/download.php](http://links.twibright.com/download.php)  
+                - Download page: http://links.twibright.com/download/binaries/win32/
+                - Download the newest version from the windows download page with default means provided by the shell (if links2 is not installed)
                 - Extract the archive and ensure the binary (\`links\`) is in the system \`PATH\` or directly executable.
             - **Linux**:  
-                - Install via system package manager: \`sudo apt install links2\`
-            - **MacOS (with Homebrew)**: \`brew install links2\`
+                - Install via system package manager, for example: \`sudo apt install links2\`
+                - alternatives can be found here: http://links.twibright.com/download.php
+            - **MacOS**:
+                - Install via Homebrew: \`brew install links2\`
         - **Asked or needed to use \`links2\`**:
             - Always run: \`links -html-numbered-links 1 -dump <url>\`
             - The command name for links2 is: \`links\`
-        - **Asked to search the Web**:
+        - **Asked to search the Web, or suggesting to search the web**:
             - Use DuckDuckGo for queries: \`https://duckduckgo.com/?q=<search_term>\`
             - Prefer \`links2\` to read the content if available, or parse the HTML output directly.
         - **Asked to create an \`@agent\`**:
@@ -267,6 +289,7 @@ let settingsDefault: Settings = {
 
 
 //* handle updating prompts / resetting prompts (if it is not an arg that loads to prompting or if the versions differ)
+let resetPrompts = false;
 if (settingsSaved !== undefined && !settingsArgs['version'] && !settingsArgs['help'] && !settingsArgs['reset-prompts'] && !settingsArgs['reset'] && !settingsArgs['open'] && (settingsSaved.version !== settingsDefault.version)) {
     //* really check if the prompts have changed
     if (settingsDefault.defaultPrompt !== settingsSaved.defaultPrompt || settingsDefault.fixitPrompt !== settingsSaved.fixitPrompt || settingsDefault.systemPrompt !== settingsSaved.systemPrompt) {
@@ -274,7 +297,7 @@ if (settingsSaved !== undefined && !settingsArgs['version'] && !settingsArgs['he
         if (isNonInteractive)
             console.info('The system propmpts have been updated. To update saved system prompts from your previous version to the current version, use: `baio --reset-prompts`' );
         else
-            settingsArgs['reset-prompts'] = await toggle({ message: `Update saved system prompts from your previous version to the current version:`, default: true });
+            resetPrompts = await toggle({ message: `Update saved system prompts from your previous version to the current version:`, default: true });
     }
 }
 
@@ -286,7 +309,7 @@ let settings: Settings = {
     // only add settingsArgs if the key is already in settingsDefault (filters out version and others)
     ...Object.entries(settingsDefault).reduce((acc, [k, v]) => settingsArgs[k] !== undefined ? { ...acc, [k]: settingsArgs[k] } : acc, {}),
     // handle --reset-prompts 
-    ...(settingsArgs['reset-prompts'] ? {defaultPrompt: settingsDefault.defaultPrompt, fixitPrompt: settingsDefault.fixitPrompt, systemPrompt: settingsDefault.systemPrompt, version: settingsDefault.version } : {}),
+    ...(settingsArgs['reset-prompts'] || resetPrompts ? {defaultPrompt: settingsDefault.defaultPrompt, fixitPrompt: settingsDefault.fixitPrompt, systemPrompt: settingsDefault.systemPrompt, version: settingsDefault.version } : {}),
 };
 
 
@@ -965,6 +988,16 @@ async function init(): Promise<string> {
         // apply invoking shell to system prompt
         settings.systemPrompt = settings.systemPrompt.replaceAll('{{invokingShell}}', getInvokingShell() ?? 'unknown');
 
+        try {
+            let output = execSync('links -version', { shell: getInvokingShell() });
+            settings.systemPrompt = settings.systemPrompt.replaceAll('{{linksIsInstalled}}', '- links2 is installed and can be used: ' + output);
+            DEBUG_OUTPUT && console.log('✔ links2 is installed');
+        }
+        catch (error) {
+            settings.systemPrompt = settings.systemPrompt.replaceAll('{{linksIsInstalled}}', '- links2 is not yet installed');
+            DEBUG_OUTPUT && console.warn('⚠️ links2 is not installed');
+        }
+
         // apply system env to system prompt or clean up the placeholder
         settings.systemPrompt = settings.systemPrompt.replaceAll('{{useAllSysEnv}}', settings.useAllSysEnv ? `- You are running on (system environment): ${JSON.stringify(process.env)}` : '');
 
@@ -975,7 +1008,6 @@ async function init(): Promise<string> {
 
     return prompt;
 }
-
 
 
 //* MAIN
