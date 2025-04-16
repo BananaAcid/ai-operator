@@ -573,10 +573,10 @@ async function doPrompt(prompt: string): Promise<promptResult> {
  */
 async function doPromptWithCommands(result: promptResult|undefined): Promise<string> {
     let resultCommands = "";
-
+    
+    //* get inital user prompt
     if (result === undefined) {
         let prompt;
-        //* get inital user prompt
         if (settingsArgs['config']) process.exit(0);
 
         if (argsPrompt) {
@@ -588,30 +588,25 @@ async function doPromptWithCommands(result: promptResult|undefined): Promise<str
     
         resultCommands = prompt;
     }
+    //* no commands
     else if (!result.commands.length) {
-
-        /**
-         *  check if there was a <NEED-MORE-INFO/> in the response
-         *  if yes, ask the user for more info and do the prompt again
-         */
-
+        //* check if there was a <NEED-MORE-INFO/> in the response
+        //* if yes, ask the user for more info and do the prompt again
         if (result.needMoreInfo) {
             resultCommands = await input({ message: 'Enter more info:' });
-
             // ... need to loop back to the prompt ("chat")
         }
+        //* the main loop decided not to exit (settings.endIfDone == false), so we ask for more info
         else if(result.isEnd) {
-            // the main loop decided not to exit (settings.endIfDone == false), so we ask for more info
             resultCommands = await input({ message: 'What do you want to do next:' });
         }
+        //* do the fixit prompt, because there was no command
         else {
             console.log('⚠️ No commands found in response, no execution will be performed.');
-
-            // do the fixit prompt, because there was no command
             resultCommands = settings.fixitPrompt;
         }
-
     }
+    //* there are commands
     else {
 
         const commands = await checkbox({
@@ -619,29 +614,14 @@ async function doPromptWithCommands(result: promptResult|undefined): Promise<str
             choices: result.commands.map((command) => ({ name: command, value: command, checked: true })),
         });
 
-        if (!commands.length) {
+        if (!commands.length)
             resultCommands = await input({ message: 'Enter more info:' });
-            return resultCommands;
-        }
-
-        const execNow = true;
-
-        if (execNow) {
-            resultCommands = await doCommands(commands);
-
-            (DEBUG_OUTPUT || DEBUG_OUTPUT_EXECUTION) && console.info('DEBUG\n', resultCommands);
-
-            // ... go and evaluate the commands result
-        }
         else {
+                resultCommands = await doCommands(commands);
 
-            /**
-             *  ask if the user wants to prompt instead, to get a better result
-             * 
-             *  ... and loop back to the prompt
-             */
+                (DEBUG_OUTPUT || DEBUG_OUTPUT_EXECUTION) && console.info('DEBUG\n', resultCommands);
 
-            resultCommands = await input({ message: 'Enter more info:' });
+                // ... go and evaluate the commands result
         }
     }
 
@@ -700,8 +680,7 @@ async function importHistory(filename: string, isAsk: boolean = false): Promise<
 async function promptTrigger(prompt: string, resultPrompt?: promptResult): Promise<boolean> {
 
     if (prompt === ':h' || prompt === '/:help') {
-        console.log(cliMd(`Possible prompt triggers
-
+        console.log(cliMd(`Possible prompt triggers\n
 | Trigger | Short | Description |
 |---|---|---|
 | \`/:help\`                       | \`:h\` | Shows this help. |
@@ -717,7 +696,6 @@ async function promptTrigger(prompt: string, resultPrompt?: promptResult): Promi
 | \`/history:import [<filename>]\` | \`:he [<filename>]\` | Imports the context from a history file or shows a file selection. |
 | \`/:quit\`, \`/:exit\`           | \`:q\` | Will exit (CTRL+D or CTRL+C will also work). |
         `));
-        
         return true;
     }
     if (prompt === '/debug:result') {
@@ -739,7 +717,7 @@ async function promptTrigger(prompt: string, resultPrompt?: promptResult): Promi
     }
     if (prompt.startsWith('/debug:set ')) {
         //* will not work with useAllSysEnv (is systemPrompt is already generated with this), saveSettings (saved already)
-        //*  /debug:set <.baiorc-key> JSON_formatted_value
+        //*  /debug:set <.baiorc-key> <JSON_formatted_value>
         const args = prompt.split(/(?<!\\)\s+/).filter(arg => arg.length > 0);
         const key = args[1];
         const value = JSON.parse(args.slice(2).join(' '));
@@ -751,7 +729,7 @@ async function promptTrigger(prompt: string, resultPrompt?: promptResult): Promi
         const key = prompt.split(/(?<!\\)\s+/).filter(arg => arg.length > 0).slice(1).join(' ');
         let filename = key || (new Date()).toLocaleString().replace(/[ :]/g, '-').replace(/,/g, '')+`_${settings.driver}_${settings.model.replace(/[^a-zA-Z0-9_-]/g, '_')}`;
         if (filename.startsWith('"') && filename.endsWith('"')) filename = filename.slice(1, -1); // "file name" is possible
-        if (filename && !path.extname(filename)) filename += '.json';
+        if (filename && !filename.toLowerCase().endsWith('.json')) filename += '.json';
 
         const historyPath = path.join(RC_HISTORY_PATH, filename);
         mkdir(RC_HISTORY_PATH, { recursive: true }).catch(_ => {});
@@ -781,17 +759,13 @@ async function promptTrigger(prompt: string, resultPrompt?: promptResult): Promi
         return true;
     }
     if (prompt === '/:write' || prompt === ':w') {
-        const value = await editor({
+        await editor({
             message: 'Waiting for you to close the editor.',
             waitForUseInput: false,
             theme: { style: { help: _ => ``, } },
-            default: resultPrompt?.answer,
+            default: resultPrompt?.answerFull,
             postfix: '.md',
         }).catch(_ => undefined);
-        if (value) {
-            prompt = value || '';
-            return false;
-        }
         return true;
     }
     if (prompt.startsWith('/:end')) {
