@@ -707,6 +707,7 @@ async function promptTrigger(prompt: string, resultPrompt?: promptResult): Promi
 | \`/:help\`                       | \`:h\` | Shows this help. |
 | \`/:read\`                       | \`:r\` | Opens the default editor for a multiline input. |
 | \`/:write\`                      | \`:w\` | Opens the default editor to show the last AI output. Use to save to a file. |
+| \`/:end [<boolean>]\`            |        | Toggles end if assumed done, or turns it on or off. |
 | \`/debug:response\`              |        | Shows what the API generated and what the tool understood. |
 | \`/debug:exec\`                  |        | Shows what the system got returned from the shell. Helps debug strange situations. |
 | \`/debug:get <.baiorc-key>\`     |        | Gets the current value of the key. Outputs the system prompt, may spam the shell output. |
@@ -793,6 +794,17 @@ async function promptTrigger(prompt: string, resultPrompt?: promptResult): Promi
         }
         return true;
     }
+    if (prompt.startsWith('/:end')) {
+        const key = prompt.split(/(?<!\\)\s+/)[1];
+        if (key === undefined || key.trim() === '')
+            settings.endIfDone = !settings.endIfDone;
+        else
+            settings.endIfDone = {'true': true, 'false': false, '1': true, '0': false, 'on': true, 'off': false, 'yes': true, 'no': false}[key.toLowerCase()] ?? false;
+        
+        console.log(`${settings.endIfDone ? '🟢' : '🔴'}End if assumed done: ${settings.endIfDone ? 'yes' : 'no'}`);
+        return true;
+    }
+
     if (prompt === '/:exit' || prompt === '/:quit' || prompt === ':q') {
         process.exit(0);
     }
