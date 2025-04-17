@@ -9,7 +9,7 @@
 import packageJSON from './package.json' with { type: 'json' };
 import { exec } from 'node:child_process';
 import path from 'node:path';
-import { writeFile, readFile, unlink, glob, mkdir } from 'node:fs/promises';
+import { writeFile, readFile, unlink, glob, mkdir, open as fsOpen } from 'node:fs/promises';
 import os from 'node:os';
 import { execSync } from 'node:child_process';
 import { parseArgs } from 'node:util';
@@ -69,8 +69,11 @@ import './types/driver.Ollama.d.ts';
 import './types/driver.OpenAi.d.ts';
 import './types/driver.GoogleAi.d.ts';
 import './types/JSON.d.ts';
-import { text } from 'node:stream/consumers';
 type Driver = typeof drivers[keyof typeof drivers];
+
+
+//* TTY input overwrite
+let TTY_INTERFACE:any;
 
 
 //* get args (partyl settings)
@@ -298,7 +301,7 @@ if (settingsSaved !== undefined && !settingsArgs['version'] && !settingsArgs['he
         if (isNonInteractive)
             console.info('The system propmpts have been updated. To update saved system prompts from your previous version to the current version, use: `baio --reset-prompts`' );
         else
-            resetPrompts = await toggle({ message: `Update saved system prompts from your previous version to the current version:`, default: true });
+            resetPrompts = await toggle({ message: `Update saved system prompts from your previous version to the current version:`, default: true }, TTY_INTERFACE);
     }
 }
 
@@ -330,7 +333,7 @@ let history: MessageItem[] = [];
  * - needMoreInfo: true if the answer contains <NEED-MORE-INFO/>.
  * - isEnd: true if the answer contains <END/>.
  */
-async function api(prompt: string): Promise<promptResult> {
+async function api(prompt: string, promptAdditions?: PromptAdditions): Promise<PromptResult> {
     // fetch from ollama api
 
     const driver: Driver = drivers[settings.driver];
@@ -338,7 +341,7 @@ async function api(prompt: string): Promise<promptResult> {
     spinner.start(`Waiting for ${driver.name}\'s response ...`);
 
 
-    let {contentRaw, history: historyNew} = await driver.getChatResponse(settings, history, prompt);
+    let {contentRaw, history: historyNew} = await driver.getChatResponse(settings, history, prompt, promptAdditions);
     
     history = historyNew;
 
@@ -356,7 +359,7 @@ async function api(prompt: string): Promise<promptResult> {
 
     // go for agents, that are created by the ai
     const matchesHelpers = content.matchAll(/\`?\ *<AGENT-DEFINITION NAME="(.*?)">(.*?)<\/AGENT-DEFINITION>\ *\`?/g);
-    let helpers: promptHelper[] = [];
+    let helpers: PromptHelper[] = [];
     for (const match of matchesHelpers) {
         helpers.push({type: 'agent', name: match[1], definition: match[2]});
     }
@@ -547,8 +550,8 @@ async function doCommands(commands: string[]): Promise<string> {
  * @param prompt 
  * @returns api result
  */
-async function doPrompt(prompt: string): Promise<promptResult> {
-    const result = await api(prompt);
+async function doPrompt(prompt: Prompt, promptAdditions?: PromptAdditions): Promise<PromptResult> {
+    const result = await api(prompt, promptAdditions);
     
     // output to the user
     console.log(result.answer);
@@ -571,7 +574,7 @@ async function doPrompt(prompt: string): Promise<promptResult> {
  * @param result the result of the api call
  * @returns the user input or the result of the commands execution
  */
-async function doPromptWithCommands(result: promptResult|undefined): Promise<string> {
+async function doPromptWithCommands(result: PromptResult|undefined): Promise<string> {
     let resultCommands = "";
     
     //* get inital user prompt
@@ -584,7 +587,7 @@ async function doPromptWithCommands(result: promptResult|undefined): Promise<str
             DEBUG_OUTPUT && console.log('✔ What do you want to get done:', argsPrompt);
         }
         else
-            prompt = argsPrompt || await input({ message: 'What do you want to get done:', default: settings.defaultPrompt });
+            prompt = argsPrompt || await input({ message: 'What do you want to get done:', default: settings.defaultPrompt }, TTY_INTERFACE);
     
         resultCommands = prompt;
     }
@@ -593,12 +596,12 @@ async function doPromptWithCommands(result: promptResult|undefined): Promise<str
         //* check if there was a <NEED-MORE-INFO/> in the response
         //* if yes, ask the user for more info and do the prompt again
         if (result.needMoreInfo) {
-            resultCommands = await input({ message: 'Enter more info:' });
+            resultCommands = await input({ message: 'Enter more info:' }, TTY_INTERFACE);
             // ... need to loop back to the prompt ("chat")
         }
         //* the main loop decided not to exit (settings.endIfDone == false), so we ask for more info
         else if(result.isEnd) {
-            resultCommands = await input({ message: 'What do you want to do next:' });
+            resultCommands = await input({ message: 'What do you want to do next:' }, TTY_INTERFACE);
         }
         //* do the fixit prompt, because there was no command
         else {
@@ -612,10 +615,10 @@ async function doPromptWithCommands(result: promptResult|undefined): Promise<str
         const commands = await checkbox({
             message: 'Select the commands to execute',
             choices: result.commands.map((command) => ({ name: command, value: command, checked: true })),
-        });
+        }, TTY_INTERFACE);
 
         if (!commands.length)
-            resultCommands = await input({ message: 'Enter more info:' });
+            resultCommands = await input({ message: 'Enter more info:' }, TTY_INTERFACE);
         else {
                 resultCommands = await doCommands(commands);
 
@@ -641,7 +644,7 @@ async function importHistory(filename: string, isAsk: boolean = false): Promise<
             !isAsk && console.error('🛑 No history files found');
             return true;
         }
-        filename = await select({ message: 'Select a history file to load:', choices: [{ name: '- none -', value: '' }, ...historyFilesChoices] });
+        filename = await select({ message: 'Select a history file to load:', choices: [{ name: '- none -', value: '' }, ...historyFilesChoices] }, TTY_INTERFACE);
     }
     if (filename === '') return true; // by choice
 
@@ -677,7 +680,7 @@ async function importHistory(filename: string, isAsk: boolean = false): Promise<
  * @param resultPrompt - The result from the API call to be potentially logged.
  * @returns A boolean indicating whether a recognized command was executed.
  */
-async function promptTrigger(prompt: string, resultPrompt?: promptResult): Promise<boolean> {
+async function promptTrigger(prompt: string, resultPrompt?: PromptResult): Promise<boolean> {
 
     if (prompt === ':h' || prompt === '/:help') {
         console.log(cliMd(`Possible prompt triggers\n
@@ -828,11 +831,26 @@ async function promptTrigger(prompt: string, resultPrompt?: promptResult): Promi
  * Initializes the prompt by asking the user for settings and returns the prompt
  * @returns the prompt
  */
-async function init() {
+async function init(): Promise<PromptAdditions> {
     let driver:Driver = drivers[settings.driver];
     let askSettings = settingsArgs['ask'] ?? (process.env.ASK_SETTINGS || !settings.saveSettings);
     if (settingsArgs['reset-prompts'] === true) { askSettings = settingsArgs['ask'] ?? false; settingsArgs['config'] = settingsArgs['config'] ?? true; } // do not ask for settings and prompt, if we are resetting the prompts so the other commands are not needed
+    let promptAdditions: PromptAdditions;
 
+
+    //*** NEEDS FIXING */
+    // no tty ?
+    if (!process.stdin.isTTY) {
+        // issue:  https://github.com/SBoudrias/Inquirer.js/issues/1721
+        console.error('⚠️ Piping files into Baio will cause problems with the prompt.');
+        if (askSettings) {
+            console.error('⚠️ Editing settings is disabled.');
+            askSettings = false;
+        }
+    }
+
+
+    //*** args with exit ***
 
     if (settingsArgs['version'])
     {
@@ -936,7 +954,8 @@ async function init() {
   --reset-prompts              reset prompts only (use this after an update)
 
   --open <config>              open the file in the default editor or the agents path (env, config, agents, history)
-`);
+  `);
+        // You can pipe in text (like from a file) to be send to the API before your prompt.
 
         console.info('');
         console.info(`Settings config path: ${RC_FILE}`);
@@ -945,6 +964,38 @@ async function init() {
 
         process.exit(0);
     }
+
+
+    //*** initialize for content ***
+
+    {//* read piped in input
+        const stdin = process.stdin;
+        if (!stdin.isTTY) {
+            stdin.setEncoding('utf8');
+            const additionalContentData = await new Promise<string>(resolve => {
+                let data = '';
+                stdin.on('data', (chunk) => data += chunk);
+                stdin.on('end', () => resolve(data));
+            });
+
+            if (additionalContentData)
+                promptAdditions = [ ...(promptAdditions ?? []), { type: 'text', content: additionalContentData }];
+
+            //! restore input capability
+            const fd = process.platform === 'win32' ? '\\\\.\\CON' : '/dev/tty';
+            let stdinNew = (await fsOpen(fd, 'r')).createReadStream();
+            // const readLineNew = createInterface({
+            //     input: stdinNew,
+            //     output: process.stdout
+            // });
+            TTY_INTERFACE = {
+                input: stdinNew,
+                output: process.stdout
+            };
+        }
+    }
+        
+    //*** settings ***
 
     if (askSettings)
     {
@@ -955,7 +1006,7 @@ async function init() {
     if (askSettings)
     {//* API/Driver selection
         let driverChoices = Object.keys(drivers).map(key => ({ name: drivers[key].name, value: key }));
-        settings.driver = await select({ message: 'Select your API:', choices: driverChoices, default: settings.driver || 'ollama' });
+        settings.driver = await select({ message: 'Select your API:', choices: driverChoices, default: settings.driver || 'ollama' }, TTY_INTERFACE);
     }
     
 
@@ -986,12 +1037,12 @@ async function init() {
         let modelSelected = '';
         if (models.length) {
             models.push({ name: 'manual input ...', value: '' });
-            modelSelected = await select({ message: 'Select your model:', choices: models, default: settings.model || driver.defaultModel });
+            modelSelected = await select({ message: 'Select your model:', choices: models, default: settings.model || driver.defaultModel }, TTY_INTERFACE);
         }
         if (!models.length || !modelSelected) {
             if (settings.driver == 'ollama')
                 console.warn('⚠️ The model you enter, will be downloaded and this process might really take a while. No progress will show.');
-            modelSelected = await input({ message: 'Enter your model to use:', default: settings.model || driver.defaultModel });
+            modelSelected = await input({ message: 'Enter your model to use:', default: settings.model || driver.defaultModel }, TTY_INTERFACE);
         }
         settings.model = modelSelected;
     }
@@ -999,18 +1050,18 @@ async function init() {
     if (askSettings)    
     {//* options
         if (DEBUG_SYSTEMPROMPT)
-            settings.systemPrompt = await input({ message: 'Enter your system prompt', default: settings.systemPrompt });
+            settings.systemPrompt = await input({ message: 'Enter your system prompt', default: settings.systemPrompt }, TTY_INTERFACE);
 
-        settings.temperature = await input({ message: 'Enter the temperature (0 for model\'s default):', default: settings.temperature.toString() }).then(answer => parseFloat(answer));
+        settings.temperature = await input({ message: 'Enter the temperature (0 for model\'s default):', default: settings.temperature.toString() }, TTY_INTERFACE).then(answer => parseFloat(answer));
         
-        settings.useAllSysEnv = await toggle({ message: 'Use all system environment variables:', default: settings.useAllSysEnv });
+        settings.useAllSysEnv = await toggle({ message: 'Use all system environment variables:', default: settings.useAllSysEnv }, TTY_INTERFACE);
         
-        settings.endIfDone = await toggle({ message: 'End if assumed done:', default: settings.endIfDone });
+        settings.endIfDone = await toggle({ message: 'End if assumed done:', default: settings.endIfDone }, TTY_INTERFACE);
     }
     
     {//* save settings
         if (askSettings)
-            settings.saveSettings = await toggle({ message: `Automatically use same settings next time:`, default: settings.saveSettings });
+            settings.saveSettings = await toggle({ message: `Automatically use same settings next time:`, default: settings.saveSettings }, TTY_INTERFACE);
 
         // write settings if it is asked for, or if it is not asked for but already saved to remove it
         if ((settingsArgs['reset-prompts'] && settingsSaved !== undefined) || (settingsArgs['update'] ?? (settings.saveSettings || (!settings.saveSettings && settingsSaved)))) {
@@ -1036,7 +1087,7 @@ async function init() {
         let agentFile = '';
 
         if (agents.length)
-            agentFile = settingsArgs['agent'] ? agents[0].value : (!askSettings && settingsArgs['agent']!==null ? '' : await select({ message: 'Select an agent:', choices: [{ name: '- none -', value: '' }, ...agents ] }));
+            agentFile = settingsArgs['agent'] ? agents[0].value : (!askSettings && settingsArgs['agent']!==null ? '' : await select({ message: 'Select an agent:', choices: [{ name: '- none -', value: '' }, ...agents ] }, TTY_INTERFACE));
         
         if (agentFile) {
             agentContent = await readFile(agentFile, 'utf-8').catch(_ => undefined);
@@ -1077,21 +1128,23 @@ async function init() {
 
         DEBUG_OUTPUT_SYSTEMPROMPT && console.log('DEBUG\n', 'systemPrompt:', settings.systemPrompt);
     }
+
+    return promptAdditions;
 }
 
 
 //* MAIN
 {
-    await init();
-    let resultPrompt: promptResult|undefined = undefined;
-    let prompt = '';
+    let promptAdditions = await init();
+    let resultPrompt: PromptResult|undefined = undefined;
+    let prompt:Prompt = '';
 
 
     while (true) {
         do prompt = await doPromptWithCommands(resultPrompt);
         while (await promptTrigger(prompt, resultPrompt));
 
-        resultPrompt = await doPrompt(prompt);
+        resultPrompt = await doPrompt(prompt, promptAdditions);
         
         if (settings.endIfDone && resultPrompt.isEnd) break;
     }

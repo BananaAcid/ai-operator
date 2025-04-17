@@ -1,11 +1,11 @@
 /**
  * This file contains the drivers for the different APIs
- * 
+ *
  * Each driver has some url config, and functions that fetches the models and answers from the API
- * 
+ *
  * These functions are really similar, since the REST API ofthe services just differs only a bit.
  * But enough to be annoying.
- * 
+ *
  * Yes Ollama could use the same OpenAPI REST call, but would lack infos that could be useful because the models run locally.
  */
 const DEBUG_OUTPUT:boolean = globalThis.DEBUG_OUTPUT;
@@ -21,7 +21,7 @@ import './types/JSON.d.ts';
 
 const drivers = {
 
-    ollama: { 
+    ollama: {
         name: 'Ollama',
         urlTest: 'http://localhost:11434/',
         urlChat: 'http://localhost:11434/v1/chat/completions', // OpenAI comaptible API
@@ -43,24 +43,24 @@ const drivers = {
                 method: 'GET',
                 headers: {
                     'Content-Type': 'application/json',
-                    ...(this.apiKey ? {'Authorization': `Bearer ${this.apiKey()}`} : {}),
+                    ...(this.apiKey ? { 'Authorization': `Bearer ${this.apiKey()}` } : {}),
                 },
-            }).then( response => response.json() ).catch( error => console.error(error) ) as OllamaResultModels|undefined;
+            }).then(response => response.json()).catch(error => console.error(error)) as OllamaResultModels | undefined;
 
             const models = response?.models || [];
 
             DEBUG_OUTPUT && console.log('models', models);
 
             // more details about the models
-            let modelSelection:ModelSelection = models.map(model => ({ name: `${model.details.family} : ${model.details.parameter_size} (${(model.size / (1024 * 1024 * 1024)).toFixed(2)} GB) --- ${model.name}`, value: model.name }));
+            let modelSelection: ModelSelection = models.map(model => ({ name: `${model.details.family} : ${model.details.parameter_size} (${(model.size / (1024 * 1024 * 1024)).toFixed(2)} GB) --- ${model.name}`, value: model.name }));
 
             return modelSelection;
         },
 
         // same as openai
-        async getChatResponse(settings: Settings, history: any, prompt: string): Promise<ChatResponse> {
+        async getChatResponse(settings: Settings, history: any[], prompt: Prompt, promptAdditions?: PromptAdditions): Promise<ChatResponse> {
             // just reuse the openai driver in the Ollama driver's context
-            return drivers.openai.getChatResponse.call(this, settings, history, prompt);
+            return drivers.openai.getChatResponse.call(this, settings, history, prompt, promptAdditions);
         },
     },
 
@@ -86,46 +86,47 @@ const drivers = {
                 method: 'GET',
                 headers: {
                     'Content-Type': 'application/json',
-                    ...(this.apiKey ? {'Authorization': `Bearer ${this.apiKey()}`} : {}),
+                    ...(this.apiKey ? { 'Authorization': `Bearer ${this.apiKey()}` } : {}),
                 },
-            }).then( response => response.json() ).catch( error => console.error(error) ) as OpenAiResultModels|undefined;
+            }).then(response => response.json()).catch(error => console.error(error)) as OpenAiResultModels | undefined;
 
             const models = response?.data || [];
 
             DEBUG_OUTPUT && console.log('models', models);
 
-            let modelSelection:ModelSelection = models.map(model => ({ name: `${model.id} (${model.owned_by})`, value: model.id }));
+            let modelSelection: ModelSelection = models.map(model => ({ name: `${model.id} (${model.owned_by})`, value: model.id }));
 
             return modelSelection;
         },
 
 
-        async getChatResponse(settings: Settings, history: any[], prompt: string): Promise<ChatResponse> {
+        async getChatResponse(settings: Settings, history: any[], prompt: Prompt, promptAdditions?: PromptAdditions): Promise<ChatResponse> {
             let resultOrig;
 
             const response = await fetch(this.urlChat, {
                 method: 'POST',
                 headers: {
                     'Content-Type': 'application/json',
-        
-                    ...(this.apiKey ? {'Authorization': `Bearer ${this.apiKey}`} : {}),
+
+                    ...(this.apiKey ? { 'Authorization': `Bearer ${this.apiKey}` } : {}),
                 },
                 body: JSON.stringify<OpenAiRequest>({
                     model: settings.model || this.defaultModel,
                     options: {
-                        ... (settings.temperature > 0 ? { temperature: settings.temperature } : {}),
+                        ...(settings.temperature > 0 ? { temperature: settings.temperature } : {}),
                     },
-        
+
                     messages: [
                         ...history,
                         { role: 'system', content: settings.systemPrompt },
+                        ...(promptAdditions ?? []).map(item => ({ role: 'user', content: item.content })), // Map additional content to user role
                         { role: 'user', content: prompt },
                     ],
-        
+
                     stream: false,
                 }),
-            }).then( response => (resultOrig = response).json() ).catch( error => console.error(error, {resultOrig}) ) as OpenAiChatCompletionResult;
-        
+            }).then(response => (resultOrig = response).json()).catch(error => console.error(error, { resultOrig })) as OpenAiChatCompletionResult;
+
             if (!response) process.exit(2);
 
             DEBUG_APICALLS && console.log('DEBUG_APICALLS', 'API response', this.urlChat, response);
@@ -134,10 +135,11 @@ const drivers = {
 
             const newHistory = [
                 ...history,
+                ...(promptAdditions ?? []).map(item => ({ role: 'user', content: item.content })), // Add additional content to history
                 { role: 'user', content: prompt },
                 { role: responseMessage.role /* == 'asistent' */, content: responseMessage.content }
             ];
-            
+
             return {
                 contentRaw: responseMessage.content,
                 history: newHistory,
@@ -159,28 +161,28 @@ const drivers = {
         historyStyle: 'googleai',
 
 
-        getUrl(url, model=''):string {
+        getUrl(url, model = ''): string {
             if (process.env.GEMINI_URL)
                 url = url.replace('https://generativelanguage.googleapis.com/v1beta', process.env.GEMINI_URL);
-            
+
             return url.replaceAll('{{model}}', model) + this.apiKey();
         },
-    
+
         async getModels(settings: Settings): Promise<ModelSelection> {
             const response = await fetch(this.getUrl(this.urlModels), {
                 method: 'GET',
-            }).then( response => response.json() ).catch( error => console.error(error) ) as GoogleAiResultModels|undefined;
+            }).then(response => response.json()).catch(error => console.error(error)) as GoogleAiResultModels | undefined;
 
             const models = response?.models || [];
-            
+
             DEBUG_OUTPUT && console.log('models', response);
 
-            let modelSelection:ModelSelection = models.map(model => ({ name: `${model.displayName} (${model.description})`, value: model.name.replace(/^models\//, '') }));
+            let modelSelection: ModelSelection = models.map(model => ({ name: `${model.displayName} (${model.description})`, value: model.name.replace(/^models\//, '') }));
 
             return modelSelection;
         },
 
-        async getChatResponse(settings: Settings, history: any[], prompt: string): Promise<ChatResponse> {
+        async getChatResponse(settings: Settings, history: any[], prompt: Prompt, promptAdditions?: PromptAdditions): Promise<ChatResponse> {
             let resultOrig;
 
             const response = await fetch(this.getUrl(this.urlChat, settings.model || this.defaultModel), {
@@ -190,21 +192,27 @@ const drivers = {
                 },
                 body: JSON.stringify<GoogleAiRequest>({
                     generationConfig: {
-                        ... (settings.temperature > 0 ? { temperature: settings.temperature } : {}),
+                        ...(settings.temperature > 0 ? { temperature: settings.temperature } : {}),
                     },
 
                     // https://ai.google.dev/gemini-api/docs/text-generation#system-instructions
                     system_instruction: {
-                        parts: [{text: settings.systemPrompt}]
+                        parts: [{ text: settings.systemPrompt }]
                     },
-                    
+
                     contents: [
                         ...history,
-                        { role: 'user', parts: [{text: prompt }] },
+                        {
+                            role: 'user',
+                            parts: [
+                                ...(promptAdditions ?? []).map(item => ({ [item.type]: item.content })),
+                                { text: prompt },
+                            ]
+                        },
                     ],
                 }),
-            }).then( response => (resultOrig = response).json() ).catch( error => console.error(error, {resultOrig}) ) as GoogleAiChatCompletionResult;
-        
+            }).then(response => (resultOrig = response).json()).catch(error => console.error(error, { resultOrig })) as GoogleAiChatCompletionResult;
+
             if (!response) process.exit(2);
 
             DEBUG_APICALLS && console.log('DEBUG_APICALLS', 'API response', this.getUrl(this.urlChat), response);
@@ -218,7 +226,13 @@ const drivers = {
 
             const newHistory = [
                 ...history,
-                { role: 'user', parts: [{text: prompt }] },
+                {
+                    role: 'user',
+                    parts: [
+                        ...(promptAdditions ?? []).map(item => ({ [item.type]: item.content })),
+                        { text: prompt },
+                    ]
+                },
                 response.candidates[0].content // Add the model's response part
             ];
 

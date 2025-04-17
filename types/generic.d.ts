@@ -1,15 +1,22 @@
 declare global {
 
-    type promptHelper = {
+    type Prompt = string;
+
+    type PromptAdditions = Array<{
+        type: 'text' | 'image',
+        content: string;
+    }> | undefined;
+
+    type PromptHelper = {
         type: 'agent';
         name: string;
         definition: string;
     };
 
-    type promptResult = {
+    type PromptResult = {
         answerFull: string; // for thinking models debugging
         answer: string;
-        helpers: promptHelper[];
+        helpers: PromptHelper[];
         commands: string[];
         needMoreInfo: boolean;
         isEnd: boolean;
