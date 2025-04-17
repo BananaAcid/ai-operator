@@ -185,16 +185,16 @@ let settingsDefault: Settings = {
         You want to solve the users prompt with concise and meaningful commandline commands and avoid guessing or duplicates and supply executable commands that will be executed.
 
         ### Your System Information:
-        - User: ${process.env.USERNAME}
-        - OS: ${process.env.OS}
-            - Plattform: ${process.platform}
-            - Architecture: ${process.arch}
-        - Computer Name: ${process.env.COMPUTERNAME}
+        - User: {{process_env_USERNAME}}
+        - OS: {{process_env_OS}}
+            - Plattform: {{process_platform}}
+            - Architecture: {{process_arch}}
+        - Computer Name: {{process_env_COMPUTERNAME}}
         - **Default Shell (used for execution)**: {{invokingShell}}
-        - **Fallback Shell (only used for execution if default is unknown):** ${process.env.SHELL ?? process.env.COMSPEC}
-        - Installed PowerShell: ${process.env.POSH_SHELL}, version ${process.env.POSH_SHELL_VERSION}
-        - User's Home Directory (user home folder): ${process.env.HOME ?? process.env.USERPROFILE}
-        - Current Working Directory (cwd, here you are always): ${process.cwd()}
+        - **Fallback Shell (only used for execution if default is unknown):** {{process_env_SHELL}}
+        - Installed PowerShell: {{process_env_POSH_SHELL}}, version {{process_env_POSH_SHELL_VERSION}}
+        - User's Home Directory (user home folder): {{process_env_HOME}}
+        - Current Working Directory (cwd, here you are always): {{process_cwd}}
         {{linksIsInstalled}}
         {{useAllSysEnv}}
 
@@ -1108,6 +1108,19 @@ async function init(): Promise<PromptAdditions> {
     }
     
     {//* system prompt
+
+        // always apply consts here, otherwise they would be saved and this be hard coded
+        settings.systemPrompt = settings.systemPrompt.replaceAll('{{process_env_USERNAME}}', process.env.USERNAME!);
+        settings.systemPrompt = settings.systemPrompt.replaceAll('{{process_env_OS}}', process.env.OS!);
+        settings.systemPrompt = settings.systemPrompt.replaceAll('{{process_platform}}', process.platform);
+        settings.systemPrompt = settings.systemPrompt.replaceAll('{{process_arch}}', process.arch);
+        settings.systemPrompt = settings.systemPrompt.replaceAll('{{process_env_COMPUTERNAME}}', process.env.COMPUTERNAME!);
+        settings.systemPrompt = settings.systemPrompt.replaceAll('{{process_env_SHELL}}', process.env.SHELL ?? process.env.COMSPEC!);
+        settings.systemPrompt = settings.systemPrompt.replaceAll('{{process_env_POSH_SHELL}}', process.env.POSH_SHELL!);
+        settings.systemPrompt = settings.systemPrompt.replaceAll('{{process_env_POSH_SHELL_VERSION}}', process.env.POSH_SHELL_VERSION!);
+        settings.systemPrompt = settings.systemPrompt.replaceAll('{{process_env_HOME}}', process.env.HOME ?? process.env.USERPROFILE!);
+        settings.systemPrompt = settings.systemPrompt.replaceAll('{{process_cwd}}', process.cwd());
+
         // apply invoking shell to system prompt
         settings.systemPrompt = settings.systemPrompt.replaceAll('{{invokingShell}}', getInvokingShell() ?? 'unknown');
 
