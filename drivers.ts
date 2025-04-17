@@ -120,7 +120,7 @@ const drivers = {
                         ...history,
                         { role: 'system', content: settings.systemPrompt },
                         ...(promptAdditions ?? []).map(item => ({ role: 'user', content: item.content })), // Map additional content to user role
-                        { role: 'user', content: prompt },
+                        { role: 'user', content: prompt ?? '' },
                     ],
 
                     stream: false,
@@ -136,7 +136,7 @@ const drivers = {
             const newHistory = [
                 ...history,
                 ...(promptAdditions ?? []).map(item => ({ role: 'user', content: item.content })), // Add additional content to history
-                { role: 'user', content: prompt },
+                { role: 'user', content: prompt ?? '' },
                 { role: responseMessage.role /* == 'asistent' */, content: responseMessage.content }
             ];
 
@@ -206,7 +206,7 @@ const drivers = {
                             role: 'user',
                             parts: [
                                 ...(promptAdditions ?? []).map(item => ({ [item.type]: item.content })),
-                                { text: prompt },
+                                { text: prompt ?? '' },
                             ]
                         },
                     ],
@@ -230,7 +230,7 @@ const drivers = {
                     role: 'user',
                     parts: [
                         ...(promptAdditions ?? []).map(item => ({ [item.type]: item.content })),
-                        { text: prompt },
+                        { text: prompt ?? '' },
                     ]
                 },
                 response.candidates[0].content // Add the model's response part

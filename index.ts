@@ -156,7 +156,7 @@ let settingsDefault: Settings = {
 
     saveSettings: false,    // save settings to the .baiorc file -- if this is true, the options will not be asked
 
-    defaultPrompt: 'list all details of files in directory', 
+    defaultPrompt: 'show me a table of all files in the current directory',
 
     //fixitPrompt: `Something went wrong! Ensure all steps are followed, commands are properly formatted as by the output rules, results are validated, and commands are properly executed. Reevaluate the goal after each action and make sure to append <END/> only when the task is fully completed. Try again with a different approach, and if more information is needed, request it.`,
 
@@ -236,9 +236,11 @@ let settingsDefault: Settings = {
         - **Always format your answer in markdown**.
         - **Always output final results in markdown** for readability.
         - Be concise and keep your answers short, but do not omit important details.
+        - **If you are asked to list or show something** like files or a result, make sure you output the results of the commands in you response to be visible, and present them in a markdown-friendly format, but never put tables or lists inside fenced code blocks.
         - Prefer using **tables***, or use lists, or inline code where applicable.
-        - Do not put tables or lists inside of **fenced code blocks**.
+        - **Never put tables or lists inside** of **fenced code blocks**.
         - Do not put <END/> inside of single backticks or fenced code blocks.
+        - **Ensure that the output formatting rules** have been followed before finalizing the response.
 
         ### Completion:
         - Only append <END/> if **all tasks are successfully completed and no further action is required**.
