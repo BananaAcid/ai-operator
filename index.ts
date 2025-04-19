@@ -18,6 +18,7 @@ import fs from 'node:fs';
 import cliMd from 'cli-markdown';
 import launchEditor from 'launch-editor';
 import open from 'open';
+import clipboard from 'copy-paste';
 
 import { input, select, checkbox, editor } from '@inquirer/prompts';
 import { default as tgl } from 'inquirer-toggle';
@@ -691,6 +692,8 @@ async function promptTrigger(prompt: string, resultPrompt?: PromptResult): Promi
 | \`/:help\`                           | \`:h\` | Shows this help. |
 | \`/:read\`                           | \`:r\` | Opens the default editor for a multiline input. |
 | \`/:write\`                          | \`:w\` | Opens the default editor to show the last AI output. Use to save to a file. |
+| \`/clip:read\`                       | \`:r+\` | Read from the clipboard and open the default editor. |
+| \`/clip:write\`                      | \`:w+\` | Write the the last AI output to the clipboard. |
 | \`/:end [<boolean>]\`                |        | Toggles end if assumed done, or turns it on or off. |
 | \`/debug:response\`                  |        | Shows what the API generated and what the tool understood. |
 | \`/debug:exec\`                      |        | Shows what the system got returned from the shell. Helps debug strange situations. |
@@ -787,16 +790,31 @@ async function promptTrigger(prompt: string, resultPrompt?: PromptResult): Promi
 
         return importHistory(filename);
     }
-    if (prompt === '/:read' || prompt === ':r') {
+    let pasteContent: string|undefined = undefined;
+    if (prompt === '/clip:read' || prompt === ':r+' || prompt === ':r +') {
+        pasteContent = clipboard.paste() || '';
+        if (!pasteContent) {
+            console.log(`🛑 Failed to read anything from clipboard`);
+            return true;
+        }
+        console.log(`📋 Read from clipboard`);
+    }
+    if (prompt === '/:read' || prompt === ':r' || pasteContent) {
         const value = await editor({
             message: 'Waiting for your input in the editor.',
             waitForUseInput: false,
+            default: pasteContent ?? '',
             theme: { style: { help: _ => `Enter your multiline content in the editor, save the file and close it.`, } }
         }).catch(_ => undefined);
         if (value) {
             prompt = value || '';
             return false;
         }
+        return true;
+    }
+    if (prompt === '/clip:write' || prompt === ':w+' || prompt === ':w +') {
+        clipboard.copy(resultPrompt?.answerFull);
+        console.log(`📋 Copied to clipboard`);
         return true;
     }
     if (prompt === '/:write' || prompt === ':w') {
