@@ -1,11 +1,16 @@
 declare global {
 
-    type Prompt = string;
+    type PromptText = string;
 
     type PromptAdditions = Array<{
         type: 'text' | 'image',
         content: string;
     }> | undefined;
+
+    type Prompt = {
+        text: PromptText;
+        additions?: PromptAdditions;
+    };
 
     type PromptHelper = {
         type: 'agent';
@@ -33,6 +38,9 @@ declare global {
         fixitPrompt: string;
         systemPrompt: string;
         version: string;
+
+        precheckUpdate: boolean;
+        precheckDriverApi: boolean;
     };
 
     type InquirerSelection = Array<{

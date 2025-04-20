@@ -1,6 +1,6 @@
 {
   "name": "baio",
-  "version": "1.0.22",
+  "version": "1.0.23",
   "description": "Simple AI operator for the CLI, for any LLM",
   "main": "index.ts",
   "type": "module",
@@ -60,6 +60,7 @@
     "cli-markdown": "^3.4.0",
     "copy-paste": "^1.5.3",
     "inquirer-toggle": "^1.0.1",
+    "is-unicode-supported": "^2.1.0",
     "launch-editor": "^2.10.0",
     "open": "^10.1.1",
     "tsx": "^4.19.3",

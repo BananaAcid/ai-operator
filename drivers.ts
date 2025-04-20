@@ -58,9 +58,9 @@ const drivers = {
         },
 
         // same as openai
-        async getChatResponse(settings: Settings, history: any[], prompt: Prompt, promptAdditions?: PromptAdditions): Promise<ChatResponse> {
+        async getChatResponse(settings: Settings, history: any[], promptText: PromptText, promptAdditions?: PromptAdditions): Promise<ChatResponse> {
             // just reuse the openai driver in the Ollama driver's context
-            return drivers.openai.getChatResponse.call(this, settings, history, prompt, promptAdditions);
+            return drivers.openai.getChatResponse.call(this, settings, history, promptText, promptAdditions);
         },
     },
 
@@ -100,7 +100,7 @@ const drivers = {
         },
 
 
-        async getChatResponse(settings: Settings, history: any[], prompt: Prompt, promptAdditions?: PromptAdditions): Promise<ChatResponse> {
+        async getChatResponse(settings: Settings, history: any[], promptText: PromptText, promptAdditions?: PromptAdditions): Promise<ChatResponse> {
             let resultOrig;
 
             const response = await fetch(this.urlChat, {
@@ -120,7 +120,7 @@ const drivers = {
                         ...history,
                         { role: 'system', content: settings.systemPrompt },
                         ...(promptAdditions ?? []).map(item => ({ role: 'user', content: item.content })), // Map additional content to user role
-                        { role: 'user', content: prompt ?? '' },
+                        { role: 'user', content: promptText ?? '' },
                     ],
 
                     stream: false,
@@ -136,7 +136,7 @@ const drivers = {
             const newHistory = [
                 ...history,
                 ...(promptAdditions ?? []).map(item => ({ role: 'user', content: item.content })), // Add additional content to history
-                { role: 'user', content: prompt ?? '' },
+                { role: 'user', content: promptText ?? '' },
                 { role: responseMessage.role /* == 'asistent' */, content: responseMessage.content }
             ];
 
@@ -182,7 +182,7 @@ const drivers = {
             return modelSelection;
         },
 
-        async getChatResponse(settings: Settings, history: any[], prompt: Prompt, promptAdditions?: PromptAdditions): Promise<ChatResponse> {
+        async getChatResponse(settings: Settings, history: any[], promptText: PromptText, promptAdditions?: PromptAdditions): Promise<ChatResponse> {
             let resultOrig;
 
             const response = await fetch(this.getUrl(this.urlChat, settings.model || this.defaultModel), {
@@ -206,7 +206,7 @@ const drivers = {
                             role: 'user',
                             parts: [
                                 ...(promptAdditions ?? []).map(item => ({ [item.type]: item.content })),
-                                { text: prompt ?? '' },
+                                { text: promptText ?? '' },
                             ]
                         },
                     ],
@@ -230,7 +230,7 @@ const drivers = {
                     role: 'user',
                     parts: [
                         ...(promptAdditions ?? []).map(item => ({ [item.type]: item.content })),
-                        { text: prompt ?? '' },
+                        { text: promptText ?? '' },
                     ]
                 },
                 response.candidates[0].content // Add the model's response part

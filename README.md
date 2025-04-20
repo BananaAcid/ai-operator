@@ -111,7 +111,7 @@ Sometimes, the command output is not formatted correctly and the AI does not get
 
 ### You do not want to execute any suggested command, but a prompt
 
-If you unselect the suggested commands (press spacebar or a) so no command is selected anymore and you press enter, you get a text prompt to be able to provide more info (if the suggestions are crap) or to change what should happen next.
+If you unselect the suggested commands (press spacebar or a) so no command is selected anymore and you press enter (or press <kbd>ESC</kbd>), you get a text prompt to be able to provide more info (if the suggestions are crap) or to change what should happen next.
 
 Useful if the AI wants to execute the same command over and over again or just doesn't get it right. (You could tell it to look it up online or tell it what command or file to use.)
 
@@ -298,7 +298,11 @@ DEBUG_OUTPUT_SYSTEMPROMPT=<boolean>
 
 ### Prompt Triggers
 
-To trigger these, if you are not on a prompt, you need to **unselect any command and press enter** to fall back to the prompt, **then enter** one of the following:
+To trigger these, **_if you are not on a prompt_**,
+1. you can press <kbd>:</kbd>, <kbd>/</kbd> or <kbd>ESC</kbd> to fall back to the prompt (the key press is not preserved) (e.g. to show the help you could type `::h`)
+2. **OR**: you **unselect any command and press enter** to fall back to the prompt
+
+**then enter** one of the following:
 
 | Trigger | Short | Description |
 |---|---|---|
@@ -307,16 +311,30 @@ To trigger these, if you are not on a prompt, you need to **unselect any command
 | `/:write`                          | `:w` | Opens the default editor to show the last AI output. Use to save to a file. |
 | `/clip:read`                       | `:r+` | Read from the clipboard and open the default editor. |
 | `/clip:write`                      | `:w+` | Write the the last AI output to the clipboard. |
+| `/history:export [<filename>]`     | `:hi [<filename>]`    | Exports the current context to a file with date-time as name or an optional custom filename. |
+| `/history:export:md [<filename>]`  | `:he:md [<filename>]` | Exports the current context to a markdown file for easier reading (can not be imported). |
+| `/history:import [<filename>]`     | `:he [<filename>]`    | Imports the context from a history file or shows a file selection. |
 | `/:end [<boolean>]`                |        | Toggles end if assumed done, or turns it on or off. |
 | `/debug:response`                  |        | Shows what the API generated and what the tool understood. |
 | `/debug:exec`                      |        | Shows what the system got returned from the shell. Helps debug strange situations. |
 | `/debug:get <.baiorc-key>`         |        | Gets the current value of the key. Outputs the system prompt, may spam the shell output. |
 | `/debug:set <.baiorc-key> <value>` |        | Overwrites a setting. value must be a JSON formatted value. |
 | `/debug:settings`                  |        | Gets all the current values of settings. May spam the shell output. |
-| `/history:export [<filename>]`     | `:hi [<filename>]`    | Exports the current context to a file with date-time as name or an optional custom filename. |
-| `/history:export:md [<filename>]`  | `:he:md [<filename>]` | Exports the current context to a markdown file for easier reading (can not be imported). |
-| `/history:import [<filename>]`     | `:he [<filename>]`    | Imports the context from a history file or shows a file selection. |
 | `/:quit`, `/:exit`               | `:q` | Will exit (CTRL+D or CTRL+C will also work). |
+
+
+**Note:** If you want to continue, just press enter without any text.
+
+
+## Faster startup
+
+These options can be turned off to reduce start time:
+
+in settings: `baio --open config`
+```
+  "precheckUpdate": true,
+  "precheckDriverApi": true,
+```
 
 
 ## Development
@@ -402,3 +420,4 @@ I am mainly using `GEMINI 2.0 Flash` for prompt engineering. Feel free to send i
 | v1.0.17 | Prompt trigger added `/history:export [<filename>]` and `/history:import [<filename>]`, Argument added: `--import` (history) |
 | v1.0.19 | fixed first prompt did not accept prompt triggers, changed triggers (renamed `/:exit`, `/:quit`, `:q`), added triggers (`:h`, `:r`, `/:read`, `:w`, `/:write`, `/:end`, `/history:export:md` ), added basic support for piping in text (experimental) |
 | v1.0.22 | Added copy-paste, added triggers (`:w+`, `:r+`) |
+| v1.0.23 | Fixed trigger (`:r`, `:r+`), added update check, added options for faster startup, added keys to fall back to the prompt (<kbd>:</kbd> or <kbd>/</kbd> or <kbd>ESC</kbd>) |

@@ -20,13 +20,19 @@ import launchEditor from 'launch-editor';
 import open from 'open';
 import clipboard from 'copy-paste';
 
-import { input, select, checkbox, editor } from '@inquirer/prompts';
+import colors from 'yoctocolors-cjs'; // installed by @inquirer/prompts
+import figures from '@inquirer/figures'; // installed by @inquirer/prompts
+import { input, select, editor } from '@inquirer/prompts';
+import checkbox from './libs/checkbox-with-actions.ts';
+import {type KeypressHandler} from './libs/checkbox-with-actions.ts';
 import { default as tgl } from 'inquirer-toggle';
 //@ts-ignore
 const toggle = tgl.default;
 
+import isUnicodeSupported from 'is-unicode-supported';  //  as long as yoctoSpinner has a hardcoded check
+import cliSpinners from 'cli-spinners'; // imported by @inquirer/core
 import yoctoSpinner from 'yocto-spinner';
-const spinner = yoctoSpinner({text: ''});
+const spinner = yoctoSpinner({text: '', ...(isUnicodeSupported() ? {spinner: cliSpinners.dots} : {})}); // do not care about non-unicode terminals, always force dots
 
 
 //* (try to) handle errors
@@ -156,6 +162,9 @@ let settingsDefault: Settings = {
     endIfDone: true,        // don't allow the AI to end the conversation (it would, if it thinks it is done)
 
     saveSettings: false,    // save settings to the .baiorc file -- if this is true, the options will not be asked
+
+    precheckUpdate: true,       // (speedup if false) try to reach the npm registry to check for an update
+    precheckDriverApi: true,    // (speedup if false) try to reach the driver api to check if it is available
 
     defaultPrompt: 'show me a table of all files in the current directory',
 
@@ -336,7 +345,7 @@ let history: MessageItem[] = [];
  * - needMoreInfo: true if the answer contains <NEED-MORE-INFO/>.
  * - isEnd: true if the answer contains <END/>.
  */
-async function api(prompt: string, promptAdditions?: PromptAdditions): Promise<PromptResult> {
+async function api(promptText: PromptText, promptAdditions?: PromptAdditions): Promise<PromptResult> {
     // fetch from ollama api
 
     const driver: Driver = drivers[settings.driver];
@@ -344,7 +353,7 @@ async function api(prompt: string, promptAdditions?: PromptAdditions): Promise<P
     spinner.start(`Waiting for ${driver.name}\'s response ...`);
 
 
-    let {contentRaw, history: historyNew} = await driver.getChatResponse(settings, history, prompt, promptAdditions);
+    let {contentRaw, history: historyNew} = await driver.getChatResponse(settings, history, promptText, promptAdditions);
     
     history = historyNew;
 
@@ -473,6 +482,27 @@ function getInvokingShell(overwriteInvokingShell = process.env.INVOKING_SHELL): 
 }
 
 
+/**
+ * Checks if there is a newer version of the package available.
+ * If there is a newer version, it will print a message to the console with the update information.
+ * @returns {Promise<boolean>}
+ */
+async function checkUpdateOutput() {
+    let result = false;
+    
+    let version = await fetch(`https://registry.npmjs.com/${packageJSON.name}/latest`).catch(_=>undefined).then(d => d?.json?.()).then(({version})=>version).catch(_=>undefined);
+    if (version === undefined) return false;
+
+    if (version !== packageJSON.version) {
+        console.warn(colors.yellow(colors.bold(figures.info + ` A new version of ${packageJSON.name} is available, ${packageJSON.version} → ${version}`)));
+        console.warn(`  Run 'npm i -g ${packageJSON.name}' to update!`);
+        result = true;
+    }
+
+    return result;
+}
+
+
 
 /**
  * Returns a selection of agents, or an empty array if none are selected.
@@ -553,8 +583,8 @@ async function doCommands(commands: string[]): Promise<string> {
  * @param prompt 
  * @returns api result
  */
-async function doPrompt(prompt: Prompt, promptAdditions?: PromptAdditions): Promise<PromptResult> {
-    const result = await api(prompt, promptAdditions);
+async function doPrompt(prompt: Prompt): Promise<PromptResult> {
+    const result = await api(prompt.text, prompt.additions);
     
     // output to the user
     console.log(result.answer);
@@ -587,7 +617,7 @@ async function doPromptWithCommands(result: PromptResult|undefined): Promise<str
 
         if (argsPrompt) {
             prompt = argsPrompt;
-            DEBUG_OUTPUT && console.log('✔ What do you want to get done:', argsPrompt);
+            DEBUG_OUTPUT && console.log(colors.green(figures.tick), 'What do you want to get done:', argsPrompt);
         }
         else
             prompt = argsPrompt || await input({ message: 'What do you want to get done:', default: settings.defaultPrompt }, TTY_INTERFACE);
@@ -608,19 +638,28 @@ async function doPromptWithCommands(result: PromptResult|undefined): Promise<str
         }
         //* do the fixit prompt, because there was no command
         else {
-            console.log('⚠️ No commands found in response, no execution will be performed.');
+            console.log(colors.yellow(figures.warning), 'No commands found in response, no execution will be performed.');
             resultCommands = settings.fixitPrompt;
         }
     }
     //* there are commands
     else {
-
+        let canceled = false;
         const commands = await checkbox({
             message: 'Select the commands to execute',
             choices: result.commands.map((command) => ({ name: command, value: command, checked: true })),
+            keypressHandler: async function({key, active}) {
+                if (key.name == 'escape' || key.sequence == ':' || key.sequence == '/') {
+                    canceled = true;   // let us know, that we should not care about the values
+                    return {
+                        isDone: true, // tell the elment to exit and return selected values
+                        isConsumed: true // prevent original handler to process this key         ... ignores any validation error (we did not setup validations for this prompt)
+                    }
+                }
+            }
         }, TTY_INTERFACE);
 
-        if (!commands.length)
+        if (canceled || !commands.length)
             resultCommands = await input({ message: 'Enter more info:' }, TTY_INTERFACE);
         else {
                 resultCommands = await doCommands(commands);
@@ -679,13 +718,13 @@ async function importHistory(filename: string, isAsk: boolean = false): Promise<
  * It performs actions such as logging the result, executing stored commands,
  * retrieving or setting configuration settings, and exiting the process.
  *
- * @param prompt - The command prompt string to evaluate.
+ * @param prompt - The command prompt.text string to evaluate.
  * @param resultPrompt - The result from the API call to be potentially logged.
  * @returns A boolean indicating whether a recognized command was executed.
  */
-async function promptTrigger(prompt: string, resultPrompt?: PromptResult): Promise<boolean> {
+async function promptTrigger(/*inout*/ prompt: Prompt, /*inout*/ resultPrompt?: PromptResult): Promise<boolean> {
 
-    if (prompt === ':h' || prompt === '/:help') {
+    if (prompt.text === ':h' || prompt.text === '/:help') {
         console.log(cliMd(`Possible prompt triggers\n
 | Trigger | Short | Description |
 |---|---|---|
@@ -694,40 +733,40 @@ async function promptTrigger(prompt: string, resultPrompt?: PromptResult): Promi
 | \`/:write\`                          | \`:w\` | Opens the default editor to show the last AI output. Use to save to a file. |
 | \`/clip:read\`                       | \`:r+\` | Read from the clipboard and open the default editor. |
 | \`/clip:write\`                      | \`:w+\` | Write the the last AI output to the clipboard. |
+| \`/history:export [<filename>]\`     | \`:hi [<filename>]\`    | Exports the current context to a file with date-time as name or an optional custom filename. |
+| \`/history:export:md [<filename>]\`  | \`:he:md [<filename>]\` | Exports the current context to a markdown file for easier reading (can not be imported). |
+| \`/history:import [<filename>]\`     | \`:he [<filename>]\`    | Imports the context from a history file or shows a file selection. |
 | \`/:end [<boolean>]\`                |        | Toggles end if assumed done, or turns it on or off. |
 | \`/debug:response\`                  |        | Shows what the API generated and what the tool understood. |
 | \`/debug:exec\`                      |        | Shows what the system got returned from the shell. Helps debug strange situations. |
 | \`/debug:get <.baiorc-key>\`         |        | Gets the current value of the key. Outputs the system prompt, may spam the shell output. |
 | \`/debug:set <.baiorc-key> <value>\` |        | Overwrites a setting. value must be a JSON formatted value. |
 | \`/debug:settings\`                  |        | Gets all the current values of settings. May spam the shell output. |
-| \`/history:export [<filename>]\`     | \`:hi [<filename>]\`    | Exports the current context to a file with date-time as name or an optional custom filename. |
-| \`/history:export:md [<filename>]\`  | \`:he:md [<filename>]\` | Exports the current context to a markdown file for easier reading (can not be imported). |
-| \`/history:import [<filename>]\`     | \`:he [<filename>]\`    | Imports the context from a history file or shows a file selection. |
 | \`/:quit\`, \`/:exit\`               | \`:q\` | Will exit (CTRL+D or CTRL+C will also work). |
         `));
         return true;
     }
-    if (prompt === '/debug:result') {
+    if (prompt.text === '/debug:result') {
         console.log(resultPrompt);
         return true;
     }
-    if (prompt === '/debug:exec') {
+    if (prompt.text === '/debug:exec') {
         console.log(doCommandsLastResult);
         return true;
     }
-    if (prompt === '/debug:settings') {
+    if (prompt.text === '/debug:settings') {
         console.log(`settings =`, settings);
         return true;
     }
-    if (prompt.startsWith('/debug:get ')) {
-        const key = prompt.split(/(?<!\\)\s+/)[1];
+    if (prompt.text.startsWith('/debug:get ')) {
+        const key = prompt.text.split(/(?<!\\)\s+/)[1];
         console.log(`settings.${key} =`, settings[key]);
         return true;
     }
-    if (prompt.startsWith('/debug:set ')) {
+    if (prompt.text.startsWith('/debug:set ')) {
         //* will not work with useAllSysEnv (is systemPrompt is already generated with this), saveSettings (saved already)
         //*  /debug:set <.baiorc-key> <JSON_formatted_value>
-        const args = prompt.split(/(?<!\\)\s+/).filter(arg => arg.length > 0);
+        const args = prompt.text.split(/(?<!\\)\s+/).filter(arg => arg.length > 0);
         const key = args[1];
         const value = JSON.parse(args.slice(2).join(' '));
         if (key in settings) settings[key] = value;
@@ -735,11 +774,11 @@ async function promptTrigger(prompt: string, resultPrompt?: PromptResult): Promi
         return true;
     }
     let exportType='json';
-    if (prompt.startsWith('/history:export:md') || prompt.startsWith(':he:md')) {
+    if (prompt.text.startsWith('/history:export:md') || prompt.text.startsWith(':he:md')) {
         exportType = 'md';
     }
-    if (prompt.startsWith('/history:export') || prompt.startsWith(':he')) {
-        const key = prompt.split(/(?<!\\)\s+/).filter(arg => arg.length > 0).slice(1).join(' ');
+    if (prompt.text.startsWith('/history:export') || prompt.text.startsWith(':he')) {
+        const key = prompt.text.split(/(?<!\\)\s+/).filter(arg => arg.length > 0).slice(1).join(' ');
         let filename = key || (new Date()).toLocaleString().replace(/[ :]/g, '-').replace(/,/g, '')+`_${settings.driver}_${settings.model.replace(/[^a-zA-Z0-9_-]/g, '_')}`;
         if (filename.startsWith('"') && filename.endsWith('"')) filename = filename.slice(1, -1); // "file name" is possible
         mkdir(RC_HISTORY_PATH, { recursive: true }).catch(_ => {});
@@ -785,13 +824,13 @@ async function promptTrigger(prompt: string, resultPrompt?: PromptResult): Promi
             console.log(`💾 Exported history to ${historyPath}`);
         return true;
     }
-    if (prompt.startsWith('/history:import') || prompt.startsWith(':hi')) {
-        let filename = prompt.split(/(?<!\\)\s+/).filter(arg => arg.length > 0).slice(1).join(' ');
+    if (prompt.text.startsWith('/history:import') || prompt.text.startsWith(':hi')) {
+        let filename = prompt.text.split(/(?<!\\)\s+/).filter(arg => arg.length > 0).slice(1).join(' ');
 
         return importHistory(filename);
     }
     let pasteContent: string|undefined = undefined;
-    if (prompt === '/clip:read' || prompt === ':r+' || prompt === ':r +') {
+    if (prompt.text === '/clip:read' || prompt.text === ':r+' || prompt.text === ':r +') {
         pasteContent = clipboard.paste() || '';
         if (!pasteContent) {
             console.log(`🛑 Failed to read anything from clipboard`);
@@ -799,7 +838,7 @@ async function promptTrigger(prompt: string, resultPrompt?: PromptResult): Promi
         }
         console.log(`📋 Read from clipboard`);
     }
-    if (prompt === '/:read' || prompt === ':r' || pasteContent) {
+    if (prompt.text === '/:read' || prompt.text === ':r' || pasteContent) {
         const value = await editor({
             message: 'Waiting for your input in the editor.',
             waitForUseInput: false,
@@ -807,28 +846,32 @@ async function promptTrigger(prompt: string, resultPrompt?: PromptResult): Promi
             theme: { style: { help: _ => `Enter your multiline content in the editor, save the file and close it.`, } }
         }).catch(_ => undefined);
         if (value) {
-            prompt = value || '';
+            prompt.text = value || '';
             return false;
         }
         return true;
     }
-    if (prompt === '/clip:write' || prompt === ':w+' || prompt === ':w +') {
+    if (prompt.text === '/clip:write' || prompt.text === ':w+' || prompt.text === ':w +') {
         clipboard.copy(resultPrompt?.answerFull);
         console.log(`📋 Copied to clipboard`);
         return true;
     }
-    if (prompt === '/:write' || prompt === ':w') {
+    if (prompt.text === '/:write' || prompt.text === ':w') {
+        if (!resultPrompt?.answerFull) {
+            console.log(`🛑 There is nothing from a previous AI response`);
+            return true;
+        }
         await editor({
             message: 'Waiting for you to close the editor.',
             waitForUseInput: false,
             theme: { style: { help: _ => ``, } },
-            default: resultPrompt?.answerFull,
+            default: resultPrompt.answerFull,
             postfix: '.md',
         }).catch(_ => undefined);
         return true;
     }
-    if (prompt.startsWith('/:end')) {
-        const key = prompt.split(/(?<!\\)\s+/)[1];
+    if (prompt.text.startsWith('/:end')) {
+        const key = prompt.text.split(/(?<!\\)\s+/)[1];
         if (key === undefined || key.trim() === '')
             settings.endIfDone = !settings.endIfDone;
         else
@@ -838,7 +881,7 @@ async function promptTrigger(prompt: string, resultPrompt?: PromptResult): Promi
         return true;
     }
 
-    if (prompt === '/:exit' || prompt === '/:quit' || prompt === ':q') {
+    if (prompt.text === '/:exit' || prompt.text === '/:quit' || prompt.text === ':q') {
         process.exit(0);
     }
 
@@ -851,26 +894,15 @@ async function promptTrigger(prompt: string, resultPrompt?: PromptResult): Promi
  * Initializes the prompt by asking the user for settings and returns the prompt
  * @returns the prompt
  */
-async function init(): Promise<PromptAdditions> {
+async function init(): Promise<Prompt> {
     let driver:Driver = drivers[settings.driver];
     let askSettings = settingsArgs['ask'] ?? (process.env.ASK_SETTINGS || !settings.saveSettings);
     if (settingsArgs['reset-prompts'] === true) { askSettings = settingsArgs['ask'] ?? false; settingsArgs['config'] = settingsArgs['config'] ?? true; } // do not ask for settings and prompt, if we are resetting the prompts so the other commands are not needed
     let promptAdditions: PromptAdditions;
 
 
-    //*** NEEDS FIXING */
-    // no tty ?
-    if (!process.stdin.isTTY) {
-        // issue:  https://github.com/SBoudrias/Inquirer.js/issues/1721
-        console.error('⚠️ Piping files into Baio will cause problems with the prompt.');
-        if (askSettings) {
-            console.error('⚠️ Editing settings is disabled.');
-            askSettings = false;
-        }
-    }
-
-
     //*** args with exit ***
+
 
     if (settingsArgs['version'])
     {
@@ -945,8 +977,11 @@ async function init(): Promise<PromptAdditions> {
         console.info(packageJSON.homepage);
         console.info('\n');
 
-        console.info(`baio [-vhdmtaqseiucr] ["prompt string"]
+        console.info(`baio [-vhdmtaqseiucr] ["prompt string"]`);
 
+        await checkUpdateOutput() && console.info('\n');
+
+        console.info(`
   -v, --version
   -h, -?, --help
 
@@ -988,6 +1023,7 @@ async function init(): Promise<PromptAdditions> {
 
     //*** initialize for content ***
 
+
     {//* read piped in input
         const stdin = process.stdin;
         if (!stdin.isTTY) {
@@ -998,10 +1034,21 @@ async function init(): Promise<PromptAdditions> {
                 stdin.on('end', () => resolve(data));
             });
 
-            if (additionalContentData)
-                promptAdditions = [ ...(promptAdditions ?? []), { type: 'text', content: additionalContentData }];
+            if (additionalContentData) {
 
-            //! restore input capability
+                //***! NEEDS FIXING */
+                // issue:  https://github.com/SBoudrias/Inquirer.js/issues/1721
+                console.error(colors.red(figures.warning + ' Piping files into Baio will cause problems with the prompt.'));
+                if (askSettings) {
+                    console.error(colors.yellow(figures.warning), 'Editing settings is disabled.');
+                    askSettings = false;
+                }
+
+
+                promptAdditions = [ ...(promptAdditions ?? []), { type: 'text', content: additionalContentData }];
+            }
+
+            //? restore input capability
             const fd = process.platform === 'win32' ? '\\\\.\\CON' : '/dev/tty';
             let stdinNew = (await fsOpen(fd, 'r')).createReadStream();
             // const readLineNew = createInterface({
@@ -1014,13 +1061,20 @@ async function init(): Promise<PromptAdditions> {
             };
         }
     }
-        
+
+
     //*** settings ***
 
+
     if (askSettings)
-    {
+    {//* info header
         console.info(packageJSON.name, 'v' + packageJSON.version);
         console.info('ℹ️ use CTRL + D to exit at any time.');
+    }
+
+    {//* new update info
+        if (settings.precheckUpdate)
+            await checkUpdateOutput();
     }
 
     if (askSettings)
@@ -1028,7 +1082,6 @@ async function init(): Promise<PromptAdditions> {
         let driverChoices = Object.keys(drivers).map(key => ({ name: drivers[key].name, value: key }));
         settings.driver = await select({ message: 'Select your API:', choices: driverChoices, default: settings.driver || 'ollama' }, TTY_INTERFACE);
     }
-    
 
     {//* api key test
         if (settings.driver !== 'ollama' && !drivers[settings.driver].apiKey()) {
@@ -1038,16 +1091,18 @@ async function init(): Promise<PromptAdditions> {
     }
 
     {//* connection test
-        askSettings && spinner.start(`Connecting to ${driver.name} ...`);
-        const connection = await doConnectionTest();
-
-        if (!connection) {
-            if (!askSettings) spinner.start(); // otherwise there is nothing shown
-            spinner.error(`Connection to ${driver.name} ( ${driver.getUrl(driver.urlTest)} ) failed!`);
-            process.exit(1);
-        }
-        else {
-            spinner.success(`Connection to ${driver.name} possible.`);
+        if (settings.precheckDriverApi) {
+            askSettings && spinner.start(`Connecting to ${driver.name} ...`);
+            const connection = await doConnectionTest();
+            
+            if (!connection) {
+                if (!askSettings) spinner.start(); // otherwise there is nothing shown
+                spinner.error(`Connection to ${driver.name} ( ${driver.getUrl(driver.urlTest)} ) failed!`);
+                process.exit(1);
+            }
+            else {
+                spinner.success(`Connection to ${driver.name} possible.`);
+            }
         }
     }
 
@@ -1147,11 +1202,11 @@ async function init(): Promise<PromptAdditions> {
         try {
             let output = execSync('links -version', { shell: getInvokingShell() });
             settings.systemPrompt = settings.systemPrompt.replaceAll('{{linksIsInstalled}}', '- links2 is installed and can be used: ' + output);
-            DEBUG_OUTPUT && console.log('✔ links2 is installed');
+            DEBUG_OUTPUT && console.log(colors.green(figures.tick), 'links2 is installed');
         }
         catch (error) {
             settings.systemPrompt = settings.systemPrompt.replaceAll('{{linksIsInstalled}}', '- links2 is not yet installed');
-            DEBUG_OUTPUT && console.warn('⚠️ links2 is not installed');
+            DEBUG_OUTPUT && console.warn(colors.yellow(figures.cross), 'links2 is not installed');
         }
 
         // apply system env to system prompt or clean up the placeholder
@@ -1162,22 +1217,21 @@ async function init(): Promise<PromptAdditions> {
         DEBUG_OUTPUT_SYSTEMPROMPT && console.log('DEBUG\n', 'systemPrompt:', settings.systemPrompt);
     }
 
-    return promptAdditions;
+    return { additions: promptAdditions, text: '' };
 }
 
 
 //* MAIN
 {
-    let promptAdditions = await init();
+    let prompt:Prompt = await init();
     let resultPrompt: PromptResult|undefined = undefined;
-    let prompt:Prompt = '';
 
 
     while (true) {
-        do prompt = await doPromptWithCommands(resultPrompt);
+        do prompt.text = await doPromptWithCommands(resultPrompt);
         while (await promptTrigger(prompt, resultPrompt));
 
-        resultPrompt = await doPrompt(prompt, promptAdditions);
+        resultPrompt = await doPrompt(prompt);
         
         if (settings.endIfDone && resultPrompt.isEnd) break;
     }
