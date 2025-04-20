@@ -64,6 +64,6 @@
     "launch-editor": "^2.10.0",
     "open": "^10.1.1",
     "tsx": "^4.19.3",
-    "yocto-spinner": "^0.2.1"
+    "yocto-spinner": "^0.2.2"
   }
 }
