@@ -128,6 +128,7 @@ These can be opened with
 baio --open env
 baio --open config
 baio --open agents
+baio --open history
 ```
 
 ### You want to do multiple tasks without losing the context
@@ -280,6 +281,7 @@ baio [-vhdmtaqseiucr] ["prompt string"]
 Settings config path: ................../.baiorc
 Environment config path: ................../.baioenvrc
 Agents config path: ................../.baio/agents/
+History config path: ................../.baio/history/
 ```
 
 

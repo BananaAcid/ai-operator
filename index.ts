@@ -1077,6 +1077,7 @@ async function init(): Promise<Prompt> {
         console.info(`Settings config path: ${RC_FILE}`);
         console.info(`Environment config path: ${RC_ENVFILE}`);
         console.info(`Agents config path: ${RC_AGENTS_PATH}`);
+        console.info(`History config path: ${RC_HISTORY_PATH}`);
 
         process.exit(0);
     }
