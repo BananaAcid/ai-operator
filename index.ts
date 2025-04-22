@@ -23,8 +23,7 @@ import clipboard from 'copy-paste';
 import colors from 'yoctocolors-cjs'; // installed by @inquirer/prompts
 import figures from '@inquirer/figures'; // installed by @inquirer/prompts
 import { input, select, editor } from '@inquirer/prompts';
-import checkbox from './libs/checkbox-with-actions.ts';
-import {type KeypressHandler} from './libs/checkbox-with-actions.ts';
+import checkboxWithActions from './libs/checkbox-with-actions.ts';
 import { default as tgl } from 'inquirer-toggle';
 //@ts-ignore
 const toggle = tgl.default;
@@ -457,7 +456,6 @@ let invokingShell: string | undefined = null as unknown as undefined;
 function getInvokingShell(overwriteInvokingShell = process.env.INVOKING_SHELL): string | undefined {
     if (overwriteInvokingShell) invokingShell = overwriteInvokingShell;
     if (invokingShell !== null) return invokingShell;
-
     const isWindows = process.platform === 'win32';
 
     try {
@@ -483,6 +481,32 @@ function getInvokingShell(overwriteInvokingShell = process.env.INVOKING_SHELL): 
 
 
 /**
+ * Given the shell as path or namethat is currently running the script, returns the file extension to be used for generated files.
+ * It tries to detect the shell and return a suitable extension based on the shell.
+ * If the detection fails, or the shell is not supported, it returns '.txt'.
+ * @returns The file extension to be used for generated files.
+ */
+function getShellExt() {
+    const shell = getInvokingShell();
+
+    if (!shell) return '.txt';
+
+    if (shell.indexOf('cmd') > -1) return '.cmd'; // NOT ooold skool .bat
+    if (shell.indexOf('powershell') > -1) return '.ps1';
+    if (shell.indexOf('pwsh') > -1) return '.ps1';
+    if (shell.indexOf('bash') > -1) return '.sh';
+    if (shell.indexOf('fish') > -1) return '.fish';
+    if (shell.indexOf('zsh') > -1) return '.zsh';
+    if (shell.indexOf('csh') > -1) return '.csh';
+    if (shell.indexOf('tcsh') > -1) return '.csh';
+    if (shell.indexOf('ksh') > -1) return '.ksh';
+    if (shell.indexOf('sh') > -1) return '.sh';
+    if (shell.indexOf('python') > -1) return '.py';
+    if (shell.indexOf('node') > -1) return '.ts';
+}
+
+
+/**
  * Checks if there is a newer version of the package available.
  * If there is a newer version, it will print a message to the console with the update information.
  * @returns {Promise<boolean>}
@@ -501,7 +525,6 @@ async function checkUpdateOutput() {
 
     return result;
 }
-
 
 
 /**
@@ -607,7 +630,7 @@ async function doPrompt(prompt: Prompt): Promise<PromptResult> {
  * @param result the result of the api call
  * @returns the user input or the result of the commands execution
  */
-async function doPromptWithCommands(result: PromptResult|undefined): Promise<string> {
+async function doPromptWithCommands(result: PromptResult|undefined): Promise<string|undefined> {
     let resultCommands = "";
     
     //* get inital user prompt
@@ -644,23 +667,55 @@ async function doPromptWithCommands(result: PromptResult|undefined): Promise<str
     }
     //* there are commands
     else {
-        let canceled = false;
-        const commands = await checkbox({
+        let canceled: boolean|'edit' = false;
+        let activeItem:{name:string,value:string,index:number};
+        let options = {...TTY_INTERFACE, clearPromptOnDone: false}
+        const commands = await checkboxWithActions({
             message: 'Select the commands to execute',
+            shortcuts: { edit: 'e' },
             choices: result.commands.map((command) => ({ name: command, value: command, checked: true })),
-            keypressHandler: async function({key, active}) {
+            keypressHandler: async function({key, active, items}) {
+                activeItem = {...items[active], index: active};
+
                 if (key.name == 'escape' || key.sequence == ':' || key.sequence == '/') {
                     canceled = true;   // let us know, that we should not care about the values
+                    options.clearPromptOnDone = true; // clear the line after exit by this
                     return {
                         isDone: true, // tell the elment to exit and return selected values
-                        isConsumed: true // prevent original handler to process this key         ... ignores any validation error (we did not setup validations for this prompt)
+                        isConsumed: true, // prevent original handler to process this key         ... ignores any validation error (we did not setup validations for this prompt)
                     }
                 }
-            }
-        }, TTY_INTERFACE);
+
+                if (key.name === 'e' || key.name === 'w' || key.name === 'right') {
+                    canceled = 'edit'; 
+                    options.clearPromptOnDone = true;
+                    return {
+                        isDone: true,
+                        isConsumed: true,
+                    }
+                }
+            },
+        }, options);
 
         if (canceled || !commands.length)
-            resultCommands = await input({ message: 'Enter more info:' }, TTY_INTERFACE);
+            //@ts-expect-error somehow the type is not correctly inferred
+            if (canceled === 'edit') {
+                let val = await editor({
+                    message: 'Waiting for you to close the editor (and you can modify the command).',
+                    waitForUseInput: false,
+                    theme: { style: { help: _ => ``, } },
+                    default: activeItem!.value,
+                    postfix: getShellExt(),
+                }, {...TTY_INTERFACE, clearPromptOnDone: true})
+                .catch(_ => undefined);
+
+                if (val !== undefined)
+                    result.commands[activeItem!.index] = val;
+
+                return undefined;
+            }
+            else
+                resultCommands = await input({ message: 'Enter more info:' }, TTY_INTERFACE);
         else {
                 resultCommands = await doCommands(commands);
 
@@ -674,7 +729,13 @@ async function doPromptWithCommands(result: PromptResult|undefined): Promise<str
 }
 
 
-async function importHistory(filename: string, isAsk: boolean = false): Promise<boolean> {
+/**
+ * Import a context (history file) from a file name or selection.
+ * @param filename the file name of the history file to import
+ * @param isAsk    defaults to false. If true, the user will be asked even if by the settings it would not and if no filename is given
+ * @returns if done
+ */
+async function importHistory(filename: string, isAsk: boolean = false): Promise<void> {
     if (filename.startsWith('"') && filename.endsWith('"')) filename = filename.slice(1, -1); // "file name" is possible
         
     if (!filename) {
@@ -684,11 +745,11 @@ async function importHistory(filename: string, isAsk: boolean = false): Promise<
 
         if (!historyFilesChoices.length) {
             !isAsk && console.error('🛑 No history files found');
-            return true;
+            return;
         }
         filename = await select({ message: 'Select a history file to load:', choices: [{ name: '- none -', value: '' }, ...historyFilesChoices] }, TTY_INTERFACE);
     }
-    if (filename === '') return true; // by choice
+    if (filename === '') return;
 
     let filePath = path.resolve(RC_HISTORY_PATH, filename);
     if (filePath && !path.extname(filePath)) filePath += '.json';
@@ -707,7 +768,7 @@ async function importHistory(filename: string, isAsk: boolean = false): Promise<
             history = content.history;
         }
     }
-    return true;
+    return;
 }
 
 
@@ -826,8 +887,8 @@ async function promptTrigger(/*inout*/ prompt: Prompt, /*inout*/ resultPrompt?: 
     }
     if (prompt.text.startsWith('/history:import') || prompt.text.startsWith(':hi')) {
         let filename = prompt.text.split(/(?<!\\)\s+/).filter(arg => arg.length > 0).slice(1).join(' ');
-
-        return importHistory(filename);
+        await importHistory(filename);
+        return true;
     }
     let pasteContent: string|undefined = undefined;
     if (prompt.text === '/clip:read' || prompt.text === ':r+' || prompt.text === ':r +') {
@@ -844,7 +905,7 @@ async function promptTrigger(/*inout*/ prompt: Prompt, /*inout*/ resultPrompt?: 
             waitForUseInput: false,
             default: pasteContent ?? '',
             theme: { style: { help: _ => `Enter your multiline content in the editor, save the file and close it.`, } }
-        }).catch(_ => undefined);
+        }, TTY_INTERFACE).catch(_ => undefined);
         if (value) {
             prompt.text = value || '';
             return false;
@@ -867,7 +928,7 @@ async function promptTrigger(/*inout*/ prompt: Prompt, /*inout*/ resultPrompt?: 
             theme: { style: { help: _ => ``, } },
             default: resultPrompt.answerFull,
             postfix: '.md',
-        }).catch(_ => undefined);
+        }, TTY_INTERFACE).catch(_ => undefined);
         return true;
     }
     if (prompt.text.startsWith('/:end')) {
@@ -1228,8 +1289,12 @@ async function init(): Promise<Prompt> {
 
 
     while (true) {
-        do prompt.text = await doPromptWithCommands(resultPrompt);
-        while (await promptTrigger(prompt, resultPrompt));
+        let resultPromptRet: string|undefined;
+        do {
+            resultPromptRet = await doPromptWithCommands(resultPrompt);
+            if (resultPromptRet !== undefined) prompt.text = resultPromptRet;
+        }
+        while (resultPromptRet === undefined || await promptTrigger(prompt, resultPrompt));
 
         resultPrompt = await doPrompt(prompt);
         

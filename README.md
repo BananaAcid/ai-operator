@@ -421,3 +421,4 @@ I am mainly using `GEMINI 2.0 Flash` for prompt engineering. Feel free to send i
 | v1.0.19 | fixed first prompt did not accept prompt triggers, changed triggers (renamed `/:exit`, `/:quit`, `:q`), added triggers (`:h`, `:r`, `/:read`, `:w`, `/:write`, `/:end`, `/history:export:md` ), added basic support for piping in text (experimental) |
 | v1.0.22 | Added copy-paste, added triggers (`:w+`, `:r+`) |
 | v1.0.23 | Fixed trigger (`:r`, `:r+`), added update check, added options for faster startup, added keys to fall back to the prompt (<kbd>:</kbd> or <kbd>/</kbd> or <kbd>ESC</kbd>) |
+| v1.0.24 | Added showing/editing (by pressing <kbd>w</kbd> or <kbd>right</kbd>) highlighted command (in selection) in the default editor |
