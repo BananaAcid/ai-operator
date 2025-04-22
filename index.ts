@@ -1038,9 +1038,9 @@ async function init(): Promise<Prompt> {
         console.info(packageJSON.homepage);
         console.info('\n');
 
-        console.info(`baio [-vhdmtaqseiucr] ["prompt string"]`);
-
         await checkUpdateOutput() && console.info('\n');
+
+        console.info(`baio [-vhdmtaqseiucr] ["prompt string"]`);
 
         console.info(`
   -v, --version
