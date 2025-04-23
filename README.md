@@ -322,8 +322,8 @@ To trigger these, **_if you are not on a prompt_**,
 | `/debug:result`                    |        | Shows what the API generated and what the tool understood. |
 | `/debug:exec`                      |        | Shows what the system got returned from the shell. Helps debug strange situations. |
 | `/debug:get <.baiorc-key>`         |        | Gets the current value of the key. Outputs the system prompt, may spam the shell output. |
-| `/debug:set <.baiorc-key> <value>` |        | Overwrites a setting. value must be a JSON formatted value. |
-| `/debug:settings`                  |        | Gets all the current values of settings. May spam the shell output. |
+| `/debug:set <.baiorc-key> <value>` |        | Overwrites a setting. The value must be a JSON formatted value. |
+| `/debug:settings`                  |        | Lists all current settings. May spam the shell output. |
 | `/:quit`, `/:exit`                 | `:q`   | Will exit (CTRL+D or CTRL+C will also work). |
 
 
