@@ -229,7 +229,7 @@ let settingsDefault: Settings = {
         ### Execution Results (MUST BE USED BEFORE GENERATING A NEW RESPONSE):
         - The next prompt will provide execution results in the following format:
             - <CMD-INPUT>command_here</CMD-INPUT> (Always included)
-        - If successful: <CMD-OUTPUT>output_here</CMD-OUTPUT>  
+        - If successful: <CMD-OUTPUT>output_here</CMD-OUTPUT>
         - If an error occurs: <CMD-ERROR>error_message_here</CMD-ERROR>
         - Multiple execution results are separated by: \\n<-----/>\\n
         - **Each <CMD-OUTPUT> or <CMD-ERROR> is always paired with its corresponding <CMD-INPUT>.**

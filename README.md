@@ -414,7 +414,7 @@ done
 
 ## Major Changes
 
-I am mainly using `GEMINI 2.0 Flash` for prompt engineering. Feel free to send in optimized versions as issues.
+I am mainly using `GEMINI 2.5 Flash` for prompt engineering. Feel free to send in optimized versions as issues.
 
 | Version | Change Description |
 |---------|---|
