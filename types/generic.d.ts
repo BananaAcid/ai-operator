@@ -35,6 +35,7 @@ declare global {
         endIfDone: boolean;
         saveSettings: boolean;
         defaultPrompt: string;
+        agentPrompt: string;
         fixitPrompt: string;
         systemPrompt: string;
         version: string;

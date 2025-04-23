@@ -169,6 +169,8 @@ let settingsDefault: Settings = {
 
     //fixitPrompt: `Something went wrong! Ensure all steps are followed, commands are properly formatted as by the output rules, results are validated, and commands are properly executed. Reevaluate the goal after each action and make sure to append <END/> only when the task is fully completed. Try again with a different approach, and if more information is needed, request it.`,
 
+    agentPrompt: '**Very important master rules, that must be followed and can overrule the rules from before:**',
+
     fixitPrompt: `
         Something went wrong! Analyze the previous output carefully.
 
@@ -1251,7 +1253,7 @@ async function init(): Promise<Prompt> {
         if (agentFile) {
             agentContent = await readFile(agentFile, 'utf-8').catch(_ => undefined);
             // get from file content the content from after the second '---' if available or everything from the beginning (if formating is broken)
-            agentContent = '**Very important master rules, that must be followed and can overrule the rules from before:**\n' + (agentContent.split('---\n')[2] || agentContent);
+            agentContent = settings.agentPrompt + '\n' + (agentContent.split('---\n')[2] || agentContent);
         }
     }
 
