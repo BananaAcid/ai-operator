@@ -42,6 +42,7 @@ declare global {
 
         precheckUpdate: boolean;
         precheckDriverApi: boolean;
+        cmdMaxLengthDisplay: number;
     };
 
     type InquirerSelection = Array<{

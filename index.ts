@@ -164,6 +164,7 @@ let settingsDefault: Settings = {
 
     precheckUpdate: true,       // (speedup if false) try to reach the npm registry to check for an update
     precheckDriverApi: true,    // (speedup if false) try to reach the driver api to check if it is available
+    cmdMaxLengthDisplay: 100,   // set the maximum length of a command to display
 
     defaultPrompt: 'show me a table of all files in the current directory',
 
@@ -691,11 +692,10 @@ async function doPromptWithCommands(result: PromptResult|undefined): Promise<str
         let canceled: boolean|'edit' = false;
         let activeItem:{name:string,value:string,index:number};
         let options = {...TTY_INTERFACE, clearPromptOnDone: false}
-        const CMD_MAX_LENGTH = 100;
         const commands = await checkboxWithActions({
             message: 'Select the commands to execute',
             shortcuts: { edit: 'e' },
-            choices: result.commands.map((command) => ({ name: (command.length > CMD_MAX_LENGTH ? command.substring(0, CMD_MAX_LENGTH - 4) + ' ...' : command), value: command, checked: true })),
+            choices: result.commands.map((command) => ({ name: (command.length > settings.cmdMaxLengthDisplay ? command.substring(0, settings.cmdMaxLengthDisplay - 4) + ' ...' : command), value: command, checked: true })),
             keypressHandler: async function({key, active, items}) {
                 activeItem = {...items[active], index: active};
 

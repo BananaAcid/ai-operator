@@ -341,6 +341,16 @@ in settings: `baio --open config`
 ```
 
 
+## Manual config
+
+These extra options can be tuned:
+
+in settings: `baio --open config`
+```
+  "cmdMaxLengthDisplay": 100,
+```
+
+
 ## Development
 
 For development (using a `.env` within the folder), within the projects folder use:
@@ -426,4 +436,4 @@ I am mainly using `GEMINI 2.5 Flash` for prompt engineering. Feel free to send i
 | v1.0.22 | Added copy-paste, added triggers (`:w+`, `:r+`) |
 | v1.0.23 | Fixed trigger (`:r`, `:r+`), added update check, added options for faster startup, added keys to fall back to the prompt (<kbd>:</kbd> or <kbd>/</kbd> or <kbd>ESC</kbd>) |
 | v1.0.24 | Added showing/editing (by pressing <kbd>w</kbd> or <kbd>right</kbd>) highlighted command (in selection) in the default editor |
-| v1.0.25 | Added prompt trigger (`/history:clear`, `/:clear`), corrected help to show correct `/debug:result` trigger, better display of multiline commands and with backticks, command selection items are cropped |
+| v1.0.25 | Added prompt trigger (`/history:clear`, `/:clear`), corrected help to show correct `/debug:result` trigger, better display of multiline commands and with backticks, command selection items are cropped, added settings.cmdMaxLengthDisplay |
