@@ -385,7 +385,22 @@ async function api(promptText: PromptText, promptAdditions?: PromptAdditions): P
 
     // User output:
     // add ` before and after all <CMD> tags and after all </CMD> tags, if missing --- also remove tags
-    content = content.replaceAll(/\`*\ *<CMD>(.*?)<\/CMD>\ *\`*/g, '\n ▶️ `$1`');
+    //content = content.replaceAll(/\`*\ *<CMD>(.*?)<\/CMD>\ *\`*/g, '\n ▶️ `$1`');
+    
+    // markdown messed up with commands. use fenced code blocks for long commands to make markdown work
+    const regex = /\`*\ *<CMD>(.*?)<\/CMD>\ *\`*/gs;
+    let m;
+
+    while ((m = regex.exec(content)) !== null) {
+        // This is necessary to avoid infinite loops with zero-width matches
+        if (m.index === regex.lastIndex) regex.lastIndex++;
+
+        if (m[1].includes('`') || m[1].includes('\n'))
+            content = content.replaceAll(m[0], '\n ```'+getShellName()+'\n▶️ ' + m[1] + '\n```\n');
+        else
+            content = content.replaceAll(m[0], '\n ▶️ `' + m[1] + '`');
+    }
+
     try {
         content = cliMd(content); // crashes sometimes : Cannot read properties of undefined (reading 'at') -- /node_modules/cli-html/lib/tags/code.js:12:25
     } catch (error) {}
@@ -488,7 +503,7 @@ function getInvokingShell(overwriteInvokingShell = process.env.INVOKING_SHELL): 
  * If the detection fails, or the shell is not supported, it returns '.txt'.
  * @returns The file extension to be used for generated files.
  */
-function getShellExt() {
+function getShellExt(): string {
     const shell = getInvokingShell();
 
     if (!shell) return '.txt';
@@ -505,15 +520,19 @@ function getShellExt() {
     if (shell.indexOf('sh') > -1) return '.sh';
     if (shell.indexOf('python') > -1) return '.py';
     if (shell.indexOf('node') > -1) return '.ts';
-}
 
+    return '.txt';
+}
+function getShellName(): string {
+    return getShellExt().substring(1);
+}
 
 /**
  * Checks if there is a newer version of the package available.
  * If there is a newer version, it will print a message to the console with the update information.
  * @returns {Promise<boolean>}
  */
-async function checkUpdateOutput() {
+async function checkUpdateOutput(): Promise<boolean> {
     let result = false;
     
     let version = await fetch(`https://registry.npmjs.com/${packageJSON.name}/latest`).catch(_=>undefined).then(d => d?.json?.()).then(({version})=>version).catch(_=>undefined);
@@ -672,10 +691,11 @@ async function doPromptWithCommands(result: PromptResult|undefined): Promise<str
         let canceled: boolean|'edit' = false;
         let activeItem:{name:string,value:string,index:number};
         let options = {...TTY_INTERFACE, clearPromptOnDone: false}
+        const CMD_MAX_LENGTH = 100;
         const commands = await checkboxWithActions({
             message: 'Select the commands to execute',
             shortcuts: { edit: 'e' },
-            choices: result.commands.map((command) => ({ name: command, value: command, checked: true })),
+            choices: result.commands.map((command) => ({ name: (command.length > CMD_MAX_LENGTH ? command.substring(0, CMD_MAX_LENGTH - 4) + ' ...' : command), value: command, checked: true })),
             keypressHandler: async function({key, active, items}) {
                 activeItem = {...items[active], index: active};
 
