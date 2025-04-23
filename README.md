@@ -308,21 +308,23 @@ To trigger these, **_if you are not on a prompt_**,
 
 | Trigger | Short | Description |
 |---|---|---|
-| `/:help`                           | `:h` | Shows this help. |
-| `/:read`                           | `:r` | Opens the default editor for a multiline input. |
-| `/:write`                          | `:w` | Opens the default editor to show the last AI output. Use to save to a file. |
-| `/clip:read`                       | `:r+` | Read from the clipboard and open the default editor. |
-| `/clip:write`                      | `:w+` | Write the the last AI output to the clipboard. |
+| `/:help`                           | `:h`   | Shows this help. |
+| `/:read`                           | `:r`   | Opens the default editor for a multiline input. |
+| `/:write`                          | `:w`   | Opens the default editor to show the last AI response. Use to save to a file. |
+| `/clip:read`                       | `:r+`  | Read from the clipboard and open the default editor. |
+| `/clip:write`                      | `:w+`  | Write the the last AI response to the clipboard. |
 | `/history:export [<filename>]`     | `:hi [<filename>]`    | Exports the current context to a file with date-time as name or an optional custom filename. |
 | `/history:export:md [<filename>]`  | `:he:md [<filename>]` | Exports the current context to a markdown file for easier reading (can not be imported). |
 | `/history:import [<filename>]`     | `:he [<filename>]`    | Imports the context from a history file or shows a file selection. |
+| `/history:clear`                   | `:hc`  | Clears the current context (to use current prompt without context). |
+| `/:clear`                          | `:c`   | Clears the current context and current prompt (use for changing topics). |
 | `/:end [<boolean>]`                |        | Toggles end if assumed done, or turns it on or off. |
-| `/debug:response`                  |        | Shows what the API generated and what the tool understood. |
+| `/debug:result`                    |        | Shows what the API generated and what the tool understood. |
 | `/debug:exec`                      |        | Shows what the system got returned from the shell. Helps debug strange situations. |
 | `/debug:get <.baiorc-key>`         |        | Gets the current value of the key. Outputs the system prompt, may spam the shell output. |
 | `/debug:set <.baiorc-key> <value>` |        | Overwrites a setting. value must be a JSON formatted value. |
 | `/debug:settings`                  |        | Gets all the current values of settings. May spam the shell output. |
-| `/:quit`, `/:exit`               | `:q` | Will exit (CTRL+D or CTRL+C will also work). |
+| `/:quit`, `/:exit`                 | `:q`   | Will exit (CTRL+D or CTRL+C will also work). |
 
 
 **Note:** If you want to continue, just press enter without any text.
@@ -424,3 +426,4 @@ I am mainly using `GEMINI 2.0 Flash` for prompt engineering. Feel free to send i
 | v1.0.22 | Added copy-paste, added triggers (`:w+`, `:r+`) |
 | v1.0.23 | Fixed trigger (`:r`, `:r+`), added update check, added options for faster startup, added keys to fall back to the prompt (<kbd>:</kbd> or <kbd>/</kbd> or <kbd>ESC</kbd>) |
 | v1.0.24 | Added showing/editing (by pressing <kbd>w</kbd> or <kbd>right</kbd>) highlighted command (in selection) in the default editor |
+| v1.0.25 | Added prompt trigger (`/history:clear`, `/:clear`), corrected help to show correct `/debug:result` trigger |

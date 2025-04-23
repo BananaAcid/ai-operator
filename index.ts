@@ -789,21 +789,23 @@ async function promptTrigger(/*inout*/ prompt: Prompt, /*inout*/ resultPrompt?: 
         console.log(cliMd(`Possible prompt triggers\n
 | Trigger | Short | Description |
 |---|---|---|
-| \`/:help\`                           | \`:h\` | Shows this help. |
-| \`/:read\`                           | \`:r\` | Opens the default editor for a multiline input. |
-| \`/:write\`                          | \`:w\` | Opens the default editor to show the last AI output. Use to save to a file. |
+| \`/:help\`                           | \`:h\`  | Shows this help. |
+| \`/:read\`                           | \`:r\`  | Opens the default editor for a multiline input. |
+| \`/:write\`                          | \`:w\`  | Opens the default editor to show the last AI response. Use to save to a file. |
 | \`/clip:read\`                       | \`:r+\` | Read from the clipboard and open the default editor. |
-| \`/clip:write\`                      | \`:w+\` | Write the the last AI output to the clipboard. |
+| \`/clip:write\`                      | \`:w+\` | Write the the last AI response to the clipboard. |
 | \`/history:export [<filename>]\`     | \`:hi [<filename>]\`    | Exports the current context to a file with date-time as name or an optional custom filename. |
 | \`/history:export:md [<filename>]\`  | \`:he:md [<filename>]\` | Exports the current context to a markdown file for easier reading (can not be imported). |
 | \`/history:import [<filename>]\`     | \`:he [<filename>]\`    | Imports the context from a history file or shows a file selection. |
-| \`/:end [<boolean>]\`                |        | Toggles end if assumed done, or turns it on or off. |
-| \`/debug:response\`                  |        | Shows what the API generated and what the tool understood. |
-| \`/debug:exec\`                      |        | Shows what the system got returned from the shell. Helps debug strange situations. |
-| \`/debug:get <.baiorc-key>\`         |        | Gets the current value of the key. Outputs the system prompt, may spam the shell output. |
-| \`/debug:set <.baiorc-key> <value>\` |        | Overwrites a setting. value must be a JSON formatted value. |
-| \`/debug:settings\`                  |        | Gets all the current values of settings. May spam the shell output. |
-| \`/:quit\`, \`/:exit\`               | \`:q\` | Will exit (CTRL+D or CTRL+C will also work). |
+| \`/history:clear\`                   | \`:hc\` | Clears the current context (to use current prompt without context). |
+| \`/:clear\`                          | \`:c\`  | Clears the current context and current prompt (use for changing topics). |
+| \`/:end [<boolean>]\`                |         | Toggles end if assumed done, or turns it on or off. |
+| \`/debug:result\`                    |         | Shows what the API generated and what the tool understood. |
+| \`/debug:exec\`                      |         | Shows what the system got returned from the shell. Helps debug strange situations. |
+| \`/debug:get <.baiorc-key>\`         |         | Gets the current value of the key. Outputs the system prompt, may spam the shell output. |
+| \`/debug:set <.baiorc-key> <value>\` |         | Overwrites a setting. value must be a JSON formatted value. |
+| \`/debug:settings\`                  |         | Gets all the current values of settings. May spam the shell output. |
+| \`/:quit\`, \`/:exit\`               | \`:q\`  | Will exit (CTRL+D or CTRL+C will also work). |
         `));
         return true;
     }
@@ -888,6 +890,26 @@ async function promptTrigger(/*inout*/ prompt: Prompt, /*inout*/ resultPrompt?: 
     if (prompt.text.startsWith('/history:import') || prompt.text.startsWith(':hi')) {
         let filename = prompt.text.split(/(?<!\\)\s+/).filter(arg => arg.length > 0).slice(1).join(' ');
         await importHistory(filename);
+        return true;
+    }
+    if (prompt.text.startsWith('/history:clear') || prompt.text.startsWith(':hc')) {
+        history = [];
+        console.log(`🗑️ History cleared.`);
+        return true;
+    }
+    if (prompt.text.startsWith('/:clear') || prompt.text.startsWith(':c')) {
+        history = [];
+        prompt.text = '';
+        prompt.additions = undefined;
+        if (resultPrompt) {
+            resultPrompt.answer = '';
+            resultPrompt.answerFull = '';
+            resultPrompt.commands = [];
+            resultPrompt.helpers = [];
+            resultPrompt.needMoreInfo = true;
+            resultPrompt.isEnd = false;
+        }
+        console.log(`🗑️ History cleared, current prompt cleared.`);
         return true;
     }
     let pasteContent: string|undefined = undefined;
