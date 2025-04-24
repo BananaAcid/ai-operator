@@ -1139,7 +1139,9 @@ async function init(): Promise<Prompt> {
   -h, -?, --help
 
   -d, --driver <api-driver>    Select a driver (ollama, openai, googleai)
+  -d *, --driver *             Ask for a driver with a list, even if it would not
   -m, --model <model-name>     Select a model
+  -m *, --model *              Ask for a model with a list, even if it would not
   -t, --temp <float>           Set a temperature, e.g. 0.7 (0 for model default)
 
   -a, --agent <agent-name>     Select an agent, a set of prompts for specific tasks
@@ -1164,7 +1166,7 @@ async function init(): Promise<Prompt> {
   --reset-prompts              Reset prompts only (use this after an update)
 
   --open <config>              Open the file in the default editor or the agents path (env, config, agents, history)
-  `);
+        `);
         // You can pipe in text (like from a file) to be send to the API before your prompt.
 
         console.info('');
@@ -1191,10 +1193,12 @@ async function init(): Promise<Prompt> {
             await checkUpdateOutput();
     }
 
-    if (askSettings)
+    if (askSettings || settings.driver === '*')
     {//* API/Driver selection
+        if (settings.driver === '*') settings.driver = ''; // allow default
         let driverChoices = Object.keys(drivers).map(key => ({ name: drivers[key]?.name, value: key }));
         settings.driver = await select({ message: 'Select your API:', choices: driverChoices, default: settings.driver || 'ollama' }, TTY_INTERFACE);
+        settings.model = '*'; // force to choose a new one
     }
 
     {//* api key test
@@ -1221,12 +1225,13 @@ async function init(): Promise<Prompt> {
         }
     }
 
-    if (askSettings)
+    if (askSettings || settings.model === '*' )
     {//* model selection
         let driver:Driver = drivers[settings.driver]!;
         const models = await getModels();
         let modelSelected = '';
         if (models.length) {
+            if (settings.model === '*') settings.model = ''; // allow default
             models.push({ name: 'manual input ...', value: '' });
             modelSelected = await select({ message: 'Select your model:', choices: models, default: settings.model || driver.defaultModel }, TTY_INTERFACE);
         }
@@ -1332,7 +1337,7 @@ async function init(): Promise<Prompt> {
         }
     }
 
-    {//* handle files from agruments
+    {//* handle files from arguments
         if (settingsArgs['files']) {
             let driver:Driver = drivers[settings.driver]!;
             
@@ -1375,7 +1380,6 @@ async function init(): Promise<Prompt> {
                 promptAdditions = [ ...(promptAdditions ?? []), additionFileName, addition ];
             }
         }
-
     }
 
     
