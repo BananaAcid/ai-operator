@@ -9,6 +9,9 @@ baio --reset-prompts --no-ask --agent ChickenTalk "list all files in directory"
 
 # only test agents with selection
 baio --reset-prompts --no-ask --agent * "list all files in directory"
+
+# test image
+baio -f cat.jpg "what is this file about"
 ```
 
 ## Some prompts:

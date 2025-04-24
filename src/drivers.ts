@@ -59,7 +59,7 @@ const drivers = {
         },
 
         // same as openai
-        makePromptAddition(type: string, mimeType: string, content: string): OpenAiPromptAddition | PromptAdditionError {
+        makePromptAddition(type: string, content: string, mimeType: string): OpenAiPromptAddition | PromptAdditionError {
             return drivers.openai.makePromptAddition.call(this, type, mimeType, content);
         },
 
@@ -106,7 +106,7 @@ const drivers = {
         },
 
         // https://platform.openai.com/docs/guides/images-vision?api-mode=responses#giving-a-model-images-as-input
-        makePromptAddition(type: string, mimeType: string, content: string): OpenAiPromptAddition | PromptAdditionError {
+        makePromptAddition(type: string, content: string, mimeType: string): OpenAiPromptAddition | PromptAdditionError {
             let result: OpenAiPromptAddition|PromptAdditionError;
             
             if (type === 'text')
@@ -210,7 +210,7 @@ const drivers = {
         },
 
         // https://ai.google.dev/gemini-api/docs/text-generation?hl=en#image-input
-        makePromptAddition(type: string, mimeType: string, content: string): GoogleAiPromptAddition | PromptAdditionError {
+        makePromptAddition(type: string, content: string, mimeType: string): GoogleAiPromptAddition | PromptAdditionError {
             let result: GoogleAiPromptAddition|undefined;
 
             if (type === 'text')

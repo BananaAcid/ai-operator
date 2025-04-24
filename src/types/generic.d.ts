@@ -16,10 +16,22 @@ declare global {
         additions?: PromptAdditions;
     };
 
+    type PromptFile = {
+        name: string;
+        mimeType: string;
+        content: string;
+    }
+
     type PromptHelper = {
         type: 'agent';
         name: string;
         definition: string;
+    } | {
+        type: 'file.write';
+        file: PromptFile;
+    } | {
+        type: 'files.write';
+        files: PromptFile[];
     };
 
     type PromptResult = {
@@ -60,8 +72,9 @@ declare global {
         endIfDone: boolean;
         saveSettings: boolean;
         defaultPrompt: string;
-        agentPrompt: string;
         fixitPrompt: string;
+        agentPrompt: string;
+        fileAddPrompt: string;
         systemPrompt: string;
         version: string;
 

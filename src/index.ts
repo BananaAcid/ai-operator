@@ -180,6 +180,8 @@ let settingsDefault: Settings = {
 
     agentPrompt: '**Very important master rules, that must be followed and can overrule the rules from before:**',
 
+    fileAddPrompt: 'The next file is from the local filesystem: {{filepath}}\nAnd its content:',
+
     fixitPrompt: `
         Something went wrong! Analyze the previous output carefully.
 
@@ -378,9 +380,22 @@ async function api(promptText: PromptText, promptAdditions?: PromptAdditions): P
     for (const match of matches)
         commands.push(match[1]!);
 
+
+    let helpers: PromptHelper[] = [];
+
+    {// do files
+        const matchesFiles = content.matchAll(/\`?\ *<WRITE-FILE NAME="(.*?)">(.*?)<\/WRITE-FILE>\ *\`?/gs);
+        for (const match of matchesFiles) {
+            helpers.push({type: 'file.write', file: {name: match[1]!, mimeType: mime.getType(match[1]!) ?? 'text', content: match[2]!}});
+            DEBUG_OUTPUT && console.log('file.write', match[1]!, 'mime:', mime.getType(match[1]!) ?? 'text', 'content length:', match[2]!.length);
+
+            // prepare for output
+            content = content.replaceAll(match[0], '\nWrite file: `' + match[1] +'`\n```'+'\n' + match[2] + '\n```\n');
+        }
+    }
+
     // go for agents, that are created by the ai
     // const matchesHelpers = content.matchAll(/\`?\ *<AGENT-DEFINITION NAME="(.*?)">(.*?)<\/AGENT-DEFINITION>\ *\`?/g);
-    let helpers: PromptHelper[] = [];
     // for (const match of matchesHelpers)
     //     helpers.push({type: 'agent', name: match[1], definition: match[2]});
 
@@ -392,18 +407,16 @@ async function api(promptText: PromptText, promptAdditions?: PromptAdditions): P
 
     // User output:
     // add ` before and after all <CMD> tags and after all </CMD> tags, if missing --- also remove tags
-    //content = content.replaceAll(/\`*\ *<CMD>(.*?)<\/CMD>\ *\`*/g, '\n ▶️ `$1`');
-    
     // markdown messed up with commands. use fenced code blocks for long commands to make markdown work
     const regex = /\`*\ *<CMD>(.*?)<\/CMD>\ *\`*/gs;
     let m;
 
-    while ((m = regex.exec(content)) !== null) {
+    while ((m = regex.exec(content)) !== null) {                                       //!  ---  do same syntax as above
         // This is necessary to avoid infinite loops with zero-width matches
         if (m.index === regex.lastIndex) regex.lastIndex++;
 
         if (m[1]?.includes('`') || m[1]?.includes('\n'))
-            content = content.replaceAll(m[0], '\n ```'+getShellName()+'\n▶️ ' + m[1] + '\n```\n');
+            content = content.replaceAll(m[0], '\n```'+getShellName()+'\n▶️ ' + m[1] + '\n```\n');
         else
             content = content.replaceAll(m[0], '\n ▶️ `' + m[1] + '`');
     }
@@ -677,8 +690,18 @@ async function doPromptWithCommands(result: PromptResult|undefined): Promise<str
     
         resultCommands = prompt;
     }
+    //* helpers
+    if (result?.helpers.length) {
+        
+
+        // TODO ... make it work ... like writing files. --> checkboxWithActions
+
+
+        console.log( colors.yellow(figures.warning), colors.bold('W O R K   I N   P R O G R E S S.') );
+        console.log('Helpers:', JSON.stringify(result.helpers, null, 2));
+    }
     //* no commands
-    else if (!result.commands.length) {
+    if (result && !result.commands.length) {
         //* check if there was a <NEED-MORE-INFO/> in the response
         //* if yes, ask the user for more info and do the prompt again
         if (result.needMoreInfo) {
@@ -696,7 +719,7 @@ async function doPromptWithCommands(result: PromptResult|undefined): Promise<str
         }
     }
     //* there are commands
-    else {
+    if (result?.commands.length) {
         let canceled: boolean|'edit' = false;
         let activeItem:{name:string,value:string,index:number};
         let options = {...TTY_INTERFACE, clearPromptOnDone: false}
@@ -1313,9 +1336,9 @@ async function init(): Promise<Prompt> {
 
                 let type = mimeType.split('/')[0] || 'text' as PromptAdditionsTypes;
                 let encoding: 'base64' | 'utf-8' = 'utf-8';
-
                 if (type === 'audio' || type === 'image' || type === 'video') encoding = 'base64';
 
+                // load file
                 let fileErr;
                 let fileContent = await readFile(filePath, encoding).catch(err => {fileErr = err; return ''; });
                 if (fileErr) {
@@ -1323,14 +1346,21 @@ async function init(): Promise<Prompt> {
                     continue;
                 }
 
-                let addition = driver.makePromptAddition(type, mimeType!, fileContent);
-
+                // add file content
+                let addition = driver.makePromptAddition(type, fileContent, mimeType!);
                 if (addition instanceof Error) {
                     console.error(colors.red(figures.warning), 'Skipping file, could not use file', filePath, '\n  ', addition.message);
                     continue;
                 }
 
-                promptAdditions = [ ...(promptAdditions ?? []), addition ];
+                // add filename prompt
+                let additionFileName = driver.makePromptAddition('text', settings.fileAddPrompt.replaceAll('{{filepath}}', filePath), 'text/plain');
+                if (additionFileName instanceof Error) {
+                    console.error(colors.red(figures.warning), 'Skipping file, could not use file', filePath, '\n  ', additionFileName.message);
+                    continue;
+                }
+
+                promptAdditions = [ ...(promptAdditions ?? []), additionFileName, addition ];
             }
         }
 
@@ -1372,9 +1402,7 @@ async function init(): Promise<Prompt> {
             settings.systemPrompt = settings.systemPrompt.replaceAll(placeholder!, value!)
         );
 
-
-        if (settings.pre ) {
-
+        if (settings.precheckLinksInstalled) {
             try {
                 let output = execSync('links -version', { shell: getInvokingShell() });
                 settings.systemPrompt = settings.systemPrompt.replaceAll('{{linksIsInstalled}}', '- links2 is installed and can be used: ' + output);
