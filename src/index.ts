@@ -384,7 +384,7 @@ async function api(promptText: PromptText, promptAdditions?: PromptAdditions): P
     let helpers: PromptHelper[] = [];
 
     {// do files
-        const matchesFiles = content.matchAll(/\`?\ *<WRITE-FILE NAME="(.*?)">(.*?)<\/WRITE-FILE>\ *\`?/gs);
+        const matchesFiles = content.matchAll(/\`?\ *<WRITE-FILE FILEPATH="(.*?)">(.*?)<\/WRITE-FILE>\ *\`?/gs);
         for (const match of matchesFiles) {
             helpers.push({type: 'file.write', file: {name: match[1]!, mimeType: mime.getType(match[1]!) ?? 'text', content: match[2]!}});
             DEBUG_OUTPUT && console.log('file.write', match[1]!, 'mime:', mime.getType(match[1]!) ?? 'text', 'content length:', match[2]!.length);
