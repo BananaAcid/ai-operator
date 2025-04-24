@@ -59,6 +59,11 @@ const drivers = {
         },
 
         // same as openai
+        makePromptAddition(type: string, mimeType: string, content: string): OpenAiPromptAddition | PromptAdditionError {
+            return drivers.openai.makePromptAddition.call(this, type, mimeType, content);
+        },
+
+        // same as openai
         async getChatResponse(settings: Settings, history: any[], promptText: PromptText, promptAdditions?: PromptAdditions): Promise<ChatResponse> {
             // just reuse the openai driver in the Ollama driver's context
             return drivers.openai.getChatResponse.call(this, settings, history, promptText, promptAdditions);
@@ -100,6 +105,19 @@ const drivers = {
             return modelSelection;
         },
 
+        // https://platform.openai.com/docs/guides/images-vision?api-mode=responses#giving-a-model-images-as-input
+        makePromptAddition(type: string, mimeType: string, content: string): OpenAiPromptAddition | PromptAdditionError {
+            let result: OpenAiPromptAddition|PromptAdditionError;
+            
+            if (type === 'text')
+                result = { type: 'text', content: content };
+            else if (type === 'image')
+                result = { type: 'input_image', content: { image_url: `data:${mimeType};base65,` + content, detail: 'auto' } };
+            else
+                result = new Error(`Unsupported prompt addition type: ${type}`);
+
+            return result;
+        },
 
         async getChatResponse(settings: Settings, history: any[], promptText: PromptText, promptAdditions?: PromptAdditions): Promise<ChatResponse> {
             let resultOrig:any;
@@ -189,6 +207,18 @@ const drivers = {
             let modelSelection: ModelSelection = models.map(model => ({ name: `${model.displayName} (${model.description})`, value: model.name.replace(/^models\//, '') }));
 
             return modelSelection;
+        },
+
+        // https://ai.google.dev/gemini-api/docs/text-generation?hl=en#image-input
+        makePromptAddition(type: string, mimeType: string, content: string): GoogleAiPromptAddition | PromptAdditionError {
+            let result: GoogleAiPromptAddition|undefined;
+
+            if (type === 'text')
+                result = { type: 'text', content: content };
+            else
+                result = { type: 'inline_data', content: { mime_type: mimeType, data: content } };
+
+            return result;
         },
 
         async getChatResponse(settings: Settings, history: any[], promptText: PromptText, promptAdditions?: PromptAdditions): Promise<ChatResponse> {

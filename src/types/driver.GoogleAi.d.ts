@@ -52,6 +52,17 @@ declare global {
             };
         }[];
     }
+
+    type GoogleAiPromptAddition = {
+        type: 'text';
+        content: string;
+    } | {
+        type: 'inline_data';
+        content: {
+            mime_type: string;
+            data: string;
+        }
+    };
 }
 
 export {};

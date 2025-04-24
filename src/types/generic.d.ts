@@ -5,10 +5,11 @@ declare global {
 
     type PromptText = string;
 
-    type PromptAdditions = Array<{
-        type: 'text' | 'image',
-        content: string;
-    }> | undefined;
+    type PromptAdditionsTypes = 'audio' | 'image' | 'video' | 'text';
+
+    type PromptAddition = GoogleAiPromptAddition | OpenAiPromptAddition;
+
+    type PromptAdditions = PromptAddition[] | undefined;
 
     type Prompt = {
         text: PromptText;
@@ -31,7 +32,7 @@ declare global {
     };
     
     type ArgsKeys = {
-        [index: string]: string|boolean|number;
+        [index: string]: string|boolean|number|string[];
         version: boolean;
         help: boolean;
         driver: string;
@@ -47,6 +48,7 @@ declare global {
         endIfDone: boolean;
         saveSettings: boolean;
         temperature: number;
+        files: string[];
     }
 
     type Settings = {
@@ -90,7 +92,8 @@ declare global {
         historyStyle: any; //drivers[any].historyStyle (history style should match the driver's key)
         history: any[];
     }
-    
+
+    type PromptAdditionError = Error;
 }
 
 

@@ -63,6 +63,18 @@ declare global {
       content: string;
   };
 
+
+  type OpenAiPromptAddition = {
+    type: 'text';
+    content: string;
+  } | {
+    type: 'input_image',
+    content: {
+      image_url: string;  // .png, .jpeg, .jpg, .gif
+      detail?: 'low' | 'high' | 'auto';
+    }
+  };
+
 }
 
 

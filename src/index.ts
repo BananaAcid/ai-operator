@@ -19,6 +19,7 @@ import cliMd from 'cli-markdown';
 import launchEditor from 'launch-editor';
 import open from 'open';
 import clipboard from 'copy-paste/promises.js';
+import mime from 'mime';
 
 import colors from 'yoctocolors-cjs'; // installed by @inquirer/prompts
 import figures from '@inquirer/figures'; // installed by @inquirer/prompts
@@ -87,7 +88,7 @@ type Driver = typeof drivers[keyof typeof drivers];
 let TTY_INTERFACE:any;
 
 
-//* get args (partyl settings)
+//* get args (partly settings)
 const args = await new Promise<ReturnType<typeof parseArgs>>(resolve => resolve(parseArgs({
     allowPositionals: true,
     options: {
@@ -113,6 +114,7 @@ const args = await new Promise<ReturnType<typeof parseArgs>>(resolve => resolve(
         'reset-prompts': {     type: 'boolean' },
 
         open:    {             type: 'string'  },
+        files:   { short: 'f', type: 'string', multiple: true },
     }, 
     //tokens: true,
     allowNegative: true,
@@ -1101,30 +1103,32 @@ async function init(): Promise<Prompt> {
   -v, --version
   -h, -?, --help
 
-  -d, --driver <api-driver>    select a driver (ollama, openai, googleai)
-  -m, --model <model-name>     select a model
-  -t, --temp <float>           set a temperature, e.g. 0.7 (0 for model default)
+  -d, --driver <api-driver>    Select a driver (ollama, openai, googleai)
+  -m, --model <model-name>     Select a model
+  -t, --temp <float>           Set a temperature, e.g. 0.7 (0 for model default)
 
-  -a, --agent <agent-name>     select an agent, a set of prompts for specific tasks
-  -a *, --agent *              ask for agent with a list, even if it would not
+  -a, --agent <agent-name>     Select an agent, a set of prompts for specific tasks
+  -a *, --agent *              Ask for agent with a list, even if it would not
 
-  -q, --ask                    reconfigure to ask everything again
+  -q, --ask                    Reconfigure to ask everything again
       --no-ask                 ... to disable
-  -s, --sysenv                 allow to use the complete system environment
+  -s, --sysenv                 Allow to use the complete system environment
       --no-sysenv              ... to disable
-  -e, --end                    end promping if assumed done
+  -e, --end                    End promping if assumed done
       --no-end                 ... to disable
 
-  -i, --import <filename>      import context from a history file or list files select from
-  -i *, --import *             ask for history file with a list, even if it would not
+  -i, --import <filename>      Import context from a history file or list files select from
+  -i *, --import *             Ask for history file with a list, even if it would not
 
-  -u, --update                 update user config (save config)
-  -c, --config                 config only, do not prompt.
+  -f, --file <filename>, ...   Add a single or multiple files to the prompt
 
-  -r, --reset                  reset (remove) config
-  --reset-prompts              reset prompts only (use this after an update)
+  -u, --update                 Update user config (save config)
+  -c, --config                 Config only, do not prompt.
 
-  --open <config>              open the file in the default editor or the agents path (env, config, agents, history)
+  -r, --reset                  Reset (remove) config
+  --reset-prompts              Reset prompts only (use this after an update)
+
+  --open <config>              Open the file in the default editor or the agents path (env, config, agents, history)
   `);
         // You can pipe in text (like from a file) to be send to the API before your prompt.
 
@@ -1135,48 +1139,6 @@ async function init(): Promise<Prompt> {
         console.info(`History config path: ${RC_HISTORY_PATH}`);
 
         process.exit(0);
-    }
-
-
-    //*** initialize for content ***
-
-
-    {//* read piped in input
-        const stdin = process.stdin;
-        if (!stdin.isTTY) {
-            stdin.setEncoding('utf8');
-            const additionalContentData = await new Promise<string>(resolve => {
-                let data = '';
-                stdin.on('data', (chunk) => data += chunk);
-                stdin.on('end', () => resolve(data));
-            });
-
-            if (additionalContentData) {
-
-                //***! NEEDS FIXING */
-                // issue:  https://github.com/SBoudrias/Inquirer.js/issues/1721
-                console.error(colors.red(figures.warning + ' Piping files into Baio will cause problems with the prompt.'));
-                if (askSettings) {
-                    console.error(colors.yellow(figures.warning), 'Editing settings is disabled.');
-                    askSettings = false;
-                }
-
-
-                promptAdditions = [ ...(promptAdditions ?? []), { type: 'text', content: additionalContentData }];
-            }
-
-            //? restore input capability
-            const fd = process.platform === 'win32' ? '\\\\.\\CON' : '/dev/tty';
-            let stdinNew = (await fsOpen(fd, 'r')).createReadStream();
-            // const readLineNew = createInterface({
-            //     input: stdinNew,
-            //     output: process.stdout
-            // });
-            TTY_INTERFACE = {
-                input: stdinNew,
-                output: process.stdout
-            };
-        }
     }
 
 
@@ -1293,6 +1255,85 @@ async function init(): Promise<Prompt> {
             // get from file content the content from after the second '---' if available or everything from the beginning (if formating is broken)
             agentContent = settings.agentPrompt + '\n' + (agentContent?.split('---\n')[2] || agentContent);
         }
+    }
+
+
+    //*** initialize for content ***
+
+
+    {//* read piped in input
+        const stdin = process.stdin;
+        if (!stdin.isTTY) {
+            stdin.setEncoding('utf8');
+            const additionalContentData = await new Promise<string>(resolve => {
+                let data = '';
+                stdin.on('data', (chunk) => data += chunk);
+                stdin.on('end', () => resolve(data));
+            });
+
+            if (additionalContentData) {
+                //***! NEEDS FIXING */
+                // issue:  https://github.com/SBoudrias/Inquirer.js/issues/1721
+                console.error(colors.red(figures.warning + ' Piping files into Baio will cause problems with the prompt.'));
+                if (askSettings) {
+                    console.error(colors.yellow(figures.warning), 'Editing settings is disabled.');
+                    askSettings = false;
+                }
+
+                promptAdditions = [ ...(promptAdditions ?? []), { type: 'text', content: additionalContentData }];
+            }
+
+            //? restore input capability
+            const fd = process.platform === 'win32' ? '\\\\.\\CON' : '/dev/tty';
+            let stdinNew = (await fsOpen(fd, 'r')).createReadStream();
+            // const readLineNew = createInterface({
+            //     input: stdinNew,
+            //     output: process.stdout
+            // });
+            TTY_INTERFACE = {
+                input: stdinNew,
+                output: process.stdout
+            };
+        }
+    }
+
+    {//* handle files from agruments
+        if (settingsArgs['files']) {
+            let driver:Driver = drivers[settings.driver]!;
+            
+            for (const filename of settingsArgs['files']) {
+
+                let filePath = path.resolve(process.cwd(), filename);
+                const mimeType = mime.getType(filePath);
+
+                if (!mimeType) {
+                    console.error(colors.red(figures.warning), 'Skipping file, could get mimeType for file', filePath);
+                    continue;
+                }
+
+                let type = mimeType.split('/')[0] || 'text' as PromptAdditionsTypes;
+                let encoding: 'base64' | 'utf-8' = 'utf-8';
+
+                if (type === 'audio' || type === 'image' || type === 'video') encoding = 'base64';
+
+                let fileErr;
+                let fileContent = await readFile(filePath, encoding).catch(err => {fileErr = err; return ''; });
+                if (fileErr) {
+                    console.error(colors.red(figures.warning), 'Skipping file, could not read file', filePath, '\n  ', (fileErr! as Error).message);   
+                    continue;
+                }
+
+                let addition = driver.makePromptAddition(type, mimeType!, fileContent);
+
+                if (addition instanceof Error) {
+                    console.error(colors.red(figures.warning), 'Skipping file, could not use file', filePath, '\n  ', addition.message);
+                    continue;
+                }
+
+                promptAdditions = [ ...(promptAdditions ?? []), addition ];
+            }
+        }
+
     }
 
     

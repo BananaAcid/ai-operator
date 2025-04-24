@@ -33,7 +33,12 @@
   },
   "tshy": {
     ".": "./src/index.ts",
-    "exclude": ["test-stuff", ".history", "examples", "test-*.*"],
+    "exclude": [
+      "test-stuff",
+      ".history",
+      "examples",
+      "test-*.*"
+    ],
     "esmDialects": [],
     "commonjsDialects": []
   },
@@ -70,6 +75,7 @@
     "inquirer-toggle": "^1.0.1",
     "is-unicode-supported": "^2.1.0",
     "launch-editor": "^2.10.0",
+    "mime": "^4.0.7",
     "open": "^10.1.1",
     "tsx": "^4.19.3",
     "yocto-spinner": "^0.2.2"
