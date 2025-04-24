@@ -41,6 +41,6 @@ function getInvokingShell() {
 }
 process.env.INVOKING_SHELL = process.env.INVOKING_SHELL || getInvokingShell();
 
-const cmd = resolve(import.meta.dirname, '..', 'node_modules/.bin/tsx') + ' --no-warnings "' + resolve(import.meta.dirname, '..', 'index.ts' + '" ' + args);
+const cmd = resolve(import.meta.dirname, '..', 'node_modules/.bin/tsx') + ' --no-warnings "' + resolve(import.meta.dirname, '..', 'src', 'index.ts' + '" ' + args);
 
 spawnSync(cmd, { stdio: 'inherit', shell: true });

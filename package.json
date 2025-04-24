@@ -1,8 +1,8 @@
 {
   "name": "baio",
-  "version": "1.0.26",
+  "version": "1.0.27",
   "description": "Simple AI operator for the CLI, for any LLM",
-  "main": "index.ts",
+  "main": "src/index.ts",
   "type": "module",
   "engines": {
     "node": ">=23.10"
@@ -25,10 +25,17 @@
     "config:promptsreset": "node ./bin/baio --prompts-reset",
     "test:prompts": "node ./bin/baio --no-config --reset-prompts --no-ask --agent ChickenTalk",
     "postinstall": "npm run updatecheck",
-    "updatecheck": "node ./bin/baio --config --no-ask"
+    "updatecheck": "node ./bin/baio --config --no-ask",
+    "prepare": "npx -y npm-check-updates"
   },
   "bin": {
     "baio": "bin/baio"
+  },
+  "tshy": {
+    ".": "./src/index.ts",
+    "exclude": ["test-stuff", ".history", "examples", "test-*.*"],
+    "esmDialects": [],
+    "commonjsDialects": []
   },
   "keywords": [
     "ai",
@@ -53,10 +60,11 @@
     "copilot"
   ],
   "devDependencies": {
-    "@types/node": "^22.14.1"
+    "@types/node": "^22.14.1",
+    "tshy": "^3.0.2"
   },
   "dependencies": {
-    "@inquirer/prompts": "^7.4.1",
+    "@inquirer/prompts": "^7.5.0",
     "cli-markdown": "^3.4.0",
     "copy-paste": "^2.1.1",
     "inquirer-toggle": "^1.0.1",

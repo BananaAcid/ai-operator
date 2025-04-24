@@ -39,7 +39,7 @@ baio --open env
 ```
 baio --reset --config --update --no-ask
 
-√ Updating settings in .../.baiorc ...
+✔ Updating settings in .../.baiorc ...
 ```
 
 ## Usage
@@ -124,7 +124,7 @@ baio --help
 will list the paths.
 
 These can be opened with
-```
+```bash
 baio --open env
 baio --open config
 baio --open agents
@@ -313,9 +313,9 @@ To trigger these, **_if you are not on a prompt_**,
 | `/:write`                          | `:w`   | Opens the default editor to show the last AI response. Use to save to a file. |
 | `/clip:read`                       | `:r+`  | Read from the clipboard and open the default editor. |
 | `/clip:write`                      | `:w+`  | Write the the last AI response to the clipboard. |
-| `/history:export [<filename>]`     | `:hi [<filename>]`    | Exports the current context to a file with date-time as name or an optional custom filename. |
+| `/history:export [<filename>]`     | `:he [<filename>]`    | Exports the current context to a file with date-time as name or an optional custom filename. |
 | `/history:export:md [<filename>]`  | `:he:md [<filename>]` | Exports the current context to a markdown file for easier reading (can not be imported). |
-| `/history:import [<filename>]`     | `:he [<filename>]`    | Imports the context from a history file or shows a file selection. |
+| `/history:import [<filename>]`     | `:hi [<filename>]`    | Imports the context from a history file or shows a file selection. |
 | `/history:clear`                   | `:hc`  | Clears the current context (to use current prompt without context). |
 | `/:clear`                          | `:c`   | Clears the current context and current prompt (use for changing topics). |
 | `/:end [<boolean>]`                |        | Toggles end if assumed done, or turns it on or off. |
@@ -338,6 +338,7 @@ in settings: `baio --open config`
 ```
   "precheckUpdate": true,
   "precheckDriverApi": true,
+  "precheckLinksInstalled": true,
 ```
 
 
@@ -364,6 +365,57 @@ For testing:
 node bin/baio --reset-prompts ...
 ```
 
+### Testing the package locally (+ installation)
+
+```powsershell
+$BaioVersion = (gc .\package.json | ConvertFrom-Json).version
+rm ./baio-${BaioVersion}.tgz ; npm uninstall -g baio ; npm pack ; npm install -g ./baio-${BaioVersion}.tgz
+baio --version
+baio what is this folder about
+```
+
+I expect it
+- to scan the folder for files
+- then to read the readme
+- and sum it up
+
+
+### This project is developed with the following specifications in mind:
+- support ollama, gemini api and openAI api
+- support any OS and any SHELL inherently (do not rely on OS or shell specific stuff, or use modules that support the other OSs and shells)
+- use NodeJS onboad technologies if they are available to some extend (env handling, args and others were really painful)
+- use NodeJS **native `.env`** support
+- use NodeJS **native type-stripping** support (TS files only use Node compatible JS)
+- **no `tsconfig.json`**, rely on vscode to not need a config (I only used one to check for possible errors in v1.0.27)
+- use a **single monolitic file** and try everything to keep it all readable while going for spaghetti-code (functions mainly for code grouping)
+- **tsx to make baio work as a commandline command**, since type-stripped files are not allowed in node modules (like how baio is installed)
+
+<details>
+<summary>This `tsconfig.json` was used to check:</summary>
+
+```json
+{
+  "compilerOptions": {
+    "declaration": true,
+    "declarationMap": true,
+    "esModuleInterop": true,
+    "forceConsistentCasingInFileNames": true,
+    "inlineSources": true,
+    "module": "nodenext",
+    "moduleResolution": "nodenext",
+    "noUncheckedIndexedAccess": true,
+    "resolveJsonModule": true,
+    "skipLibCheck": false,
+    "sourceMap": true,
+    "strict": true,
+    "target": "es2022",
+    "allowImportingTsExtensions": true, // required to work with NODEJS
+    "noEmit": true
+  }
+}
+```
+
+</details>
 
 ## `drivers.ts`
 
@@ -437,3 +489,4 @@ I am mainly using `GEMINI 2.5 Flash` for prompt engineering. Feel free to send i
 | v1.0.23 | Fixed trigger (`:r`, `:r+`), added update check, added options for faster startup, added keys to fall back to the prompt (<kbd>:</kbd> or <kbd>/</kbd> or <kbd>ESC</kbd>) |
 | v1.0.24 | Added showing/editing (by pressing <kbd>w</kbd> or <kbd>right</kbd>) highlighted command (in selection) in the default editor |
 | v1.0.25 | Added prompt trigger (`/history:clear`, `/:clear`), corrected help to show correct `/debug:result` trigger, better display of multiline commands and with backticks, command selection items are cropped, added settings.cmdMaxLengthDisplay |
+| v1.0.27 | Fixes for possible bugs, added `precheckLinksInstalled` |

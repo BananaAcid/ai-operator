@@ -1,4 +1,7 @@
 declare global {
+    var DEBUG_OUTPUT:boolean;  // globalThis.DEBUG_OUTPUT
+    var DEBUG_APICALLS:boolean;
+
 
     type PromptText = string;
 
@@ -27,7 +30,27 @@ declare global {
         isEnd: boolean;
     };
     
+    type ArgsKeys = {
+        [index: string]: string|boolean|number;
+        version: boolean;
+        help: boolean;
+        driver: string;
+        model: string;
+        agent: string;
+        ask: boolean;
+        import: string;
+        config: boolean;
+        reset: boolean;
+        'reset-prompts': boolean;
+        open: string;
+        useAllSysEnv: boolean;
+        endIfDone: boolean;
+        saveSettings: boolean;
+        temperature: number;
+    }
+
     type Settings = {
+        [index: string]: string|boolean|number;
         driver: string;
         model: string;
         temperature: number;
@@ -42,6 +65,7 @@ declare global {
 
         precheckUpdate: boolean;
         precheckDriverApi: boolean;
+        precheckLinksInstalled: boolean;
         cmdMaxLengthDisplay: number;
     };
 
@@ -66,6 +90,8 @@ declare global {
         historyStyle: any; //drivers[any].historyStyle (history style should match the driver's key)
         history: any[];
     }
+    
 }
+
 
 export {};

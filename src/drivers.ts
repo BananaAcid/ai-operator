@@ -8,15 +8,16 @@
  *
  * Yes Ollama could use the same OpenAPI REST call, but would lack infos that could be useful because the models run locally.
  */
-const DEBUG_OUTPUT:boolean = globalThis.DEBUG_OUTPUT;
-const DEBUG_APICALLS:boolean = globalThis.DEBUG_APICALLS;
+
+const DEBUG_OUTPUT = globalThis.DEBUG_OUTPUT;
+const DEBUG_APICALLS = globalThis.DEBUG_APICALLS;
 
 //* import types
 import './types/generic.d.ts';
 import './types/driver.Ollama.d.ts';
 import './types/driver.OpenAi.d.ts';
 import './types/driver.GoogleAi.d.ts';
-import './types/JSON.d.ts';
+import './types/json.d.ts';
 
 
 const drivers = {
@@ -31,7 +32,7 @@ const drivers = {
         historyStyle: 'openai',
 
 
-        getUrl(url): string {
+        getUrl(url: string): string {
             if (process.env.OLLAMA_URL)
                 return url.replace('http://localhost:11434', process.env.OLLAMA_URL);
             else
@@ -74,7 +75,7 @@ const drivers = {
         historyStyle: 'openai',
 
 
-        getUrl(url): string {
+        getUrl(url: string): string {
             if (process.env.OPENAI_URL)
                 return url.replace('https://api.openai.com', process.env.OPENAI_URL);
             else
@@ -101,7 +102,7 @@ const drivers = {
 
 
         async getChatResponse(settings: Settings, history: any[], promptText: PromptText, promptAdditions?: PromptAdditions): Promise<ChatResponse> {
-            let resultOrig;
+            let resultOrig:any;
 
             const response = await fetch(this.urlChat, {
                 method: 'POST',
@@ -131,7 +132,15 @@ const drivers = {
 
             DEBUG_APICALLS && console.log('DEBUG_APICALLS', 'API response', this.urlChat, response);
 
-            let responseMessage = response.choices[0].message;
+            if (!response.choices?.[0]) {
+                console.error('No response from AI service');
+                return {
+                    contentRaw: '',
+                    history: history,
+                }
+            }
+
+            let responseMessage = response.choices[0]!.message;
 
             const newHistory = [
                 ...history,
@@ -161,7 +170,7 @@ const drivers = {
         historyStyle: 'googleai',
 
 
-        getUrl(url, model = ''): string {
+        getUrl(url: string, model = ''): string {
             if (process.env.GEMINI_URL)
                 url = url.replace('https://generativelanguage.googleapis.com/v1beta', process.env.GEMINI_URL);
 
@@ -183,7 +192,7 @@ const drivers = {
         },
 
         async getChatResponse(settings: Settings, history: any[], promptText: PromptText, promptAdditions?: PromptAdditions): Promise<ChatResponse> {
-            let resultOrig;
+            let resultOrig:any;
 
             const response = await fetch(this.getUrl(this.urlChat, settings.model || this.defaultModel), {
                 method: 'POST',
@@ -222,6 +231,14 @@ const drivers = {
                 process.exit(3);
             }
 
+            if (!response.candidates?.[0]) {
+                console.error('No response from AI service');
+                return {
+                    contentRaw: '',
+                    history: history,
+                }
+            }
+
             let responseMessage = response.candidates[0].content.parts[0];
 
             const newHistory = [
@@ -237,7 +254,7 @@ const drivers = {
             ];
 
             return {
-                contentRaw: responseMessage.text,
+                contentRaw: responseMessage?.text ?? '',
                 history: newHistory,
             }
         },
@@ -247,4 +264,4 @@ const drivers = {
 };
 
 
-export default drivers;
+export default drivers as { [index: string]: typeof drivers[keyof typeof drivers] };

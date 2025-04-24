@@ -3,6 +3,8 @@ __TODO.txt
 examples
 test-*.*
 test-stuff
+tsconfig.json
+baio-*.tgz
 
 # Logs
 logs

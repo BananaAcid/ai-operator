@@ -6,7 +6,7 @@
  */
 
 //* node imports
-import packageJSON from './package.json' with { type: 'json' };
+import packageJSON from '../package.json' with { type: 'json' };
 import { exec } from 'node:child_process';
 import path from 'node:path';
 import { writeFile, readFile, unlink, glob, mkdir, open as fsOpen } from 'node:fs/promises';
@@ -18,7 +18,7 @@ import fs from 'node:fs';
 import cliMd from 'cli-markdown';
 import launchEditor from 'launch-editor';
 import open from 'open';
-import clipboard from 'copy-paste';
+import clipboard from 'copy-paste/promises.js';
 
 import colors from 'yoctocolors-cjs'; // installed by @inquirer/prompts
 import figures from '@inquirer/figures'; // installed by @inquirer/prompts
@@ -51,30 +51,35 @@ const RC_HISTORY_PATH = path.join(RC_PATH, 'history');
 
 //* get user dot env
 // node:parseEnv sucks really badly.
-(await readFile(RC_ENVFILE, 'utf-8').catch(_ => '')).split('\n').map(line => line.trim()).filter(line => line.length > 0 && !line.startsWith('#')).map(line => line.split(/=(.*)/).map(part => part.trim())).filter(line => line[1].length > 0).forEach(line => process.env[line[0].toUpperCase().replaceAll(' ', '_')] = line[1]);
+(await readFile(RC_ENVFILE, 'utf-8').catch(_ => ''))
+.split('\n').map(line => line.trim()).filter(line => line.length > 0 && !line.startsWith('#'))
+.map(line => line.split(/=(.*)/).map(part => part.trim()) )
+.filter(([key,val]) => key && val)
+.forEach(([key,val]) => process.env[key!.toUpperCase().replaceAll(' ', '_')] = val);
 
 
 //* set DEBUG consts
-const DEBUG_OUTPUT = process.env.DEBUG_OUTPUT || false;
-const DEBUG_APICALLS = process.env.DEBUG_APICALLS || false;
-const DEBUG_SYSTEMPROMPT = process.env.DEBUG_SYSTEMPROMPT || false;
-const DEBUG_OUTPUT_EXECUTION = process.env.DEBUG_OUTPUT_EXECUTION || false;
-const DEBUG_OUTPUT_SYSTEMPROMPT = process.env.DEBUG_OUTPUT_SYSTEMPROMPT || false;
+const DEBUG_OUTPUT = !!process.env.DEBUG_OUTPUT;
+const DEBUG_APICALLS = !!process.env.DEBUG_APICALLS;
+const DEBUG_SYSTEMPROMPT = !!process.env.DEBUG_SYSTEMPROMPT;
+const DEBUG_OUTPUT_EXECUTION = !!process.env.DEBUG_OUTPUT_EXECUTION;
+const DEBUG_OUTPUT_SYSTEMPROMPT = !!process.env.DEBUG_OUTPUT_SYSTEMPROMPT;
 
 
 //* project imports
 globalThis.DEBUG_OUTPUT = DEBUG_OUTPUT;
 globalThis.DEBUG_APICALLS = DEBUG_APICALLS;
-
-import drivers from './drivers.ts';
+import drivers from './drivers.ts';  // ext .ts is required by NodeJS (with TS support)
 
 
 //* import types
+import './types/cli-markdown.d.ts';
+import './types/copy-paste.d.ts';
 import './types/generic.d.ts';
 import './types/driver.Ollama.d.ts';
 import './types/driver.OpenAi.d.ts';
 import './types/driver.GoogleAi.d.ts';
-import './types/JSON.d.ts';
+import './types/json.d.ts';
 type Driver = typeof drivers[keyof typeof drivers];
 
 
@@ -113,7 +118,7 @@ const args = await new Promise<ReturnType<typeof parseArgs>>(resolve => resolve(
     allowNegative: true,
     args: process.argv.slice(2)
 }))).catch(error => { console.error('🛑', error.message); process.exit(1); });
-const argsReMap = {
+const argsReMap: Record<string, string> = {
     sysenv: 'useAllSysEnv',
     end: 'endIfDone',
     update: 'saveSettings',
@@ -124,11 +129,11 @@ const argsReMap = {
 //!   And options does not allow for a key name (only long and short arg name)
 //! ---->   default values make them always be set and always be true and can not be changed. Writing the param with --no-acbd does set them to false but changes their names
 //!  ... and no support for numbers
-let settingsArgs;
+//let settingsArgs;
 //? 1. get all token .name from .tokens[] with reduce (not all do have a name), 2. then get matching value from .values{} 
 //~ settingsArgs = args.tokens!.filter(token => token.kind === 'option').reduce((acc, token) => ({ ...acc, [token.name]: args.values[token.name] }), {});
-//? 3. remap
-settingsArgs = Object.entries(settingsArgs || args.values).reduce((acc, [k, v]) => ({ ...acc, [argsReMap[k] || k]: v }), {});
+//? 3. remap ( keys of args.options and argsReMap-values but without argsReMap-keys (which are remapped) )
+let settingsArgs:Partial<ArgsKeys> = Object.entries(args.values).reduce((acc, [k, v]) => ({ ...acc, [argsReMap[k] || k]: v }), {});
 //* get the prompt, the non-options
 const argsPrompt = args.positionals.join(' ').trim();
 
@@ -164,6 +169,7 @@ let settingsDefault: Settings = {
 
     precheckUpdate: true,       // (speedup if false) try to reach the npm registry to check for an update
     precheckDriverApi: true,    // (speedup if false) try to reach the driver api to check if it is available
+    precheckLinksInstalled: true,   // (speedup if false) try to check if links is installed and if it is available
     cmdMaxLengthDisplay: 100,   // set the maximum length of a command to display
 
     defaultPrompt: 'show me a table of all files in the current directory',
@@ -350,7 +356,7 @@ let history: MessageItem[] = [];
 async function api(promptText: PromptText, promptAdditions?: PromptAdditions): Promise<PromptResult> {
     // fetch from ollama api
 
-    const driver: Driver = drivers[settings.driver];
+    const driver: Driver = drivers[settings.driver]!;
 
     spinner.start(`Waiting for ${driver.name}\'s response ...`);
 
@@ -361,22 +367,20 @@ async function api(promptText: PromptText, promptAdditions?: PromptAdditions): P
 
     spinner.success();
 
+    // remove the <think>...</think> block from the visible output
+    let content = contentRaw.replaceAll(/<think>.*?<\/think>/gis, '');
 
     // find all commands with format `<CMD>the commandline command</CMD>` which can be in the middle of a string,
-    //  AND ARE NOT part of a <think>...</think> block
-    let content = contentRaw.replaceAll(/<think>.*?<\/think>/gis, '');
-    const matches = content.matchAll(/\`?\ *<CMD>(.*?)<\/CMD>\ *\`?/g);
+    const matches = content.matchAll(/\`?\ *<CMD>(.*?)<\/CMD>\ *\`?/gs);
     let commands: string[] = [];
-    for (const match of matches) {
-        commands.push(match[1]);
-    }
+    for (const match of matches)
+        commands.push(match[1]!);
 
     // go for agents, that are created by the ai
-    const matchesHelpers = content.matchAll(/\`?\ *<AGENT-DEFINITION NAME="(.*?)">(.*?)<\/AGENT-DEFINITION>\ *\`?/g);
+    // const matchesHelpers = content.matchAll(/\`?\ *<AGENT-DEFINITION NAME="(.*?)">(.*?)<\/AGENT-DEFINITION>\ *\`?/g);
     let helpers: PromptHelper[] = [];
-    for (const match of matchesHelpers) {
-        helpers.push({type: 'agent', name: match[1], definition: match[2]});
-    }
+    // for (const match of matchesHelpers)
+    //     helpers.push({type: 'agent', name: match[1], definition: match[2]});
 
     // clean <END/> tags, because sometimes they are within strange places
     content = content.replaceAll(/<END\/>/g, '');
@@ -396,7 +400,7 @@ async function api(promptText: PromptText, promptAdditions?: PromptAdditions): P
         // This is necessary to avoid infinite loops with zero-width matches
         if (m.index === regex.lastIndex) regex.lastIndex++;
 
-        if (m[1].includes('`') || m[1].includes('\n'))
+        if (m[1]?.includes('`') || m[1]?.includes('\n'))
             content = content.replaceAll(m[0], '\n ```'+getShellName()+'\n▶️ ' + m[1] + '\n```\n');
         else
             content = content.replaceAll(m[0], '\n ▶️ `' + m[1] + '`');
@@ -422,7 +426,7 @@ async function api(promptText: PromptText, promptAdditions?: PromptAdditions): P
  * @returns true if the connection test was successful, false if not
  */
 async function doConnectionTest(): Promise<boolean> {
-    const driver: Driver = drivers[settings.driver];
+    const driver: Driver = drivers[settings.driver]!;
 
     const response = await fetch(driver.getUrl(driver.urlTest), {        
         method: 'HEAD',
@@ -444,7 +448,7 @@ async function doConnectionTest(): Promise<boolean> {
 async function getModels(): Promise<ModelSelection> {
     //:11434/api/tags
 
-    let driver:Driver = drivers[settings.driver];
+    let driver:Driver = drivers[settings.driver]!;
 
     spinner.start(`Getting models from ${driver.name} ...`);
 
@@ -579,7 +583,9 @@ async function getAgents(): Promise<AgentSelection> {
         agents.push({name: settingsArgs['agent'], value: file});
     }
     else {
-        if (settingsArgs['agent']) settingsArgs['agent'] = null;
+        // commandline was proccessed
+        if (settingsArgs['agent']) settingsArgs['agent'] = undefined;
+
         agents = agentFiles.map(file => ({ name: file.name.replace('.md', ''), value: path.join(file.parentPath, file.name) }))
     }
 
@@ -725,7 +731,7 @@ async function doPromptWithCommands(result: PromptResult|undefined): Promise<str
                 let val = await editor({
                     message: 'Waiting for you to close the editor (and you can modify the command).',
                     waitForUseInput: false,
-                    theme: { style: { help: _ => ``, } },
+                    theme: { style: { help: () => ``, } },
                     default: activeItem!.value,
                     postfix: getShellExt(),
                 }, {...TTY_INTERFACE, clearPromptOnDone: true})
@@ -782,7 +788,7 @@ async function importHistory(filename: string, isAsk: boolean = false): Promise<
     else {
         let content = JSON.parse(historyContent) as HistoryFile;
 
-        let driver: Driver = drivers[settings.driver];
+        let driver: Driver = drivers[settings.driver]!;
         if (content.historyStyle !== driver.historyStyle)
             console.error(`🛑 Importing history failed. File ${filePath} has an incompatible history style (${drivers[content.historyStyle]?.name ?? content.historyStyle}) than the current API ${driver.name}.`);
         else {
@@ -816,9 +822,9 @@ async function promptTrigger(/*inout*/ prompt: Prompt, /*inout*/ resultPrompt?: 
 | \`/:write\`                          | \`:w\`  | Opens the default editor to show the last AI response. Use to save to a file. |
 | \`/clip:read\`                       | \`:r+\` | Read from the clipboard and open the default editor. |
 | \`/clip:write\`                      | \`:w+\` | Write the the last AI response to the clipboard. |
-| \`/history:export [<filename>]\`     | \`:hi [<filename>]\`    | Exports the current context to a file with date-time as name or an optional custom filename. |
+| \`/history:export [<filename>]\`     | \`:he [<filename>]\`    | Exports the current context to a file with date-time as name or an optional custom filename. |
 | \`/history:export:md [<filename>]\`  | \`:he:md [<filename>]\` | Exports the current context to a markdown file for easier reading (can not be imported). |
-| \`/history:import [<filename>]\`     | \`:he [<filename>]\`    | Imports the context from a history file or shows a file selection. |
+| \`/history:import [<filename>]\`     | \`:hi [<filename>]\`    | Imports the context from a history file or shows a file selection. |
 | \`/history:clear\`                   | \`:hc\` | Clears the current context (to use current prompt without context). |
 | \`/:clear\`                          | \`:c\`  | Clears the current context and current prompt (use for changing topics). |
 | \`/:end [<boolean>]\`                |         | Toggles end if assumed done, or turns it on or off. |
@@ -845,17 +851,23 @@ async function promptTrigger(/*inout*/ prompt: Prompt, /*inout*/ resultPrompt?: 
     }
     if (prompt.text.startsWith('/debug:get ')) {
         const key = prompt.text.split(/(?<!\\)\s+/)[1];
-        console.log(`settings.${key} =`, settings[key]);
+        console.log(`settings.${key} =`, key ? settings[key] : 'not found');
         return true;
     }
     if (prompt.text.startsWith('/debug:set ')) {
         //* will not work with useAllSysEnv (is systemPrompt is already generated with this), saveSettings (saved already)
         //*  /debug:set <.baiorc-key> <JSON_formatted_value>
         const args = prompt.text.split(/(?<!\\)\s+/).filter(arg => arg.length > 0);
-        const key = args[1];
-        const value = JSON.parse(args.slice(2).join(' '));
-        if (key in settings) settings[key] = value;
-        else console.error(`Unknown setting: ${key}`);
+        const key = args[1],
+              val = args.slice(2).join(' ');
+        try {
+            const value = JSON.parse(val) as any;
+            if (key && key in settings) settings[key] = value;
+            else console.error(colors.red(figures.cross), `Unknown setting: ${key}`);
+        }
+        catch (e) {
+            console.error(colors.red(figures.cross), `Failed to parse value: ${val}`, '\n  ', (e as SyntaxError).message);
+        }
         return true;
     }
     let exportType='json';
@@ -871,13 +883,13 @@ async function promptTrigger(/*inout*/ prompt: Prompt, /*inout*/ resultPrompt?: 
         let content = '';
         if (exportType == 'json') {
             if (!filename.toLowerCase().endsWith('.json')) filename += '.json';
-            content = JSON.stringify({ version: settings.version, historyStyle: drivers[settings.driver].historyStyle, history}, null, 2);
+            content = JSON.stringify({ version: settings.version, historyStyle: drivers[settings.driver]!.historyStyle, history}, null, 2);
         }
         else if (exportType == 'md') {
             if (!filename.toLowerCase().endsWith('.json')) filename += '.md';
             //content =  a flattened object, where all keys that do not have a child, will be inlcuded with key:content
             let contentStrings:string[] = [];
-            function walk(obj) {
+            function walk(obj:Record<string, any>) {
                 for (const key in obj) {
                     if (typeof obj[key] === 'string') {
                         contentStrings.push(obj[key]);
@@ -936,7 +948,7 @@ async function promptTrigger(/*inout*/ prompt: Prompt, /*inout*/ resultPrompt?: 
     }
     let pasteContent: string|undefined = undefined;
     if (prompt.text === '/clip:read' || prompt.text === ':r+' || prompt.text === ':r +') {
-        pasteContent = clipboard.paste() || '';
+        pasteContent = await clipboard.paste() || '';
         if (!pasteContent) {
             console.log(`🛑 Failed to read anything from clipboard`);
             return true;
@@ -948,7 +960,7 @@ async function promptTrigger(/*inout*/ prompt: Prompt, /*inout*/ resultPrompt?: 
             message: 'Waiting for your input in the editor.',
             waitForUseInput: false,
             default: pasteContent ?? '',
-            theme: { style: { help: _ => `Enter your multiline content in the editor, save the file and close it.`, } }
+            theme: { style: { help: () => `Enter your multiline content in the editor, save the file and close it.`, } }
         }, TTY_INTERFACE).catch(_ => undefined);
         if (value) {
             prompt.text = value || '';
@@ -957,7 +969,7 @@ async function promptTrigger(/*inout*/ prompt: Prompt, /*inout*/ resultPrompt?: 
         return true;
     }
     if (prompt.text === '/clip:write' || prompt.text === ':w+' || prompt.text === ':w +') {
-        clipboard.copy(resultPrompt?.answerFull);
+        clipboard.copy(resultPrompt?.answerFull ?? '');
         console.log(`📋 Copied to clipboard`);
         return true;
     }
@@ -969,7 +981,7 @@ async function promptTrigger(/*inout*/ prompt: Prompt, /*inout*/ resultPrompt?: 
         await editor({
             message: 'Waiting for you to close the editor.',
             waitForUseInput: false,
-            theme: { style: { help: _ => ``, } },
+            theme: { style: { help: () => ``, } },
             default: resultPrompt.answerFull,
             postfix: '.md',
         }, TTY_INTERFACE).catch(_ => undefined);
@@ -1000,7 +1012,6 @@ async function promptTrigger(/*inout*/ prompt: Prompt, /*inout*/ resultPrompt?: 
  * @returns the prompt
  */
 async function init(): Promise<Prompt> {
-    let driver:Driver = drivers[settings.driver];
     let askSettings = settingsArgs['ask'] ?? (process.env.ASK_SETTINGS || !settings.saveSettings);
     if (settingsArgs['reset-prompts'] === true) { askSettings = settingsArgs['ask'] ?? false; settingsArgs['config'] = settingsArgs['config'] ?? true; } // do not ask for settings and prompt, if we are resetting the prompts so the other commands are not needed
     let promptAdditions: PromptAdditions;
@@ -1185,19 +1196,20 @@ async function init(): Promise<Prompt> {
 
     if (askSettings)
     {//* API/Driver selection
-        let driverChoices = Object.keys(drivers).map(key => ({ name: drivers[key].name, value: key }));
+        let driverChoices = Object.keys(drivers).map(key => ({ name: drivers[key]?.name, value: key }));
         settings.driver = await select({ message: 'Select your API:', choices: driverChoices, default: settings.driver || 'ollama' }, TTY_INTERFACE);
     }
 
     {//* api key test
-        if (settings.driver !== 'ollama' && !drivers[settings.driver].apiKey()) {
-            console.error(`🛑 ${drivers[settings.driver].name} has no API key configured in the environment`);
+        if (settings.driver !== 'ollama' && !drivers[settings.driver]?.apiKey()) {
+            console.error(`🛑 ${drivers[settings.driver]?.name ?? settings.driver} has no API key configured in the environment`);
             process.exit(1);
         }
     }
 
     {//* connection test
         if (settings.precheckDriverApi) {
+            let driver:Driver = drivers[settings.driver]!;
             askSettings && spinner.start(`Connecting to ${driver.name} ...`);
             const connection = await doConnectionTest();
             
@@ -1214,6 +1226,7 @@ async function init(): Promise<Prompt> {
 
     if (askSettings)
     {//* model selection
+        let driver:Driver = drivers[settings.driver]!;
         const models = await getModels();
         let modelSelected = '';
         if (models.length) {
@@ -1268,12 +1281,17 @@ async function init(): Promise<Prompt> {
         let agentFile = '';
 
         if (agents.length)
-            agentFile = settingsArgs['agent'] ? agents[0].value : (!askSettings && settingsArgs['agent']!==null ? '' : await select({ message: 'Select an agent:', choices: [{ name: '- none -', value: '' }, ...agents ] }, TTY_INTERFACE));
+            agentFile = settingsArgs['agent'] 
+                ? agents[0]!.value 
+                : (!askSettings && settingsArgs['agent']!==null 
+                    ? '' 
+                    : await select({ message: 'Select an agent:', choices: [{ name: '- none -', value: '' }, ...agents ] }, TTY_INTERFACE)
+                );
         
         if (agentFile) {
             agentContent = await readFile(agentFile, 'utf-8').catch(_ => undefined);
             // get from file content the content from after the second '---' if available or everything from the beginning (if formating is broken)
-            agentContent = settings.agentPrompt + '\n' + (agentContent.split('---\n')[2] || agentContent);
+            agentContent = settings.agentPrompt + '\n' + (agentContent?.split('---\n')[2] || agentContent);
         }
     }
 
@@ -1289,36 +1307,45 @@ async function init(): Promise<Prompt> {
     }
     
     {//* system prompt
-
+        [
         // always apply consts here, otherwise they would be saved and this be hard coded
-        settings.systemPrompt = settings.systemPrompt.replaceAll('{{process_env_USERNAME}}', process.env.USERNAME!);
-        settings.systemPrompt = settings.systemPrompt.replaceAll('{{process_env_OS}}', process.env.OS!);
-        settings.systemPrompt = settings.systemPrompt.replaceAll('{{process_platform}}', process.platform);
-        settings.systemPrompt = settings.systemPrompt.replaceAll('{{process_arch}}', process.arch);
-        settings.systemPrompt = settings.systemPrompt.replaceAll('{{process_env_COMPUTERNAME}}', process.env.COMPUTERNAME!);
-        settings.systemPrompt = settings.systemPrompt.replaceAll('{{process_env_SHELL}}', process.env.SHELL ?? process.env.COMSPEC!);
-        settings.systemPrompt = settings.systemPrompt.replaceAll('{{process_env_POSH_SHELL}}', process.env.POSH_SHELL!);
-        settings.systemPrompt = settings.systemPrompt.replaceAll('{{process_env_POSH_SHELL_VERSION}}', process.env.POSH_SHELL_VERSION!);
-        settings.systemPrompt = settings.systemPrompt.replaceAll('{{process_env_HOME}}', process.env.HOME ?? process.env.USERPROFILE!);
-        settings.systemPrompt = settings.systemPrompt.replaceAll('{{process_cwd}}', process.cwd());
+            ['{{process_env_USERNAME}}', process.env.USERNAME!],
+            ['{{process_env_OS}}', process.env.OS!],
+            ['{{process_platform}}', process.platform],
+            ['{{process_arch}}', process.arch],
+            ['{{process_env_COMPUTERNAME}}', process.env.COMPUTERNAME!],
+            ['{{process_env_SHELL}}', process.env.SHELL ?? process.env.COMSPEC!],
+            ['{{process_env_POSH_SHELL}}', process.env.POSH_SHELL!],
+            ['{{process_env_POSH_SHELL_VERSION}}', process.env.POSH_SHELL_VERSION!],
+            ['{{process_env_HOME}}', process.env.HOME ?? process.env.USERPROFILE!],
+            ['{{process_cwd}}', process.cwd()],
 
         // apply invoking shell to system prompt
-        settings.systemPrompt = settings.systemPrompt.replaceAll('{{invokingShell}}', getInvokingShell() ?? 'unknown');
-
-        try {
-            let output = execSync('links -version', { shell: getInvokingShell() });
-            settings.systemPrompt = settings.systemPrompt.replaceAll('{{linksIsInstalled}}', '- links2 is installed and can be used: ' + output);
-            DEBUG_OUTPUT && console.log(colors.green(figures.tick), 'links2 is installed');
-        }
-        catch (error) {
-            settings.systemPrompt = settings.systemPrompt.replaceAll('{{linksIsInstalled}}', '- links2 is not yet installed');
-            DEBUG_OUTPUT && console.warn(colors.yellow(figures.cross), 'links2 is not installed');
-        }
+            ['{{invokingShell}}', getInvokingShell() ?? 'unknown'],
 
         // apply system env to system prompt or clean up the placeholder
-        settings.systemPrompt = settings.systemPrompt.replaceAll('{{useAllSysEnv}}', settings.useAllSysEnv ? `- You are running on (system environment): ${JSON.stringify(process.env)}` : '');
+            ['{{useAllSysEnv}}', settings.useAllSysEnv ? `- You are running on (system environment): ${JSON.stringify(process.env)}` : ''],
 
-        settings.systemPrompt = settings.systemPrompt.replaceAll('{{useAgent}}', agentContent ? `---\n${agentContent}\n---\n` : '');
+            ['{{useAgent}}', agentContent ? `---\n${agentContent}\n---\n` : ''],
+        ].forEach(([placeholder, value]) =>
+            settings.systemPrompt = settings.systemPrompt.replaceAll(placeholder!, value!)
+        );
+
+
+        if (settings.pre ) {
+
+            try {
+                let output = execSync('links -version', { shell: getInvokingShell() });
+                settings.systemPrompt = settings.systemPrompt.replaceAll('{{linksIsInstalled}}', '- links2 is installed and can be used: ' + output);
+                DEBUG_OUTPUT && console.log(colors.green(figures.tick), 'links2 is installed');
+            }
+            catch (error) {
+                settings.systemPrompt = settings.systemPrompt.replaceAll('{{linksIsInstalled}}', '- links2 is not yet installed');
+                DEBUG_OUTPUT && console.warn(colors.yellow(figures.cross), 'links2 is not installed');
+            }
+        }
+        else
+            settings.systemPrompt = settings.systemPrompt.replaceAll('{{linksIsInstalled}}', '- you need to check if links2 is installed');
 
         DEBUG_OUTPUT_SYSTEMPROMPT && console.log('DEBUG\n', 'systemPrompt:', settings.systemPrompt);
     }
