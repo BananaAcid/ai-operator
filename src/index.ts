@@ -621,7 +621,7 @@ async function doCommands(commands: string[]): Promise<string> {
     let results: string[] = [];
 
     for (const command of commands) {
-        spinner.start(`Executing command: ${command}`);
+        spinner.start(`Executing command: ${displayCommand(command)}`);
 
         // execute command mith node and a promise and wait
         let result = await new Promise((resolve, reject) => {
@@ -661,6 +661,18 @@ async function doPrompt(prompt: Prompt): Promise<PromptResult> {
     return result;
 }
 
+
+/**
+ * Shorten a command for displaying it, limiting it to a maximum length and replace linebreaks with an enter-arrow symbol
+ * @param command The command to shorten
+ * @returns The shortened command
+ */
+function displayCommand(command: string): string {
+    return (command.length > settings.cmdMaxLengthDisplay 
+        ? command.substring(0, settings.cmdMaxLengthDisplay - 4) + ' ...' 
+        : command
+    ).replaceAll(/[\n\r]+/g, colors.blue(colors.bold('↵')));
+}
 
 /**
  * Take the result of the api call and either execute the commands or ask the user for more info
@@ -726,7 +738,7 @@ async function doPromptWithCommands(result: PromptResult|undefined): Promise<str
         const commands = await checkboxWithActions({
             message: 'Select the commands to execute',
             shortcuts: { edit: 'e' },
-            choices: result.commands.map((command) => ({ name: (command.length > settings.cmdMaxLengthDisplay ? command.substring(0, settings.cmdMaxLengthDisplay - 4) + ' ...' : command), value: command, checked: true })),
+            choices: result.commands.map((command) => ({ name: displayCommand(command), value: command, checked: true })),
             keypressHandler: async function({key, active, items}) {
                 activeItem = {...items[active], index: active};
 
