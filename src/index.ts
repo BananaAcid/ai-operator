@@ -862,6 +862,51 @@ async function importHistory(filename: string, isAsk: boolean = false): Promise<
 
 
 /**
+ * Adds a file to the promptAdditions. Skips the file, if it could not be read or used.
+ * @param promptAdditions The current promptAdditions, that this function will add to.
+ * @param filename The file name of the file to add.
+ * @returns The new promptAdditions with the file added, or null if the file could not be used.
+ */
+async function addFile(promptAdditions: PromptAdditions, filename: string): Promise<PromptAdditions|null> {
+    let driver:Driver = drivers[settings.driver]!;
+    let filePath = path.resolve(process.cwd(), filename);
+    const mimeType = mime.getType(filePath);
+
+    if (!mimeType) {
+        console.error(colors.red(figures.warning), 'Skipping file, could get mimeType for file', filePath);
+        return null;
+    }
+
+    let type = mimeType.split('/')[0] || 'text' as PromptAdditionsTypes;
+    let encoding: 'base64' | 'utf-8' = 'utf-8';
+    if (type === 'audio' || type === 'image' || type === 'video') encoding = 'base64';
+
+    // load file
+    let fileErr;
+    let fileContent = await readFile(filePath, encoding).catch(err => {fileErr = err; return ''; });
+    if (fileErr) {
+        console.error(colors.red(figures.warning), 'Skipping file, could not read file', filePath, '\n  ', (fileErr! as Error).message);   
+        return null;
+    }
+
+    // add file content
+    let addition = driver.makePromptAddition(type, fileContent, mimeType!);
+    if (addition instanceof Error) {
+        console.error(colors.red(figures.warning), 'Skipping file, could not use file', filePath, '\n  ', addition.message);
+        return null;
+    }
+
+    // add filename prompt, 2nd: if file fails, we need not to run this code (order is correct when adding below)
+    let additionFileName = driver.makePromptAddition('text', settings.fileAddPrompt.replaceAll('{{filepath}}', filePath), 'text/plain');
+    if (additionFileName instanceof Error) {
+        console.error(colors.red(figures.warning), 'Skipping file, could not use file', filePath, '\n  ', additionFileName.message);
+        return null;
+    }
+
+    return [ ...(promptAdditions ?? []), additionFileName, addition ];
+}
+
+/**
  * Evaluates a given prompt string and executes corresponding debug commands.
  *
  * This function checks if the provided prompt matches specific debug commands.
@@ -1368,45 +1413,9 @@ async function init(): Promise<Prompt> {
 
     {//* handle files from arguments
         if (settingsArgs['files']) {
-            let driver:Driver = drivers[settings.driver]!;
-            
             for (const filename of settingsArgs['files']) {
-
-                let filePath = path.resolve(process.cwd(), filename);
-                const mimeType = mime.getType(filePath);
-
-                if (!mimeType) {
-                    console.error(colors.red(figures.warning), 'Skipping file, could get mimeType for file', filePath);
-                    continue;
-                }
-
-                let type = mimeType.split('/')[0] || 'text' as PromptAdditionsTypes;
-                let encoding: 'base64' | 'utf-8' = 'utf-8';
-                if (type === 'audio' || type === 'image' || type === 'video') encoding = 'base64';
-
-                // load file
-                let fileErr;
-                let fileContent = await readFile(filePath, encoding).catch(err => {fileErr = err; return ''; });
-                if (fileErr) {
-                    console.error(colors.red(figures.warning), 'Skipping file, could not read file', filePath, '\n  ', (fileErr! as Error).message);   
-                    continue;
-                }
-
-                // add file content
-                let addition = driver.makePromptAddition(type, fileContent, mimeType!);
-                if (addition instanceof Error) {
-                    console.error(colors.red(figures.warning), 'Skipping file, could not use file', filePath, '\n  ', addition.message);
-                    continue;
-                }
-
-                // add filename prompt
-                let additionFileName = driver.makePromptAddition('text', settings.fileAddPrompt.replaceAll('{{filepath}}', filePath), 'text/plain');
-                if (additionFileName instanceof Error) {
-                    console.error(colors.red(figures.warning), 'Skipping file, could not use file', filePath, '\n  ', additionFileName.message);
-                    continue;
-                }
-
-                promptAdditions = [ ...(promptAdditions ?? []), additionFileName, addition ];
+                let result = await addFile(promptAdditions, filename);
+                if (result !== null) promptAdditions = result;
             }
         }
     }
