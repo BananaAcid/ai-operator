@@ -98,7 +98,7 @@ const args = await new Promise<ReturnType<typeof parseArgs>>(resolve => resolve(
         model:   { short: 'm', type: 'string'  },
         temp:    { short: 't', type: 'string'  },
 
-        agent:   { short: 'a', type: 'string'  },
+        agent:   { short: 'a', type: 'string',  multiple: true },
 
         ask:     { short: 'q', type: 'boolean' },
         sysenv:  { short: 's', type: 'boolean' },
@@ -432,9 +432,9 @@ async function api(promptText: PromptText, promptAdditions?: PromptAdditions): P
         if (m.index === regex.lastIndex) regex.lastIndex++;
 
         if (m[1]?.includes('`') || m[1]?.includes('\n'))
-            content = content.replaceAll(m[0], '\n```'+getShellName()+'\n▶️ ' + m[1] + '\n```\n');
+            content = content.replaceAll(m[0], '\n ▶️ Command: \n```'+getShellName()+'\n' + m[1]?.trim() + '\n```\n');
         else
-            content = content.replaceAll(m[0], '\n ▶️ `' + m[1] + '`');
+            content = content.replaceAll(m[0], '\n ▶️ `' + m[1]?.trim() + '`');
     }
 
     try {
@@ -596,25 +596,30 @@ async function getAgents(): Promise<AgentSelection> {
     // get *.md files from RC_AGENTS_PATH, if there are any, show a selection
     const agentFiles: fs.Dirent[] = [];
     for await (const file of glob('*.md', { cwd: RC_AGENTS_PATH, withFileTypes: true })) agentFiles.push(file);
+
+    const hasAgentsArgs = !!settingsArgs['agent']?.length;
+    const forceSelection = settingsArgs['agent']?.[0] === '*';
     
-    if (settingsArgs['agent'] && settingsArgs['agent'] !== '*') {
-        const file = path.join(RC_AGENTS_PATH, settingsArgs['agent'] + '.md');
-        //const exists = await access(file).catch(() => undefined);
+    if (hasAgentsArgs && !forceSelection) {
+        for (const agentArg of settingsArgs['agent']!) {
+            const file = path.join(RC_AGENTS_PATH, agentArg + '.md');
 
-        const filename = (settingsArgs['agent'] + '.md').toLowerCase();
+            const filename = (agentArg + '.md').toLowerCase();
 
-        // find the file in agentFiles (compare lowercase, so the user can use `--agent` without taking care off the case)
-        const fileFound = agentFiles.find(file => file.name.toLowerCase() === filename);
+            // find the file in agentFiles (compare lowercase, so the user can use `--agent` without taking care off the case)
+            const fileFound = agentFiles.find(file => file.name.toLowerCase() === filename);
+            const agentName = fileFound ? fileFound.name.replace('.md', '') : agentArg;
 
-        if (!fileFound) { // if (!exists)
-            console.error(`🛑 Agent ${settingsArgs['agent']} file ${file} not found!`);
-            return [];
+            if (!fileFound)
+                console.error(`🛑 Agent ${agentArg} file ${file} not found!`);
+            else {
+                console.log(colors.green(colors.bold(figures.tick)), `Agent ${agentName} used`);
+                agents.push({name: agentName, value: file});
+            }
         }
-
-        agents.push({name: settingsArgs['agent'], value: file});
     }
     else {
-        // commandline was proccessed
+        // commandline was proccessed, in case there is something going to be added in the future
         if (settingsArgs['agent']) settingsArgs['agent'] = undefined;
 
         agents = agentFiles.map(file => ({ name: file.name.replace('.md', ''), value: path.join(file.parentPath, file.name) }))
@@ -1293,23 +1298,28 @@ async function init(): Promise<Prompt> {
     //*** the following options are NOT saved, but can add to settings ***
 
 
-    let agentContent;
+    let agentContent = '';
     {//* agent
+        const hasAgentsArgs = !!settingsArgs['agent']?.length;
+        const forceSelection = settingsArgs['agent']?.[0] === '*';
+        let agentFiles:ArgsKeys['agent'] = [];
+
         const agents = await getAgents();
-        let agentFile = '';
 
         if (agents.length)
-            agentFile = settingsArgs['agent'] 
-                ? agents[0]!.value 
-                : (!askSettings && settingsArgs['agent']!==null 
-                    ? '' 
-                    : await select({ message: 'Select an agent:', choices: [{ name: '- none -', value: '' }, ...agents ] }, TTY_INTERFACE)
+            agentFiles = hasAgentsArgs && !forceSelection
+                ? agents.map(({value}) => value) // getAgents returned only the requested ones
+                : (askSettings || forceSelection
+                    ? [await select({ message: 'Select an agent:', choices: [{ name: '- none -', value: '' }, ...agents ] }, TTY_INTERFACE)]
+                    : []
                 );
         
-        if (agentFile) {
-            agentContent = await readFile(agentFile, 'utf-8').catch(_ => undefined);
-            // get from file content the content from after the second '---' if available or everything from the beginning (if formating is broken)
-            agentContent = settings.agentPrompt + '\n' + (agentContent?.split('---\n')[2] || agentContent);
+        if (agentFiles.length) {
+            for (const agentFile of agentFiles) {
+                let agentContentFile = await readFile(agentFile, 'utf-8').catch(_ => undefined);
+                // get from file content the content from after the second '---' if available or everything from the beginning (if formating is broken)
+                agentContent += settings.agentPrompt + '\n' + (agentContent ? '\n---\n' : '') + (agentContentFile?.split('---\n')?.[2] || agentContentFile);
+            }
         }
     }
 

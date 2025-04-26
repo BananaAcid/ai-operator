@@ -49,7 +49,7 @@ declare global {
         help: boolean;
         driver: string;
         model: string;
-        agent: string;
+        agent: string[];
         ask: boolean;
         import: string;
         config: boolean;
