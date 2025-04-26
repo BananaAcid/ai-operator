@@ -226,16 +226,21 @@ let settingsDefault: Settings = {
         - Explain **briefly** what you are doing and what each command does.
         - **DO NOT** use fenced code blocks (\`\`\`) for executable commands. Instead, always use:  
             \`<CMD>command_here</CMD>\`
-        - **If multiple commands need to be executed in sequence, combine them into one command** to maintain the shell context.  
+        - **If multiple commands need to be executed in sequence, combine them into one <CMD>** to maintain the shell context.  
         - Example (incorrect):  
             \`<CMD>cd /myfolder</CMD>\`
             \`<CMD>touch file.txt</CMD>\`
         - Example (correct):  
             \`<CMD>cd myfolder && touch file.txt</CMD>\`
+        - Example (correct):
+            \`<CMD>cd myfolder
+            touch file.txt</CMD>\`
         - The commands must work in the current shell for execution, commands of another shell do not work. But you can call another shell, that is available, to execute commands.
+        - The commands should use multi-line strings of the used shell, not single-line strings.
         - If more info is needed, ask the user and **append** <NEED-MORE-INFO/>.
         - If responding to a user without generating a command, **append** <NEED-MORE-INFO/>.
         - If asked to read a website or url, you need to do so.
+        - You can create and edit or append to files by creating commands that will be executed that write the content into a file.
 
         ### Execution Results (MUST BE USED BEFORE GENERATING A NEW RESPONSE):
         - The next prompt will provide execution results in the following format:
