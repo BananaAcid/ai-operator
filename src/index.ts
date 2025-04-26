@@ -241,6 +241,7 @@ let settingsDefault: Settings = {
         - If responding to a user without generating a command, **append** <NEED-MORE-INFO/>.
         - If asked to read a website or url, you need to do so.
         - You can create and edit or append to files by creating commands that will be executed that write the content into a file.
+        - Do not show the commands you are executing without <CMD> tags separately, directly show the commands with <CMD> tags in the response.
 
         ### Execution Results (MUST BE USED BEFORE GENERATING A NEW RESPONSE):
         - The next prompt will provide execution results in the following format:
@@ -431,7 +432,7 @@ async function api(promptText: PromptText, promptAdditions?: PromptAdditions): P
         // This is necessary to avoid infinite loops with zero-width matches
         if (m.index === regex.lastIndex) regex.lastIndex++;
 
-        if (m[1]?.includes('`') || m[1]?.includes('\n'))
+        if (m[1]?.includes('`') || m[1]?.trim().includes('\n'))
             content = content.replaceAll(m[0], '\n ▶️ Command: \n```'+getShellName()+'\n' + m[1]?.trim() + '\n```\n');
         else
             content = content.replaceAll(m[0], '\n ▶️ `' + m[1]?.trim() + '`');
