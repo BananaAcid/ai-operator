@@ -41,9 +41,19 @@ declare global {
 
     type GoogleAiChatCompletionResult = {
         error?: {
-            code: number;
-            message: string;
-            status: string;
+            code: number;       // 429
+            message: string;    // 'You exceeded your current quota, please check your plan and billing details. For more information on this error, head to: https://ai.google.dev/gemini-api/docs/rate-limits.'
+            status: string;     // RESOURCE_EXHAUSTED
+            details: Array<{
+                // these 3 came together
+                // '@type': 'type.googleapis.com/google.rpc.QuotaFailure', violations: [Array]
+                // '@type': 'type.googleapis.com/google.rpc.Help', links: [Array]
+                // '@type': 'type.googleapis.com/google.rpc.RetryInfo', retryDelay: '16s'
+                '@type': string;
+                violations?: any[];
+                links?: any[];
+                retryDelay?: string; // '16s'
+            }>;
         };        
 
         candidates: {

@@ -9,8 +9,9 @@
  * Yes Ollama could use the same OpenAPI REST call, but would lack infos that could be useful because the models run locally.
  */
 
-const DEBUG_OUTPUT = globalThis.DEBUG_OUTPUT;
-const DEBUG_APICALLS = globalThis.DEBUG_APICALLS;
+const DEBUG_OUTPUT = !!process.env.DEBUG_OUTPUT;
+const DEBUG_APICALLS = !!process.env.DEBUG_APICALLS;
+const DEBUG_APICALLS_PRETEND_ERROR = !!process.env.DEBUG_APICALLS_PRETEND_ERROR;
 
 //* import types
 import './types/generic.d.ts';
@@ -64,7 +65,7 @@ const drivers = {
         },
 
         // same as openai
-        async getChatResponse(settings: Settings, history: any[], promptText: PromptText, promptAdditions?: PromptAdditions): Promise<ChatResponse> {
+        async getChatResponse(settings: Settings, history: any[], promptText: PromptText, promptAdditions?: PromptAdditions): Promise<ChatResponse|ChatResponseError> {
             // just reuse the openai driver in the Ollama driver's context
             return drivers.openai.getChatResponse.call(this, settings, history, promptText, promptAdditions);
         },
@@ -119,7 +120,7 @@ const drivers = {
             return result;
         },
 
-        async getChatResponse(settings: Settings, history: any[], promptText: PromptText, promptAdditions?: PromptAdditions): Promise<ChatResponse> {
+        async getChatResponse(settings: Settings, history: any[], promptText: PromptText, promptAdditions?: PromptAdditions): Promise<ChatResponse|ChatResponseError> {
             let resultOrig:any;
 
             const response = await fetch(this.urlChat, {
@@ -146,12 +147,20 @@ const drivers = {
                 }),
             }).then(response => (resultOrig = response).json()).catch(error => console.error(error, { resultOrig })) as OpenAiChatCompletionResult;
 
-            if (!response) process.exit(2);
+            if (!response) return new Error('No response from AI service') as ChatResponseError;
 
             DEBUG_APICALLS && console.log('DEBUG_APICALLS', 'API response', this.urlChat, response);
 
+
+            // TODO - openai: check for error infos like for googleapi
+            // ...
+
+            // TODO - openai: add DEBUG_APICALLS_PRETEND_ERROR to trigger test error
+            // ...
+
+
             if (!response.choices?.[0]) {
-                console.error('No response from AI service');
+                console.error('No answers from AI service');
                 return {
                     contentRaw: '',
                     history: history,
@@ -221,7 +230,7 @@ const drivers = {
             return result;
         },
 
-        async getChatResponse(settings: Settings, history: any[], promptText: PromptText, promptAdditions?: PromptAdditions): Promise<ChatResponse> {
+        async getChatResponse(settings: Settings, history: any[], promptText: PromptText, promptAdditions?: PromptAdditions): Promise<ChatResponse|ChatResponseError> {
             let resultOrig:any;
 
             const response = await fetch(this.getUrl(this.urlChat, settings.model || this.defaultModel), {
@@ -252,17 +261,26 @@ const drivers = {
                 }),
             }).then(response => (resultOrig = response).json()).catch(error => console.error(error, { resultOrig })) as GoogleAiChatCompletionResult;
 
-            if (!response) process.exit(2);
+            if (!response) return new Error('No response from AI service') as ChatResponseError;
 
             DEBUG_APICALLS && console.log('DEBUG_APICALLS', 'API response', this.getUrl(this.urlChat), response);
 
+            if (DEBUG_APICALLS_PRETEND_ERROR) {
+                response.error = {
+                    code: 429,
+                    message: 'FAKE: You exceeded your current quota, please check your plan and billing details. For more information on this error, head to: https://ai.google.dev/gemini-api/docs/rate-limits.',
+                    status: 'RESOURCE_EXHAUSTED',
+                    details: []
+                };
+            }
+
             if (response.error) {
                 console.error(response.error);
-                process.exit(3);
+                return new Error(response.error.message) as ChatResponseError;
             }
 
             if (!response.candidates?.[0]) {
-                console.error('No response from AI service');
+                console.error('No answers from AI service');
                 return {
                     contentRaw: '',
                     history: history,

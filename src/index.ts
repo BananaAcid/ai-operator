@@ -65,11 +65,9 @@ const DEBUG_APICALLS = !!process.env.DEBUG_APICALLS;
 const DEBUG_SYSTEMPROMPT = !!process.env.DEBUG_SYSTEMPROMPT;
 const DEBUG_OUTPUT_EXECUTION = !!process.env.DEBUG_OUTPUT_EXECUTION;
 const DEBUG_OUTPUT_SYSTEMPROMPT = !!process.env.DEBUG_OUTPUT_SYSTEMPROMPT;
-
+const DEBUG_APICALLS_PRETEND_ERROR = !!process.env.DEBUG_APICALLS_PRETEND_ERROR;
 
 //* project imports
-globalThis.DEBUG_OUTPUT = DEBUG_OUTPUT;
-globalThis.DEBUG_APICALLS = DEBUG_APICALLS;
 import drivers from './drivers.ts';  // ext .ts is required by NodeJS (with TS support)
 
 
@@ -358,18 +356,31 @@ let history: MessageItem[] = [];
  * - isEnd: true if the answer contains <END/>.
  */
 async function api(promptText: PromptText, promptAdditions?: PromptAdditions): Promise<PromptResult> {
-    // fetch from ollama api
-
     const driver: Driver = drivers[settings.driver]!;
 
-    spinner.start(`Waiting for ${driver.name}\'s response ...`);
+    let result;
+    let retry = false;
+    do {
+        spinner.start(`Waiting for ${driver.name}\'s response ...`);
+        result = await driver.getChatResponse(settings, history, promptText, promptAdditions);
+        spinner.success();
+    
+        // error, ask to retry
+        if (result instanceof Error) {
+            console.error(colors.red(colors.bold(figures.cross)), colors.red(`API Error (${driver.name}): ${result.message}`));
+            retry = await toggle({ message: `Do you want to try again?`, default: true }, TTY_INTERFACE);
+            if (!retry)
+                return {answer: '', answerFull: '', helpers: [], commands: [], needMoreInfo: true, isEnd: false};
+        }
+
+    } while(retry);
 
 
-    let {contentRaw, history: historyNew} = await driver.getChatResponse(settings, history, promptText, promptAdditions);
+    let {contentRaw, history: historyNew} = result as ChatResponse;
     
     history = historyNew;
 
-    spinner.success();
+    
 
     // remove the <think>...</think> block from the visible output
     let content = contentRaw.replaceAll(/<think>.*?<\/think>/gis, '');

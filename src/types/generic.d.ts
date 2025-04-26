@@ -1,8 +1,4 @@
 declare global {
-    var DEBUG_OUTPUT:boolean;  // globalThis.DEBUG_OUTPUT
-    var DEBUG_APICALLS:boolean;
-
-
     type PromptText = string;
 
     type PromptAdditionsTypes = 'audio' | 'image' | 'video' | 'text';
@@ -10,6 +6,10 @@ declare global {
     type PromptAddition = GoogleAiPromptAddition | OpenAiPromptAddition;
 
     type PromptAdditions = PromptAddition[] | undefined;
+
+    type PromptAdditionError = Error;
+
+    type ChatResponseError = Error;
 
     type Prompt = {
         text: PromptText;
@@ -105,8 +105,6 @@ declare global {
         historyStyle: any; //drivers[any].historyStyle (history style should match the driver's key)
         history: any[];
     }
-
-    type PromptAdditionError = Error;
 }
 
 
