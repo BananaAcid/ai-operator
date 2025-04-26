@@ -31,17 +31,6 @@
   "bin": {
     "baio": "bin/baio"
   },
-  "tshy": {
-    ".": "./src/index.ts",
-    "exclude": [
-      "test-stuff",
-      ".history",
-      "examples",
-      "test-*.*"
-    ],
-    "esmDialects": [],
-    "commonjsDialects": []
-  },
   "keywords": [
     "ai",
     "operator",
@@ -65,8 +54,7 @@
     "copilot"
   ],
   "devDependencies": {
-    "@types/node": "^22.15.2",
-    "tshy": "^3.0.2"
+    "@types/node": "^22.15.2"
   },
   "dependencies": {
     "@inquirer/prompts": "^7.5.0",
