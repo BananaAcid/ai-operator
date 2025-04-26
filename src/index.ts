@@ -63,6 +63,8 @@ const RC_HISTORY_PATH = path.join(RC_PATH, 'history');
 const DEBUG_OUTPUT = !!process.env.DEBUG_OUTPUT;
 const DEBUG_APICALLS = !!process.env.DEBUG_APICALLS;
 const DEBUG_SYSTEMPROMPT = !!process.env.DEBUG_SYSTEMPROMPT;
+const DEBUG_OUTPUT_MODELS = !!process.env.DEBUG_OUTPUT_MODELS;
+const DEBUG_OUTPUT_MODELNAME = !!process.env.DEBUG_OUTPUT_MODELNAME;
 const DEBUG_OUTPUT_EXECUTION = !!process.env.DEBUG_OUTPUT_EXECUTION;
 const DEBUG_OUTPUT_SYSTEMPROMPT = !!process.env.DEBUG_OUTPUT_SYSTEMPROMPT;
 const DEBUG_APICALLS_PRETEND_ERROR = !!process.env.DEBUG_APICALLS_PRETEND_ERROR;
@@ -489,7 +491,7 @@ async function getModels(): Promise<ModelSelection> {
         return [];
     }
 
-    let models = await driver.getModels(settings);
+    let models = await driver.getModels(settings, DEBUG_OUTPUT_MODELNAME ? false : true);
 
     if (models.length > 0)
         spinner.success(`${driver.name} models found: ${models.length}`);

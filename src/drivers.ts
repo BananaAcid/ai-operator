@@ -10,6 +10,7 @@
  */
 
 const DEBUG_OUTPUT = !!process.env.DEBUG_OUTPUT;
+const DEBUG_OUTPUT_MODELS = !!process.env.DEBUG_OUTPUT_MODELS;
 const DEBUG_APICALLS = !!process.env.DEBUG_APICALLS;
 const DEBUG_APICALLS_PRETEND_ERROR = !!process.env.DEBUG_APICALLS_PRETEND_ERROR;
 
@@ -40,7 +41,7 @@ const drivers = {
                 return url;
         },
 
-        async getModels(settings: Settings): Promise<ModelSelection> {
+        async getModels(settings: Settings, showSimple = true): Promise<ModelSelection> {
             const response = await fetch(this.getUrl(this.urlModels), {
                 method: 'GET',
                 headers: {
@@ -54,7 +55,7 @@ const drivers = {
             DEBUG_OUTPUT && console.log('models', models);
 
             // more details about the models
-            let modelSelection: ModelSelection = models.map(model => ({ name: `${model.details.family} : ${model.details.parameter_size} (${(model.size / (1024 * 1024 * 1024)).toFixed(2)} GB) --- ${model.name}`, value: model.name }));
+            let modelSelection: ModelSelection = models.map(model => ({ name: showSimple ? `${model.details.family} : ${model.details.parameter_size} (${(model.size / (1024 * 1024 * 1024)).toFixed(2)} GB) --- ${model.name}` : JSON.stringify(model), value: model.name }));
 
             return modelSelection;
         },
@@ -88,7 +89,7 @@ const drivers = {
                 return url;
         },
 
-        async getModels(settings: Settings): Promise<ModelSelection> {
+        async getModels(settings: Settings, showSimple = true): Promise<ModelSelection> {
             const response = await fetch(this.getUrl(this.urlModels), {
                 method: 'GET',
                 headers: {
@@ -99,9 +100,9 @@ const drivers = {
 
             const models = response?.data || [];
 
-            DEBUG_OUTPUT && console.log('models', models);
+            (DEBUG_OUTPUT || DEBUG_OUTPUT_MODELS) && console.log('models', models);
 
-            let modelSelection: ModelSelection = models.map(model => ({ name: `${model.id} (${model.owned_by})`, value: model.id }));
+            let modelSelection: ModelSelection = models.map(model => ({ name: showSimple ? `${model.id} (${model.owned_by})` : JSON.stringify(model), value: model.id }));
 
             return modelSelection;
         },
@@ -192,7 +193,7 @@ const drivers = {
         urlTest: 'https://generativelanguage.googleapis.com/v1beta/models/?key=', // unlucky: there is no test endpoint
         urlChat: 'https://generativelanguage.googleapis.com/v1beta/models/{{model}}:generateContent?key=',
         urlModels: 'https://generativelanguage.googleapis.com/v1beta/models/?key=',
-        defaultModel: 'gemini-2.0-flash',
+        defaultModel: 'gemini-2.0-flash', // gemini-2.5-flash-preview-04-17
         apiKey: () => process.env.GEMINI_API_KEY,
         historyStyle: 'googleai',
 
@@ -204,16 +205,16 @@ const drivers = {
             return url.replaceAll('{{model}}', model) + this.apiKey();
         },
 
-        async getModels(settings: Settings): Promise<ModelSelection> {
+        async getModels(settings: Settings, showSimple = true): Promise<ModelSelection> {
             const response = await fetch(this.getUrl(this.urlModels), {
                 method: 'GET',
             }).then(response => response.json()).catch(error => console.error(error)) as GoogleAiResultModels | undefined;
 
             const models = response?.models || [];
 
-            DEBUG_OUTPUT && console.log('models', response);
+            (DEBUG_OUTPUT || DEBUG_OUTPUT_MODELS) && console.log('models', response);
 
-            let modelSelection: ModelSelection = models.map(model => ({ name: `${model.displayName} (${model.description})`, value: model.name.replace(/^models\//, '') }));
+            let modelSelection: ModelSelection = models.map(model => ({ name: showSimple ? `${model.displayName} (${model.description})` : JSON.stringify(model), value: model.name.replace(/^models\//, '') }));
 
             return modelSelection;
         },

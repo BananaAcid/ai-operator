@@ -296,6 +296,8 @@ The following environment variables can be used to output debug info. All defaul
 DEBUG_OUTPUT=<boolean>
 DEBUG_APICALLS=<boolean>
 DEBUG_SYSTEMPROMPT=<boolean>
+DEBUG_OUTPUT_MODELS=<boolean>
+DEBUG_OUTPUT_MODELNAME=<boolean>
 DEBUG_OUTPUT_EXECUTION=<boolean>
 DEBUG_OUTPUT_SYSTEMPROMPT=<boolean>
 DEBUG_APICALLS_PRETEND_ERROR=<boolean>
