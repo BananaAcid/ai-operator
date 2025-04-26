@@ -1160,34 +1160,34 @@ async function init(): Promise<Prompt> {
   -v, --version
   -h, -?, --help
 
-  -d, --driver <api-driver>    Select a driver (ollama, openai, googleai)
-  -d *, --driver *             Ask for a driver with a list, even if it would not
-  -m, --model <model-name>     Select a model
-  -m *, --model *              Ask for a model with a list, even if it would not
-  -t, --temp <float>           Set a temperature, e.g. 0.7 (0 for model default)
+  -d, --driver <api-driver>      Select a driver (ollama, openai, googleai)
+  -d *, --driver *               Ask for a driver with a list, even if it would not
+  -m, --model <model-name>       Select a model
+  -m *, --model *                Ask for a model with a list, even if it would not
+  -t, --temp <float>             Set a temperature, e.g. 0.7 (0 for model default)
 
-  -a, --agent <agent-name>     Select an agent, a set of prompts for specific tasks
-  -a *, --agent *              Ask for agent with a list, even if it would not
+  -a, --agent <agent-name>, ...  Select an agent or multiple, (a set of prompts for specific tasks)
+  -a *, --agent *                Ask for agent with a list, even if it would not
 
-  -q, --ask                    Reconfigure to ask everything again
-      --no-ask                 ... to disable
-  -s, --sysenv                 Allow to use the complete system environment
-      --no-sysenv              ... to disable
-  -e, --end                    End promping if assumed done
-      --no-end                 ... to disable
+  -q, --ask                      Reconfigure to ask everything again
+      --no-ask                   ... to disable
+  -s, --sysenv                   Allow to use the complete system environment
+      --no-sysenv                ... to disable
+  -e, --end                      End promping if assumed done
+      --no-end                   ... to disable
 
-  -i, --import <filename>      Import context from a history file or list files select from
-  -i *, --import *             Ask for history file with a list, even if it would not
+  -i, --import <filename>        Import context from a history file or list files select from
+  -i *, --import *               Ask for history file with a list, even if it would not
 
-  -f, --file <filename>, ...   Add a single or multiple files to the prompt
+  -f, --file <filename>, ...     Add a single or multiple files to the prompt
 
-  -u, --update                 Update user config (save config)
-  -c, --config                 Config only, do not prompt.
+  -u, --update                   Update user config (save config)
+  -c, --config                   Config only, do not prompt.
 
-  -r, --reset                  Reset (remove) config
-  --reset-prompts              Reset prompts only (use this after an update)
+  -r, --reset                    Reset (remove) config
+  --reset-prompts                Reset prompts only (use this after an update)
 
-  --open <config>              Open the file in the default editor or the agents path (env, config, agents, history)
+  --open <config>                Open the file in the default editor or the agents path (env, config, agents, history)
         `);
         // You can pipe in text (like from a file) to be send to the API before your prompt.
 
