@@ -95,6 +95,8 @@ const drivers = {
                 headers: {
                     'Content-Type': 'application/json',
                     ...(this.apiKey ? { 'Authorization': `Bearer ${this.apiKey()}` } : {}),
+                    'HTTP-Referer': 'https://github.com/BananaAcid/ai-operator', // Optional. Site URL for rankings on openrouter.ai.
+                    'X-Title': 'Baio', // Optional. Site title for rankings on openrouter.ai.                
                 },
             }).then(response => response.json()).catch(error => console.error(error)) as OpenAiResultModels | undefined;
 
