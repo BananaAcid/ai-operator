@@ -90,7 +90,7 @@ Google AI gemini for free (and unlimited): https://aistudio.google.com/apikey (a
 Ollama is free anyways, just install it (https://ollama.com/download) and within this tool, just accept the default model.
 
 
-## Usage Notes
+## FAQ - Usage Notes
 
 **Info:**
 
@@ -156,12 +156,28 @@ Saving settings with `Automatically use same settings next time:` **`yes`** (or 
 
 Or use `baio --no-ask`
 
-### ... Ask again
+### ... Ask again for settings
 
 If you saved the settings, but you want to be able to be asked again, use:
 ```bash
 baio --ask
 ```
+
+### Quota exceeded / All tokens used up for current prompt
+
+If you reached the token limit for the current chat, you can:
+
+1. save the current history (context) with the prompt trigger: `/history:export:md` (could be imported with an LLM that has a larger context)
+2. reduce the current history (context) to the last 6 (user prompt + reponse = 2): `/history:clear 6` (to be able to continue)
+
+or 
+
+3. clear the complete history (context): `/history:clear`
+4. start over, clearing the history (context) and the current prompt: `/:clear`
+
+
+**Note:** More details are below in the section about Prompt Triggers
+
 
 ### Wrong shell for suggested commands
 
