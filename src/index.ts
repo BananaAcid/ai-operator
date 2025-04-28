@@ -85,6 +85,8 @@ import './types/driver.GoogleAi.d.ts';
 import './types/json.d.ts';
 type Driver = typeof drivers[keyof typeof drivers];
 
+//* defs
+const autoExecKeys = ['links', 'curl', 'wget', 'Invoke-WebRequest', 'iwr'];
 
 //* TTY input overwrite
 let TTY_INTERFACE:any;
@@ -170,6 +172,8 @@ let settingsDefault: Settings = {
     endIfDone: true,        // don't allow the AI to end the conversation (it would, if it thinks it is done)
 
     saveSettings: false,    // save settings to the .baiorc file -- if this is true, the options will not be asked
+
+    autoExecKeys: autoExecKeys, // allow execution if command is in here
 
     /** Optimizations **/
     precheckUpdate: true,       // (speedup if false) try to reach the npm registry to check for an update
@@ -756,37 +760,53 @@ async function doPromptWithCommands(result: PromptResult|undefined): Promise<str
             resultCommands = settings.fixitPrompt;
         }
     }
+
+    //* there are commands, AND autoExecKeys
+    let allow = false;
+    if (result?.commands.length) {
+        allow = true;
+        for (let command of result.commands) {
+            let allowCmd = false;
+            for (let key of settings.autoExecKeys) {
+                if (command.startsWith(key)) allowCmd = true;
+            }
+            allow &&= allowCmd;
+        }
+    }
+
     //* there are commands
     if (result?.commands.length) {
         let canceled: boolean|'edit' = false;
         let activeItem:{name:string,value:string,index:number};
         let options = {...TTY_INTERFACE, clearPromptOnDone: false}
-        const commands = await checkboxWithActions({
-            message: 'Select the commands to execute',
-            shortcuts: { edit: 'e' },
-            choices: result.commands.map((command) => ({ name: displayCommand(command), value: command, checked: true })),
-            keypressHandler: async function({key, active, items}) {
-                activeItem = {...items[active], index: active};
+        const commands = allow 
+            ? result.commands
+            : await checkboxWithActions({
+                message: 'Select the commands to execute',
+                shortcuts: { edit: 'e' },
+                choices: result.commands.map((command) => ({ name: displayCommand(command), value: command, checked: true })),
+                keypressHandler: async function({key, active, items}) {
+                    activeItem = {...items[active], index: active};
 
-                if (key.name == 'escape' || key.sequence == ':' || key.sequence == '/') {
-                    canceled = true;   // let us know, that we should not care about the values
-                    options.clearPromptOnDone = true; // clear the line after exit by this
-                    return {
-                        isDone: true, // tell the elment to exit and return selected values
-                        isConsumed: true, // prevent original handler to process this key         ... ignores any validation error (we did not setup validations for this prompt)
+                    if (key.name == 'escape' || key.sequence == ':' || key.sequence == '/') {
+                        canceled = true;   // let us know, that we should not care about the values
+                        options.clearPromptOnDone = true; // clear the line after exit by this
+                        return {
+                            isDone: true, // tell the elment to exit and return selected values
+                            isConsumed: true, // prevent original handler to process this key         ... ignores any validation error (we did not setup validations for this prompt)
+                        }
                     }
-                }
 
-                if (key.name === 'e' || key.name === 'w' || key.name === 'right') {
-                    canceled = 'edit'; 
-                    options.clearPromptOnDone = true;
-                    return {
-                        isDone: true,
-                        isConsumed: true,
+                    if (key.name === 'e' || key.name === 'w' || key.name === 'right') {
+                        canceled = 'edit'; 
+                        options.clearPromptOnDone = true;
+                        return {
+                            isDone: true,
+                            isConsumed: true,
+                        }
                     }
-                }
-            },
-        }, options);
+                },
+            }, options);
 
         if (canceled || !commands.length)
             //@ts-expect-error somehow the type is not correctly inferred
@@ -1361,6 +1381,8 @@ async function init(): Promise<Prompt> {
         settings.useAllSysEnv = await toggle({ message: 'Use all system environment variables:', default: settings.useAllSysEnv }, TTY_INTERFACE);
         
         settings.endIfDone = await toggle({ message: 'End if assumed done:', default: settings.endIfDone }, TTY_INTERFACE);
+
+        settings.autoExecKeys = await checkboxWithActions({ message: 'Auto execute if commands match:', choices: autoExecKeys.map(key => ({ name: key, value: key, checked: settings.autoExecKeys.includes(key) }))}, TTY_INTERFACE);
     }
     
     {//* save settings

@@ -55,7 +55,7 @@ declare global {
     }
 
     type Settings = {
-        [index: string]: string|boolean|number;
+        [index: string]: string|boolean|number|string[];
         driver: string;
         model: string;
         temperature: number;
@@ -74,6 +74,8 @@ declare global {
         precheckLinksInstalled: boolean;
         cmdMaxLengthDisplay: number;
         historySaveThinking: boolean;
+
+        autoExecKeys: string[];
     };
 
     type InquirerSelection = Array<{
