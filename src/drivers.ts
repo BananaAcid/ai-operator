@@ -293,6 +293,15 @@ const drivers = {
                 }
             }
 
+            if (!response.candidates[0].content || !response.candidates[0].content.parts?.[0]) {
+                console.error('Data error: response was not complete', response);
+                debugger;
+                return {
+                    contentRaw: '',
+                    history: history,
+                }
+            }
+
             let responseMessage = response.candidates[0].content.parts[0];
 
             let responseContentHistory = response.candidates[0].content;
