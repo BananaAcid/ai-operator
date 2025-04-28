@@ -1274,7 +1274,7 @@ async function init(): Promise<Prompt> {
 
     if (askSettings || settings.driver === '*')
     {//* API/Driver selection
-        if (settings.driver === '*') settings.driver = ''; // allow default
+        if (settings.driver === '*') settings.driver = settingsSaved?.driver || ''; // allow default
         let driverChoices = Object.keys(drivers).map(key => ({ name: drivers[key]?.name, value: key }));
         settings.driver = await select({ message: 'Select your API:', choices: driverChoices, default: settings.driver || 'ollama' }, TTY_INTERFACE);
         settings.model = '*'; // force to choose a new one
@@ -1310,7 +1310,7 @@ async function init(): Promise<Prompt> {
         const models = await getModels();
         let modelSelected = '';
         if (models.length) {
-            if (settings.model === '*') settings.model = ''; // allow default
+            if (settings.model === '*') settings.model = settingsSaved?.model || ''; // allow default
             models.push({ name: 'manual input ...', value: '' });
             modelSelected = await select({ message: 'Select your model:', choices: models, default: settings.model || driver.defaultModel }, TTY_INTERFACE);
         }
