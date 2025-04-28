@@ -78,6 +78,7 @@ import drivers from './drivers.ts';  // ext .ts is required by NodeJS (with TS s
 import './types/cli-markdown.d.ts';
 import './types/copy-paste.d.ts';
 import './types/generic.d.ts';
+import './types/drivers.d.ts';
 import './types/driver.Ollama.d.ts';
 import './types/driver.OpenAi.d.ts';
 import './types/driver.GoogleAi.d.ts';

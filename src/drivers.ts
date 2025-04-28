@@ -16,6 +16,7 @@ const DEBUG_APICALLS_PRETEND_ERROR = !!process.env.DEBUG_APICALLS_PRETEND_ERROR;
 
 //* import types
 import './types/generic.d.ts';
+import './types/drivers.d.ts';
 import './types/driver.Ollama.d.ts';
 import './types/driver.OpenAi.d.ts';
 import './types/driver.GoogleAi.d.ts';
