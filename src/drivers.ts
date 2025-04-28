@@ -286,6 +286,7 @@ const drivers = {
             }
 
             if (!response.candidates?.[0]) {
+                // might happen sometimes, treat as no answer
                 console.error('No answers from AI service');
                 return {
                     contentRaw: '',
@@ -294,12 +295,9 @@ const drivers = {
             }
 
             if (!response.candidates[0].content || !response.candidates[0].content.parts?.[0]) {
-                console.error('Data error: response was not complete', response);
-                debugger;
-                return {
-                    contentRaw: '',
-                    history: history,
-                }
+                // should never happen
+                console.error('response data:', response);
+                return new Error('Data error: AI response was not complete') as ChatResponseError;
             }
 
             let responseMessage = response.candidates[0].content.parts[0];
