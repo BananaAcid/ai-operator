@@ -935,7 +935,7 @@ Model: \`${settings.model ?? drivers[settings.model]?.name}\`
 | \`/history:export [<filename>]\`     | \`:he [<filename>]\`    | Exports the current context to a file with date-time as name or an optional custom filename. |
 | \`/history:export:md [<filename>]\`  | \`:he:md [<filename>]\` | Exports the current context to a markdown file for easier reading (can not be imported). |
 | \`/history:import [<filename>]\`     | \`:hi [<filename>]\`    | Imports the context from a history file or shows a file selection. |
-| \`/history:clear\`                   | \`:hc\` | Clears the current context (to use current prompt without context). |
+| \`/history:clear [<number>]\`        | \`:hc [<number>]\`      | Clears the current context (to use current prompt without context). Optionally keeps an amount. |
 | \`/:clear\`                          | \`:c\`  | Clears the current context and current prompt (use for changing topics). |
 | \`/:end [<boolean>]\`                |         | Toggles end if assumed done, or turns it on or off. |
 | \`/debug:result\`                    |         | Shows what the API generated and what the tool understood. |
@@ -1043,7 +1043,17 @@ Model: \`${settings.model ?? drivers[settings.model]?.name}\`
         return true;
     }
     if (prompt.text.startsWith('/history:clear') || prompt.text.startsWith(':hc')) {
-        history = [];
+        const key = prompt.text.split(/(?<!\\)\s+/)[1];
+        if (key) {
+            const num = parseInt(key);
+            if (Number.isNaN(num)) {
+                console.error(colors.red(figures.cross), `Not a number: ${key}`);
+                return true;
+            }
+            history = history.slice(-num);
+        }
+        else
+            history = [];
         console.log(`🗑️ History cleared.`);
         return true;
     }
