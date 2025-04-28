@@ -220,12 +220,12 @@ import {
         let isDone = false;
         if (config.keypressHandler) {
             let act = await config.keypressHandler({key, rl, shortcuts, theme, firstRender, status, setStatus, prefix, items, setItems, active, setActive, showHelpTip, setShowHelpTip, isUpKey, isDownKey, isSpaceKey, isBackspaceKey, isNumberKey, isEnterKey});
-            if (act?.isDone) {
+            if (act && act?.isDone) {
                 isDone = true;
                 setStatus('done');
                 done(items.filter(isChecked).map((choice) => choice.value));
             }
-            if (act?.isConsumed) return;
+            if (act && act?.isConsumed) return;
         }
 
         if (isEnterKey(key) || isDone) {

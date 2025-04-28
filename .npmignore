@@ -5,6 +5,7 @@ test-*.*
 test-stuff
 tsconfig.json
 baio-*.tgz
+rollup.*
 
 # Logs
 logs
