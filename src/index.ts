@@ -836,7 +836,7 @@ async function importHistory(filename: string, isAsk: boolean = false): Promise<
             !isAsk && console.error('🛑 No history files found');
             return;
         }
-        filename = await select({ message: 'Select a history file to load:', choices: [{ name: '- none -', value: '' }, ...historyFilesChoices] }, TTY_INTERFACE);
+        filename = await select({ message: 'Select a history file to load:', choices: [{ name: colors.red('- none -'), value: '' }, ...historyFilesChoices] }, TTY_INTERFACE);
     }
     if (filename === '') return;
 
@@ -1307,11 +1307,13 @@ async function init(): Promise<Prompt> {
     if (askSettings || settings.model === '*' )
     {//* model selection
         let driver:Driver = drivers[settings.driver]!;
-        const models = await getModels();
+
+        let models = await getModels();
         let modelSelected = '';
         if (models.length) {
             if (settings.model === '*') settings.model = settingsSaved?.model || ''; // allow default
-            models.push({ name: 'manual input ...', value: '' });
+            models = models.map(({name, value}) => ({name: name.replace(/([^(]*)/, colors.bold('$1 ')), value}));
+            models.push({ name: colors.green('manual input ...'), value: '' });
             modelSelected = await select({ message: 'Select your model:', choices: models, default: settings.model || driver.defaultModel }, TTY_INTERFACE);
         }
         if (!models.length || !modelSelected) {
@@ -1368,7 +1370,7 @@ async function init(): Promise<Prompt> {
             agentFiles = hasAgentsArgs && !forceSelection
                 ? agents.map(({value}) => value) // getAgents returned only the requested ones
                 : (askSettings || forceSelection
-                    ? [await select({ message: 'Select an agent:', choices: [{ name: '- none -', value: '' }, ...agents ] }, TTY_INTERFACE)]
+                    ? [await select({ message: 'Select an agent:', choices: [{ name: colors.red('- none -'), value: '' }, ...agents ] }, TTY_INTERFACE)]
                     : []
                 );
         
