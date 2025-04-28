@@ -920,8 +920,12 @@ async function addFile(promptAdditions: PromptAdditions, filename: string): Prom
 async function promptTrigger(/*inout*/ prompt: Prompt, /*inout*/ resultPrompt?: PromptResult): Promise<boolean> {
 
     if (prompt.text === ':h' || prompt.text === '/:help') {
-        console.log(cliMd(`Possible prompt triggers\n
-| Trigger | Short | Description |
+        console.info(packageJSON.name,'v' + packageJSON.version);
+        console.log(cliMd(`
+Driver: \`${drivers[settings.driver]?.name ?? settings.driver}\`\n
+Model: \`${settings.model ?? drivers[settings.model]?.name}\`
+
+| Possible prompt triggers | Short | Description |
 |---|---|---|
 | \`/:help\`                           | \`:h\`  | Shows this help. |
 | \`/:read\`                           | \`:r\`  | Opens the default editor for a multiline input. |
@@ -936,9 +940,9 @@ async function promptTrigger(/*inout*/ prompt: Prompt, /*inout*/ resultPrompt?: 
 | \`/:end [<boolean>]\`                |         | Toggles end if assumed done, or turns it on or off. |
 | \`/debug:result\`                    |         | Shows what the API generated and what the tool understood. |
 | \`/debug:exec\`                      |         | Shows what the system got returned from the shell. Helps debug strange situations. |
-| \`/debug:get <.baiorc-key>\`         |         | Gets the current value of the key. Outputs the system prompt, may spam the shell output. |
+| \`/debug:get <.baiorc-key>\`         |         | Gets the current value of the key. If no key is given, lists all possible keys. |
 | \`/debug:set <.baiorc-key> <value>\` |         | Overwrites a setting. The value must be a JSON formatted value. |
-| \`/debug:settings\`                  |         | Lists all current settings. May spam the shell output. |
+| \`/debug:settings [all\\|*]\`        |         | Lists all current settings without prompts. Use \`all\` or \`*\` to also show prompts. |
 | \`/:quit\`, \`/:exit\`               | \`:q\`  | Will exit (CTRL+D or CTRL+C will also work). |
         `));
         return true;
@@ -951,13 +955,19 @@ async function promptTrigger(/*inout*/ prompt: Prompt, /*inout*/ resultPrompt?: 
         console.log(doCommandsLastResult);
         return true;
     }
-    if (prompt.text === '/debug:settings') {
-        console.log(`settings =`, settings);
+    if (prompt.text.startsWith('/debug:settings')) {
+        const key = prompt.text.split(/(?<!\\)\s+/)[1];
+        // if all or *, return all. if no key, return all settings where the key does not start with prompt
+        const settingsOutput = key == 'all' || key == '*' ? settings : Object.fromEntries(Object.entries(settings).filter(([key]) => !key.endsWith('Prompt')));
+        console.log(colors.green(figures.info), `settings =`, settingsOutput);
         return true;
     }
-    if (prompt.text.startsWith('/debug:get ')) {
+    if (prompt.text.startsWith('/debug:get')) {
         const key = prompt.text.split(/(?<!\\)\s+/)[1];
-        console.log(`settings.${key} =`, key ? settings[key] : 'not found');
+        if (key)
+            console.log(colors.green(figures.tick), `settings.${key} =`, key ? settings[key] : 'not found');
+        else
+            console.log(colors.blueBright('?'), `Possible keys:`, Object.keys(settings).join(', '));
         return true;
     }
     if (prompt.text.startsWith('/debug:set ')) {
@@ -1193,7 +1203,7 @@ async function init(): Promise<Prompt> {
         console.info(packageJSON.name,'v' + packageJSON.version);
         console.info(packageJSON.description);
         console.info('');
-        console.info(`Copyright (c) 2025 ${packageJSON.author.name} <${packageJSON.author.email}>`);
+        console.info(`Copyright (c) ${new Date().getFullYear()} ${packageJSON.author.name} <${packageJSON.author.email}>`);
         console.info('MIT License');
         
         console.info(packageJSON.homepage);
