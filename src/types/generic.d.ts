@@ -1,15 +1,6 @@
 declare global {
-    type PromptText = string;
 
     type PromptAdditionsTypes = 'audio' | 'image' | 'video' | 'text';
-
-    type PromptAddition = GoogleAiPromptAddition | OpenAiPromptAddition;
-
-    type PromptAdditions = PromptAddition[] | undefined;
-
-    type PromptAdditionError = Error;
-
-    type ChatResponseError = Error;
 
     type Prompt = {
         text: PromptText;
@@ -82,29 +73,13 @@ declare global {
         precheckDriverApi: boolean;
         precheckLinksInstalled: boolean;
         cmdMaxLengthDisplay: number;
+        historySaveThinking: boolean;
     };
 
     type InquirerSelection = Array<{
         name: string;
         value: string
     }>;
-
-    type ModelSelection = InquirerSelection;
-    type AgentSelection = InquirerSelection;
-    type HistorySelection = InquirerSelection;
-
-    type ChatResponse = {
-        contentRaw: string;
-        history: any; // driver specific
-    }
-
-    type MessageItem = OpenAiMessageItem | GoogleAiMessageItem;
-
-    type HistoryFile = {
-        version: Settings['version'];
-        historyStyle: any; //drivers[any].historyStyle (history style should match the driver's key)
-        history: any[];
-    }
 }
 
 

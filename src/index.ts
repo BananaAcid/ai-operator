@@ -169,14 +169,15 @@ let settingsDefault: Settings = {
 
     saveSettings: false,    // save settings to the .baiorc file -- if this is true, the options will not be asked
 
+    /** Optimizations **/
     precheckUpdate: true,       // (speedup if false) try to reach the npm registry to check for an update
     precheckDriverApi: true,    // (speedup if false) try to reach the driver api to check if it is available
     precheckLinksInstalled: true,   // (speedup if false) try to check if links is installed and if it is available
     cmdMaxLengthDisplay: 100,   // set the maximum length of a command to display
+    historySaveThinking: false, // save the thinking block to the history
 
+    /** Prompts **/
     defaultPrompt: 'show me a table of all files in the current directory',
-
-    //fixitPrompt: `Something went wrong! Ensure all steps are followed, commands are properly formatted as by the output rules, results are validated, and commands are properly executed. Reevaluate the goal after each action and make sure to append <END/> only when the task is fully completed. Try again with a different approach, and if more information is needed, request it.`,
 
     agentPrompt: '**Very important master rules, that must be followed and can overrule the rules from before:**',
 
@@ -388,7 +389,6 @@ async function api(promptText: PromptText, promptAdditions?: PromptAdditions): P
     
     history = historyNew;
 
-    
 
     // remove the <think>...</think> block from the visible output
     let content = contentRaw.replaceAll(/<think>.*?<\/think>/gis, '');
@@ -965,7 +965,7 @@ Model: \`${settings.model ?? drivers[settings.model]?.name}\`
     if (prompt.text.startsWith('/debug:get')) {
         const key = prompt.text.split(/(?<!\\)\s+/)[1];
         if (key)
-            console.log(colors.green(figures.tick), `settings.${key} =`, key ? settings[key] : 'not found');
+            console.log(colors.green(figures.info), `settings.${key} =`, key ? settings[key] : 'not found');
         else
             console.log(colors.blueBright('?'), `Possible keys:`, Object.keys(settings).join(', '));
         return true;

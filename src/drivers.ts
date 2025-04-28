@@ -41,7 +41,7 @@ const drivers = {
                 return url;
         },
 
-        async getModels(settings: Settings, showSimple = true): Promise<ModelSelection> {
+        async getModels(settings: ModelSelectionSettings, showSimple = true): Promise<ModelSelection> {
             const response = await fetch(this.getUrl(this.urlModels), {
                 method: 'GET',
                 headers: {
@@ -66,7 +66,7 @@ const drivers = {
         },
 
         // same as openai
-        async getChatResponse(settings: Settings, history: any[], promptText: PromptText, promptAdditions?: PromptAdditions): Promise<ChatResponse|ChatResponseError> {
+        async getChatResponse(settings: ChatResponseSettings, history: any[], promptText: PromptText, promptAdditions?: PromptAdditions): Promise<ChatResponse|ChatResponseError> {
             // just reuse the openai driver in the Ollama driver's context
             return drivers.openai.getChatResponse.call(this, settings, history, promptText, promptAdditions);
         },
@@ -89,7 +89,7 @@ const drivers = {
                 return url;
         },
 
-        async getModels(settings: Settings, showSimple = true): Promise<ModelSelection> {
+        async getModels(settings: ModelSelectionSettings, showSimple = true): Promise<ModelSelection> {
             const response = await fetch(this.getUrl(this.urlModels), {
                 method: 'GET',
                 headers: {
@@ -123,7 +123,7 @@ const drivers = {
             return result;
         },
 
-        async getChatResponse(settings: Settings, history: any[], promptText: PromptText, promptAdditions?: PromptAdditions): Promise<ChatResponse|ChatResponseError> {
+        async getChatResponse(settings: ChatResponseSettings, history: any[], promptText: PromptText, promptAdditions?: PromptAdditions): Promise<ChatResponse|ChatResponseError> {
             let resultOrig:any;
 
             const response = await fetch(this.urlChat, {
@@ -172,11 +172,13 @@ const drivers = {
 
             let responseMessage = response.choices[0]!.message;
 
+            let responseContentHistory = settings.historySaveThinking ? responseMessage.content : responseMessage.content.replaceAll(/<think>.*?<\/think>/gis, '');
+
             const newHistory = [
                 ...history,
                 ...(promptAdditions ?? []).map(item => ({ role: 'user', content: item.content })), // Add additional content to history
                 { role: 'user', content: promptText ?? '' },
-                { role: responseMessage.role /* == 'asistent' */, content: responseMessage.content }
+                { role: responseMessage.role /* == 'asistent' */, content: responseContentHistory },
             ];
 
             return {
@@ -207,7 +209,7 @@ const drivers = {
             return url.replaceAll('{{model}}', model) + this.apiKey();
         },
 
-        async getModels(settings: Settings, showSimple = true): Promise<ModelSelection> {
+        async getModels(settings: ModelSelectionSettings, showSimple = true): Promise<ModelSelection> {
             const response = await fetch(this.getUrl(this.urlModels), {
                 method: 'GET',
             }).then(response => response.json()).catch(error => console.error(error)) as GoogleAiResultModels | undefined;
@@ -233,7 +235,7 @@ const drivers = {
             return result;
         },
 
-        async getChatResponse(settings: Settings, history: any[], promptText: PromptText, promptAdditions?: PromptAdditions): Promise<ChatResponse|ChatResponseError> {
+        async getChatResponse(settings: ChatResponseSettings, history: any[], promptText: PromptText, promptAdditions?: PromptAdditions): Promise<ChatResponse|ChatResponseError> {
             let resultOrig:any;
 
             const response = await fetch(this.getUrl(this.urlChat, settings.model || this.defaultModel), {
@@ -292,6 +294,10 @@ const drivers = {
 
             let responseMessage = response.candidates[0].content.parts[0];
 
+            let responseContentHistory = response.candidates[0].content;
+            if (!settings.historySaveThinking)
+                responseContentHistory.parts.forEach(part => part.text = part.text.replaceAll(/<think>.*?<\/think>/gis, ''));
+
             const newHistory = [
                 ...history,
                 {
@@ -301,7 +307,7 @@ const drivers = {
                         { text: promptText ?? '' },
                     ]
                 },
-                response.candidates[0].content // Add the model's response part
+                responseContentHistory, // Add the model's response part
             ];
 
             return {
