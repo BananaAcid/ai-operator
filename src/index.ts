@@ -923,7 +923,8 @@ async function promptTrigger(/*inout*/ prompt: Prompt, /*inout*/ resultPrompt?: 
         console.info(packageJSON.name,'v' + packageJSON.version);
         console.log(cliMd(`
 Driver: \`${drivers[settings.driver]?.name ?? settings.driver}\`\n
-Model: \`${settings.model ?? drivers[settings.model]?.name}\`
+Model: \`${settings.model ?? drivers[settings.model]?.name}\`\n
+History: \`${history.length} entries\`\n
 
 | Possible prompt triggers | Short | Description |
 |---|---|---|

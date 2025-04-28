@@ -167,8 +167,9 @@ baio --ask
 
 If you reached the token limit for the current chat, you can:
 
-1. save the current history (context) with the prompt trigger: `/history:export:md` (could be imported with an LLM that has a larger context)
-2. reduce the current history (context) to the last 6 (user prompt + reponse = 2): `/history:clear 6` (to be able to continue)
+1. save the current history (context) with the prompt trigger: `/history:export` (could be imported with an LLM that has a larger context)
+    - use `/history:export:md` if you want a readable (Markdown) version, that can not be imported.
+2. reduce the current history (context) to the last 6 (user prompt + reponse = 2): `/history:clear 6` (to be able to continue. `/:help` shows you how many entries are stored)
 
 or 
 
@@ -519,4 +520,4 @@ I am mainly using `GEMINI 2.5 Flash` for prompt engineering. Feel free to send i
 | v1.0.25 | Added prompt trigger (`/history:clear`, `/:clear`), corrected help to show correct `/debug:result` trigger, better display of multiline commands and with backticks, command selection items are cropped, added settings.cmdMaxLengthDisplay |
 | v1.0.27 | Argument added: `--file <image/text/...>` and support for adding files (text and image, ...), added fixes for possible bugs, added `precheckLinksInstalled`, fixed multiline commands in selection and progress to be single line and shortened |
 | v1.0.28 | Allow `--driver *` and `--model *` only get a selection for these, api errors are recoverable and can be retried (mind QUOTA errors), reduced duplicate output (showing the command and the command itself) |
-| v1.0.29 | Removed thinking blocks from history to massively reduce token konsumption (`settings.historySaveThinking = false`), allow multiple agents by `--agent agent1 --agent agent2`, changed trigger `/debug:get` to output possible keys if no key was given, changed trigger `/debug:settings` to not show prompts by default, but `/debug:settings all` will |
+| v1.0.29 | Removed thinking blocks from history to massively reduce token konsumption (`settings.historySaveThinking = false`), allow multiple agents by `--agent agent1 --agent agent2`, changed trigger `/debug:get` to output possible keys if no key was given, changed trigger `/debug:settings` to not show prompts by default, but `/debug:settings all` will, allowed prompt trigger `/history:clear <number>` to clear up to the provided amount in case of quota / token max |
