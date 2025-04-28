@@ -24,7 +24,7 @@
     "config:remove": "node ./bin/baio --config --reset --no-ask",
     "config:promptsreset": "node ./bin/baio --prompts-reset",
     "test:prompts": "node ./bin/baio --no-config --reset-prompts --no-ask --agent ChickenTalk",
-    "postinstall": "npm run updatecheck",
+    "x-postinstall": "npm run updatecheck",
     "updatecheck": "node ./bin/baio --config --no-ask",
     "prepare": "npx -y npm-check-updates"
   },
@@ -54,12 +54,13 @@
     "copilot"
   ],
   "devDependencies": {
-    "@types/node": "^22.15.2"
+    "@types/node": "^22.15.3"
   },
   "dependencies": {
     "@inquirer/prompts": "^7.5.0",
     "cli-markdown": "^3.4.0",
     "copy-paste": "^2.1.1",
+    "inquirer-file-selector": "^0.6.2",
     "inquirer-toggle": "^1.0.1",
     "is-unicode-supported": "^2.1.0",
     "launch-editor": "^2.10.0",

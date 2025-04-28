@@ -163,6 +163,16 @@ If you saved the settings, but you want to be able to be asked again, use:
 baio --ask
 ```
 
+### Add a file while prompting
+
+If you want to add an image before your next prompt,
+1. use the prompt trigger `/file:add <filename>`
+2. prompt about this file
+
+You can always ask Baio to read a text file, but for images you need to start with the `--file <filename>` param or during prompting the `/file:add [<filename>]` (short: `:f [<filename>]`) trigger. If you use the trigger but do not enter a filename, a file picker will show.
+
+**Note:** More details are below in the section about Prompt Triggers
+
 ### Quota exceeded / All tokens used up for current prompt
 
 If you reached the token limit for the current chat, you can:
@@ -342,6 +352,7 @@ To trigger these, **_if you are not on a prompt_**,
 | `/:write`                          | `:w`   | Opens the default editor to show the last AI response. Use to save to a file. |
 | `/clip:read`                       | `:r+`  | Read from the clipboard and open the default editor. |
 | `/clip:write`                      | `:w+`  | Write the the last AI response to the clipboard. |
+| `/file:add [<filename>]`           | `:f [<filename>]`     | Adds a file to the prompt. Or shows a file selection. |
 | `/history:export [<filename>]`     | `:he [<filename>]`    | Exports the current context to a file with date-time as name or an optional custom filename. |
 | `/history:export:md [<filename>]`  | `:he:md [<filename>]` | Exports the current context to a markdown file for easier reading (can not be imported). |
 | `/history:import [<filename>]`     | `:hi [<filename>]`    | Imports the context from a history file or shows a file selection. |
@@ -520,4 +531,4 @@ I am mainly using `GEMINI 2.5 Flash` for prompt engineering. Feel free to send i
 | v1.0.25 | Added prompt trigger (`/history:clear`, `/:clear`), corrected help to show correct `/debug:result` trigger, better display of multiline commands and with backticks, command selection items are cropped, added settings.cmdMaxLengthDisplay |
 | v1.0.27 | Argument added: `--file <image/text/...>` and support for adding files (text and image, ...), added fixes for possible bugs, added `precheckLinksInstalled`, fixed multiline commands in selection and progress to be single line and shortened |
 | v1.0.28 | Allow `--driver *` and `--model *` only get a selection for these, api errors are recoverable and can be retried (mind QUOTA errors), reduced duplicate output (showing the command and the command itself) |
-| v1.0.29 | Removed thinking blocks from history to massively reduce token konsumption (`settings.historySaveThinking = false`), allow multiple agents by `--agent agent1 --agent agent2`, changed trigger `/debug:get` to output possible keys if no key was given, changed trigger `/debug:settings` to not show prompts by default, but `/debug:settings all` will, allowed prompt trigger `/history:clear <number>` to clear up to the provided amount in case of quota / token max |
+| v1.0.29 | Removed thinking blocks from history to massively reduce token konsumption (`settings.historySaveThinking = false`), allow multiple agents by `--agent agent1 --agent agent2`, changed trigger `/debug:get` to output possible keys if no key was given, changed trigger `/debug:settings` to not show prompts by default, but `/debug:settings all` will, allowed prompt trigger `/history:clear <number>` to clear up to the provided amount in case of quota / token max, added prompt trigger `/file:add` to add a file or show a file picker |

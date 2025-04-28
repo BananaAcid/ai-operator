@@ -113,7 +113,7 @@ const drivers = {
         makePromptAddition(type: string, content: string, mimeType: string): OpenAiPromptAddition | PromptAdditionError {
             let result: OpenAiPromptAddition|PromptAdditionError;
             
-            if (type === 'text')
+            if (type === 'text' || mimeType === 'application/json')
                 result = { type: 'text', content: content };
             else if (type === 'image')
                 result = { type: 'input_image', content: { image_url: `data:${mimeType};base65,` + content, detail: 'auto' } };
@@ -227,7 +227,7 @@ const drivers = {
         makePromptAddition(type: string, content: string, mimeType: string): GoogleAiPromptAddition | PromptAdditionError {
             let result: GoogleAiPromptAddition|undefined;
 
-            if (type === 'text')
+            if (type === 'text' || mimeType === 'application/json')
                 result = { type: 'text', content: content };
             else
                 result = { type: 'inline_data', content: { mime_type: mimeType, data: content } };

@@ -28,6 +28,7 @@ import checkboxWithActions from './libs/checkbox-with-actions.ts';
 import { default as tgl } from 'inquirer-toggle';
 //@ts-ignore
 const toggle = tgl.default;
+import fileSelector from 'inquirer-file-selector';
 
 import isUnicodeSupported from 'is-unicode-supported';  //  as long as yoctoSpinner has a hardcoded check
 import cliSpinners from 'cli-spinners'; // imported by @inquirer/core
@@ -870,11 +871,12 @@ async function importHistory(filename: string, isAsk: boolean = false): Promise<
 async function addFile(promptAdditions: PromptAdditions, filename: string): Promise<PromptAdditions|null> {
     let driver:Driver = drivers[settings.driver]!;
     let filePath = path.resolve(process.cwd(), filename);
-    const mimeType = mime.getType(filePath);
+    let mimeType = mime.getType(filePath);
 
     if (!mimeType) {
-        console.error(colors.red(figures.warning), 'Skipping file, could get mimeType for file', filePath);
-        return null;
+        console.error(colors.yellow(figures.warning), 'Could get not mimeType for file', filePath, '. Using text/plain.');
+        mimeType = 'text/plain';
+        //return null;
     }
 
     let type = mimeType.split('/')[0] || 'text' as PromptAdditionsTypes;
@@ -933,6 +935,7 @@ History: \`${history.length} entries\`\n
 | \`/:write\`                          | \`:w\`  | Opens the default editor to show the last AI response. Use to save to a file. |
 | \`/clip:read\`                       | \`:r+\` | Read from the clipboard and open the default editor. |
 | \`/clip:write\`                      | \`:w+\` | Write the the last AI response to the clipboard. |
+| \`/file:add [<filename>]\`           | \`:f [<filename>]\`     | Adds a file to the prompt. Or shows a file selection. |
 | \`/history:export [<filename>]\`     | \`:he [<filename>]\`    | Exports the current context to a file with date-time as name or an optional custom filename. |
 | \`/history:export:md [<filename>]\`  | \`:he:md [<filename>]\` | Exports the current context to a markdown file for easier reading (can not be imported). |
 | \`/history:import [<filename>]\`     | \`:hi [<filename>]\`    | Imports the context from a history file or shows a file selection. |
@@ -987,12 +990,22 @@ History: \`${history.length} entries\`\n
         }
         return true;
     }
+    if (prompt.text.startsWith('/:end')) { // ==> /debug:set endIfDone <boolean>
+        const key = prompt.text.split(/(?<!\\)\s+/)[1];
+        if (key === undefined || key.trim() === '')
+            settings.endIfDone = !settings.endIfDone;
+        else
+            settings.endIfDone = {'true': true, 'false': false, '1': true, '0': false, 'on': true, 'off': false, 'yes': true, 'no': false}[key.toLowerCase()] ?? false;
+        
+        console.log(`${settings.endIfDone ? '🟢' : '🔴'}End if assumed done: ${settings.endIfDone ? 'yes' : 'no'}`);
+        return true;
+    }
     let exportType='json';
     if (prompt.text.startsWith('/history:export:md') || prompt.text.startsWith(':he:md')) {
         exportType = 'md';
     }
     if (prompt.text.startsWith('/history:export') || prompt.text.startsWith(':he')) {
-        const key = prompt.text.split(/(?<!\\)\s+/).filter(arg => arg.length > 0).slice(1).join(' ');
+        const key = prompt.text.split(/(?<!\\)\s+/).filter(arg => arg.length > 0).slice(1).join(' ').trim();
         let filename = key || (new Date()).toLocaleString().replace(/[ :]/g, '-').replace(/,/g, '')+`_${settings.driver}_${settings.model.replace(/[^a-zA-Z0-9_-]/g, '_')}`;
         if (filename.startsWith('"') && filename.endsWith('"')) filename = filename.slice(1, -1); // "file name" is possible
         mkdir(RC_HISTORY_PATH, { recursive: true }).catch(_ => {});
@@ -1039,7 +1052,7 @@ History: \`${history.length} entries\`\n
         return true;
     }
     if (prompt.text.startsWith('/history:import') || prompt.text.startsWith(':hi')) {
-        let filename = prompt.text.split(/(?<!\\)\s+/).filter(arg => arg.length > 0).slice(1).join(' ');
+        let filename = prompt.text.split(/(?<!\\)\s+/).filter(arg => arg.length > 0).slice(1).join(' ').trim();
         await importHistory(filename);
         return true;
     }
@@ -1114,14 +1127,16 @@ History: \`${history.length} entries\`\n
         }, TTY_INTERFACE).catch(_ => undefined);
         return true;
     }
-    if (prompt.text.startsWith('/:end')) {
-        const key = prompt.text.split(/(?<!\\)\s+/)[1];
-        if (key === undefined || key.trim() === '')
-            settings.endIfDone = !settings.endIfDone;
-        else
-            settings.endIfDone = {'true': true, 'false': false, '1': true, '0': false, 'on': true, 'off': false, 'yes': true, 'no': false}[key.toLowerCase()] ?? false;
-        
-        console.log(`${settings.endIfDone ? '🟢' : '🔴'}End if assumed done: ${settings.endIfDone ? 'yes' : 'no'}`);
+    if (prompt.text.startsWith('/file:add') || prompt.text.startsWith(':f')) {
+        const key = prompt.text.split(/(?<!\\)\s+/).filter(arg => arg.length > 0).slice(1).join(' ').trim();
+        let filename = key || await fileSelector( { message: 'Select a file to add:'}, TTY_INTERFACE);
+        if (!filename) { console.error('🛑 No file selected'); return true; }        
+        if (filename.startsWith('"') && filename.endsWith('"')) filename = filename.slice(1, -1); // "file name" is possible
+
+        let promptAdditions = await addFile(prompt.additions, filename);
+        if (!promptAdditions) return true;
+
+        prompt.additions = promptAdditions;
         return true;
     }
 
