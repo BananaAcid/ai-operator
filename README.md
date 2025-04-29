@@ -23,11 +23,11 @@ It connects directly to the REST API endpoints of Ollama, OpenAI, Google's AI an
 
 **Note:**
 
-Yes, a more reliable way would be to use AIs that support "tooling" (which are usually big AIs)
+Yes, a more reliable way would be to use AIs that support "tooling" (which are usually means: large AIs/LLMs)
 
 ## Install
 
-⚠️ Make sure, you have Node JS v23.10 or newer installed.
+⚠️ Make sure, you have Node JS v23.10 or newer installed. ([download, check version](https://nodejs.org/en/download))
 
 ```bash
 npm -g baio
@@ -58,7 +58,9 @@ If it was run once and you selected `Automatically use same settings next time:`
 baio "list all files"
 ```
 
-**Careful:** depending on your shell, you can not use specific characters as they have a special meaning (need escaping if possible). In such cases, just run `baio` and enter your prompt.
+**Careful:** depending on your shell, you can not use specific characters as they have a special meaning (need escaping if possible). In such cases, just run `baio` and enter your prompt in the text field.
+
+**NOTE:** To not execute the AI provided commands, you can press <kbd>:</kbd> or <kbd>/</kbd> (or unselect any command and press enter) to fall back to a **prompt to enter more info**.
 
 ### Test usage
 
