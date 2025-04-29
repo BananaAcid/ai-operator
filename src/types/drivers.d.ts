@@ -17,7 +17,7 @@ declare global {
     type ChatResponseError = Error;
 
     type ModelSelection = InquirerSelection;
-    type AgentSelection = InquirerSelection;
+    type AgentSelection = InquirerCheckboxSelection
     type HistorySelection = InquirerSelection;
 
     type ChatResponse = {

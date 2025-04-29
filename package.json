@@ -1,6 +1,6 @@
 {
   "name": "baio",
-  "version": "1.0.29",
+  "version": "1.0.30",
   "description": "Simple AI operator for the CLI, for any LLM",
   "main": "src/index.ts",
   "type": "module",
@@ -51,7 +51,10 @@
     "terminal",
     "shell",
     "ki",
-    "copilot"
+    "copilot",
+    "co-pilot",
+    "api",
+    "provider"
   ],
   "devDependencies": {
     "@types/node": "^22.15.3"

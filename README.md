@@ -33,14 +33,15 @@ Yes, a more reliable way would be to use AIs that support "tooling" (which are u
 npm -g baio
 ```
 
-Simple setup: set any API key or settings in `.baioenvrc` (see below: Env Config)
+Simple setup: set any API key or settings in `.baioenvrc` (see below: Environment Config)
 ```bash
 baio --open env
 ```
 
-**OPTIONAL:** Auto configure with GEMINI (after you entered the KEY in `--open env`), or just run `baio` and it will guide you through the options.
+**OPTIONAL:** Autoconfigure with Google's Gemini (after you entered the KEY in `baio --open env`), 
+**or** just run `baio` and it will guide you through the options.
 ```
-baio --reset --config --update --no-ask
+baio --reset --config --update --no-settings
 
 ✔ Updating settings in .../.baiorc ...
 ```
@@ -120,6 +121,14 @@ Useful if the AI wants to execute the same command over and over again or just d
 
 ### I want to edit the settings / env
 
+#### The current settings can be changed with
+
+```bash
+baio --settings
+```
+
+#### Editing the files (and prompts used):
+
 ```bash
 baio --help
 ```
@@ -152,15 +161,15 @@ You can open the folder in your file manager to edit the files using: `baio --op
 
 ### Do not ask for settings every time
 
-Saving settings with `Automatically use same settings next time:` **`yes`** (or `--update`)  will directly go to the prompt on next launch, and will not ask for any options.
+Saving settings with `Automatically use same settings next time:` **`yes`**  will directly go to the prompt on next launch, and will not ask for any options.
 
-Or use `baio --no-ask`
+Or use `baio --no-update`
 
-### ... Ask again for settings
+### Edit settings
 
 If you saved the settings, but you want to be able to be asked again, use:
 ```bash
-baio --ask
+baio --settings
 ```
 
 ### Add a file while prompting
@@ -188,6 +197,19 @@ or
 
 
 **Note:** More details are below in the section about Prompt Triggers
+
+
+### If you want specific commands to be automatically to be executed
+
+It checks if the command in the config's list ist in the beginning of the line.
+
+Edit the config:
+
+```bash
+baio --open config
+```
+
+and change the key: `autoExecKeys`
 
 
 ### Wrong shell for suggested commands
@@ -291,11 +313,9 @@ baio [-vhdmtaqseiucr] ["prompt string"]
   -a, --agent <agent-name>, ...  Select an agent or multiple, (a set of prompts for specific tasks)
   -a *, --agent *                Ask for agent with a list, even if it would not
 
-  -q, --ask                      Reconfigure to ask everything again
-      --no-ask                   ... to disable
   -s, --sysenv                   Allow to use the complete system environment
       --no-sysenv                ... to disable
-  -e, --end                      End promping if assumed done
+  -e, --end                      End prompting if assumed done
       --no-end                   ... to disable
 
   -i, --import <filename>        Import context from a history file or list files select from
@@ -303,8 +323,9 @@ baio [-vhdmtaqseiucr] ["prompt string"]
 
   -f, --file <filename>, ...     Add a single or multiple files to the prompt
 
-  -u, --update                   Update user config (save config)
-  -c, --config                   Config only, do not prompt.
+  -u, --update                   Update user config, and automatically use the same settings next time
+  -c, --config                   Do not prompt, use with other config params
+  --settings                     Only shows the settings to edit
 
   -r, --reset                    Reset (remove) config
   --reset-prompts                Reset prompts only (use this after an update)
@@ -347,24 +368,25 @@ To trigger these, **_if you are not on a prompt_**,
 
 | Trigger | Short | Description |
 |---|---|---|
-| `/:help`                           | `:h`   | Shows this help. |
-| `/:read`                           | `:r`   | Opens the default editor for a multiline input. |
-| `/:write`                          | `:w`   | Opens the default editor to show the last AI response. Use to save to a file. |
-| `/clip:read`                       | `:r+`  | Read from the clipboard and open the default editor. |
-| `/clip:write`                      | `:w+`  | Write the the last AI response to the clipboard. |
+| `/:help`                           | `:h`  | Shows this help. |
+| `/:settings`                       | `:s`  | Opens settings menu to change the configuration. |
+| `/:read`                           | `:r`  | Opens the default editor for a multiline input. |
+| `/:write`                          | `:w`  | Opens the default editor to show the last AI response. Use to save to a file. |
+| `/clip:read`                       | `:r+` | Read from the clipboard and open the default editor. |
+| `/clip:write`                      | `:w+` | Write the the last AI response to the clipboard. |
 | `/file:add [<filename>]`           | `:f [<filename>]`     | Adds a file to the prompt. Or shows a file selection. |
 | `/history:export [<filename>]`     | `:he [<filename>]`    | Exports the current context to a file with date-time as name or an optional custom filename. |
 | `/history:export:md [<filename>]`  | `:he:md [<filename>]` | Exports the current context to a markdown file for easier reading (can not be imported). |
 | `/history:import [<filename>]`     | `:hi [<filename>]`    | Imports the context from a history file or shows a file selection. |
 | `/history:clear [<number>]`        | `:hc [<number>]`      | Clears the current context (to use current prompt without context). Optionally keeps an amount
-| `/:clear`                          | `:c`   | Clears the current context and current prompt (use for changing topics). |
-| `/:end [<boolean>]`                |        | Toggles end if assumed done, or turns it on or off. |
-| `/debug:result`                    |        | Shows what the API generated and what the tool understood. |
-| `/debug:exec`                      |        | Shows what the system got returned from the shell. Helps debug strange situations. |
-| `/debug:get <.baiorc-key>`         |        | Gets the current value of the key. If no key is given, lists all possible keys. |
-| `/debug:set <.baiorc-key> <value>` |        | Overwrites a setting. The value must be a JSON formatted value. |
-| `/debug:settings [all\|*]`         |        | Lists all current settings without prompts. Use `all` or `*` to also show prompts. |
-| `/:quit`, `/:exit`                 | `:q`   | Will exit (CTRL+D or CTRL+C will also work). |
+| `/:clear`                          | `:c`  | Clears the current context and current prompt (use for changing topics). |
+| `/:end [<boolean>]`                |       | Toggles end if assumed done, or turns it on or off. |
+| `/debug:result`                    |       | Shows what the API generated and what the tool understood. |
+| `/debug:exec`                      |       | Shows what the system got returned from the shell. Helps debug strange situations. |
+| `/debug:get <.baiorc-key>`         |       | Gets the current value of the key. If no key is given, lists all possible keys. |
+| `/debug:set <.baiorc-key> <value>` |       | Overwrites a setting. The value must be a JSON formatted value. |
+| `/debug:settings [all\|*]`         |       | Lists all current settings without prompts. Use `all` or `*` to also show prompts. |
+| `/:quit`, `/:exit`                 | `:q`  | Will exit (CTRL+D or CTRL+C will also work). |
 
 
 **Note:** If you want to continue, just press enter without any text.
@@ -407,7 +429,7 @@ node bin/baio --reset-prompts ...
 
 ### Testing the package locally (+ installation)
 
-```powsershell
+```powershell
 $BaioVersion = (gc .\package.json | ConvertFrom-Json).version
 rm ./baio-${BaioVersion}.tgz ; npm uninstall -g baio ; npm pack ; npm install -g ./baio-${BaioVersion}.tgz
 baio --version
@@ -423,12 +445,12 @@ I expect it
 ### This project is developed with the following specifications in mind:
 - support ollama, gemini api and openAI api
 - support any OS and any SHELL inherently (do not rely on OS or shell specific stuff, or use modules that support the other OSs and shells)
-- use NodeJS onboad technologies if they are available to some extend (env handling, args and others were really painful)
+- use NodeJS onboard technologies if they are available to some extend (env handling, args and others were really painful)
 - use NodeJS **native `.env`** support
 - use NodeJS **native type-stripping** support (TS files only use Node compatible JS)
 - **no `tsconfig.json`**, rely on vscode to not need a config (I only used one to check for possible errors in v1.0.27)
-- use a **single monolitic file** and try everything to keep it all readable while going for spaghetti-code (functions mainly for code grouping)
-- **tsx to make baio work as a commandline command**, since type-stripped files are not allowed in node modules (like how baio is installed)
+- use a **single monolithic file** and try everything to keep it all readable while going for spaghetti-code (functions mainly for code grouping)
+- **`tsx` to make baio work as a commandline command**, since type-stripped files are not allowed in node modules (like how baio is installed)
 
 <details>
 <summary>This `tsconfig.json` was used to check:</summary>
@@ -459,7 +481,7 @@ I expect it
 
 ## `drivers.ts`
 
-This file holds Ollama, OpenAI and Googles API in simple selfcontained files.
+This file holds Ollama, OpenAI and Google's API in simple self-contained files.
 
 No dependencies are used: it uses `fetch()` to connect to the REST API endpoints of the mentioned APIs.
 
@@ -528,8 +550,8 @@ I am mainly using `GEMINI 2.5 Flash` for prompt engineering. Feel free to send i
 | v1.0.22 | Added copy-paste, added triggers (`:w+`, `:r+`) |
 | v1.0.23 | Fixed trigger (`:r`, `:r+`), added update check, added options for faster startup, added keys to fall back to the prompt (<kbd>:</kbd> or <kbd>/</kbd> or <kbd>ESC</kbd>) |
 | v1.0.24 | Added showing/editing (by pressing <kbd>w</kbd> or <kbd>right</kbd>) highlighted command (in selection) in the default editor |
-| v1.0.25 | Added prompt trigger (`/history:clear`, `/:clear`), corrected help to show correct `/debug:result` trigger, better display of multiline commands and with backticks, command selection items are cropped, added settings.cmdMaxLengthDisplay |
+| v1.0.25 | Added prompt trigger (`/history:clear`, `/:clear`), corrected help to show correct `/debug:result` trigger, better display of multiline commands and with backticks, command selection items are cropped, added `settings.cmdMaxLengthDisplay` |
 | v1.0.27 | Argument added: `--file <image/text/...>` and support for adding files (text and image, ...), added fixes for possible bugs, added `precheckLinksInstalled`, fixed multiline commands in selection and progress to be single line and shortened |
 | v1.0.28 | Allow `--driver *` and `--model *` only get a selection for these, api errors are recoverable and can be retried (mind QUOTA errors), reduced duplicate output (showing the command and the command itself) |
-| v1.0.29 | Removed thinking blocks from history to massively reduce token konsumption (`settings.historySaveThinking = false`), allow multiple agents by `--agent agent1 --agent agent2`, changed trigger `/debug:get` to output possible keys if no key was given, changed trigger `/debug:settings` to not show prompts by default, but `/debug:settings all` will, allowed prompt trigger `/history:clear <number>` to clear up to the provided amount in case of quota / token max, added prompt trigger `/file:add` to add a file or show a file picker |
-| v1.0.30 | Settings in a menu, prompt trigger `/:settings`\|`/:config` to open settings any time |
+| v1.0.29 | Removed thinking blocks from history to massively reduce token consumption (`settings.historySaveThinking = false`), allow multiple agents by `--agent agent1 --agent agent2`, changed trigger `/debug:get` to output possible keys if no key was given, changed trigger `/debug:settings` to not show prompts by default, but `/debug:settings all` will, allowed prompt trigger `/history:clear <number>` to clear up to the provided amount in case of quota / token max, added prompt trigger `/file:add` to add a file or show a file picker |
+| v1.0.30 | Settings in a menu, added prompt trigger `/:settings` to open settings any time and argument `--settings`, allowed `{{ENVNAME}}` in custom system prompts, deprecated `--ask`, fixed argument `--files` to `--file` (to match the help), added `settings.autoExecKeys` to allow baio auto execute commands that begin with one of the defined keywords |

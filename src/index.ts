@@ -23,7 +23,7 @@ import mime from 'mime';
 
 import colors from 'yoctocolors-cjs'; // installed by @inquirer/prompts
 import figures from '@inquirer/figures'; // installed by @inquirer/prompts
-import { input, select, editor } from '@inquirer/prompts';
+import { input, select, Separator, editor, checkbox } from '@inquirer/prompts';
 import checkboxWithActions from './libs/checkbox-with-actions.ts';
 import { default as tgl } from 'inquirer-toggle';
 //@ts-ignore
@@ -86,7 +86,8 @@ import './types/json.d.ts';
 type Driver = typeof drivers[keyof typeof drivers];
 
 //* defs
-const autoExecKeys = ['links', 'curl', 'wget', 'Invoke-WebRequest', 'iwr'];
+const AUTOEXEC_KEYS = ['links', 'curl', 'wget', 'Invoke-WebRequest', 'iwr'];
+const SETTINGS_BLACKLIST = ['agentFiles', 'agentNames']; // keys not to save
 
 //* TTY input overwrite
 let TTY_INTERFACE:any;
@@ -106,7 +107,7 @@ const args = await new Promise<ReturnType<typeof parseArgs>>(resolve => resolve(
 
         agent:   { short: 'a', type: 'string',  multiple: true },
 
-        ask:     { short: 'q', type: 'boolean' },
+        ask:     { short: 'q', type: 'boolean' },  //! TODO --- deprecated
         sysenv:  { short: 's', type: 'boolean' },
         end:     { short: 'e', type: 'boolean' },
 
@@ -114,11 +115,13 @@ const args = await new Promise<ReturnType<typeof parseArgs>>(resolve => resolve(
 
         config:  { short: 'c', type: 'boolean' },
         update:  { short: 'u', type: 'boolean' },
+        'settings':      {     type: 'boolean' },
+
         reset:   { short: 'r', type: 'boolean' },
         'reset-prompts': {     type: 'boolean' },
 
         open:    {             type: 'string'  },
-        files:   { short: 'f', type: 'string', multiple: true },
+        file:    { short: 'f', type: 'string', multiple: true },
     }, 
     //tokens: true,
     allowNegative: true,
@@ -171,9 +174,9 @@ let settingsDefault: Settings = {
     useAllSysEnv: false,    // use all system environment variables in the system prompt
     endIfDone: true,        // don't allow the AI to end the conversation (it would, if it thinks it is done)
 
-    saveSettings: false,    // save settings to the .baiorc file -- if this is true, the options will not be asked
+    saveSettings: false,    // (--update) save settings to the .baiorc file -- if this is true, the settings will not be asked
 
-    autoExecKeys: autoExecKeys, // allow execution if command is in here
+    autoExecKeys: AUTOEXEC_KEYS, // allow execution if command is in here
 
     /** Optimizations **/
     precheckUpdate: true,       // (speedup if false) try to reach the npm registry to check for an update
@@ -326,6 +329,11 @@ let settingsDefault: Settings = {
         Follow these rules strictly to ensure accurate command execution and validation.
     `,
     version: packageJSON.version,
+
+    // - Temp
+    agentFiles: [], // blacklisted
+    agentNames: [], // blacklisted
+    modelName: '', // NOT blacklisted !!
 };
 
 
@@ -333,10 +341,10 @@ let settingsDefault: Settings = {
 let resetPrompts = false;
 if (settingsSaved !== undefined && !settingsArgs['version'] && !settingsArgs['help'] && !settingsArgs['reset-prompts'] && !settingsArgs['reset'] && !settingsArgs['open'] && (settingsSaved.version !== settingsDefault.version)) {
     //* really check if the prompts have changed
-    if (settingsDefault.defaultPrompt !== settingsSaved.defaultPrompt || settingsDefault.fixitPrompt !== settingsSaved.fixitPrompt || settingsDefault.systemPrompt !== settingsSaved.systemPrompt) {
+    if ( (settingsSaved.defaultPrompt && settingsDefault.defaultPrompt !== settingsSaved.defaultPrompt) || (settingsSaved.fixitPrompt && settingsDefault.fixitPrompt !== settingsSaved.fixitPrompt) || (settingsSaved.systemPrompt && settingsDefault.systemPrompt !== settingsSaved.systemPrompt) ) {
         const isNonInteractive = !process.stdin.isTTY || process.env.npm_lifecycle_event === 'updatecheck';
         if (isNonInteractive)
-            console.info('The system propmpts have been updated. To update saved system prompts from your previous version to the current version, use: `baio --reset-prompts`' );
+            console.info('The system prompts have been updated. To update saved system prompts from your previous version to the current version, use: `baio --reset-prompts`' );
         else
             resetPrompts = await toggle({ message: `Update saved system prompts from your previous version to the current version:`, default: true }, TTY_INTERFACE);
     }
@@ -436,7 +444,7 @@ async function api(promptText: PromptText, promptAdditions?: PromptAdditions): P
     const regex = /\`*\ *<CMD>(.*?)<\/CMD>\ *\`*/gs;
     let m;
 
-    while ((m = regex.exec(content)) !== null) {                                       //!  ---  do same syntax as above
+    while ((m = regex.exec(content)) !== null) {                                       //! TODO  ---  do same syntax as above
         // This is necessary to avoid infinite loops with zero-width matches
         if (m.index === regex.lastIndex) regex.lastIndex++;
 
@@ -623,7 +631,7 @@ async function getAgents(): Promise<AgentSelection> {
                 console.error(`🛑 Agent ${agentArg} file ${file} not found!`);
             else {
                 console.log(colors.green(colors.bold(figures.tick)), `Agent ${agentName} used`);
-                agents.push({name: agentName, value: file});
+                agents.push({name: agentName, value: file, checked: settings.agentNames.includes(agentName)});
             }
         }
     }
@@ -631,7 +639,7 @@ async function getAgents(): Promise<AgentSelection> {
         // commandline was proccessed, in case there is something going to be added in the future
         if (settingsArgs['agent']) settingsArgs['agent'] = undefined;
 
-        agents = agentFiles.map(file => ({ name: file.name.replace('.md', ''), value: path.join(file.parentPath, file.name) }))
+        agents = agentFiles.map(file => ({ name: file.name.replace('.md', ''), value: path.join(file.parentPath, file.name), checked: settings.agentNames.includes(file.name.replace('.md', '')) }))
     }
 
     return agents;
@@ -721,7 +729,6 @@ async function doPromptWithCommands(result: PromptResult|undefined): Promise<str
     //* get inital user prompt
     if (result === undefined) {
         let prompt;
-        if (settingsArgs['config']) process.exit(0);
 
         if (argsPrompt) {
             prompt = argsPrompt;
@@ -945,13 +952,14 @@ async function promptTrigger(/*inout*/ prompt: Prompt, /*inout*/ resultPrompt?: 
     if (prompt.text === ':h' || prompt.text === '/:help') {
         console.info(packageJSON.name,'v' + packageJSON.version);
         console.log(cliMd(`
-Driver: \`${drivers[settings.driver]?.name ?? settings.driver}\`\n
-Model: \`${settings.model ?? drivers[settings.model]?.name}\`\n
+AI Driver: \`${drivers[settings.driver]?.name ?? settings.driver}\`\n
+AI Model: \`${settings.modelName || (settings.model ?? drivers[settings.model]?.defaultModel)}\`\n
 History: \`${history.length} entries\`\n
 
 | Possible prompt triggers | Short | Description |
 |---|---|---|
 | \`/:help\`                           | \`:h\`  | Shows this help. |
+| \`/:settings\`                       | \`:s\`  | Opens settings menu to change the configuration. |
 | \`/:read\`                           | \`:r\`  | Opens the default editor for a multiline input. |
 | \`/:write\`                          | \`:w\`  | Opens the default editor to show the last AI response. Use to save to a file. |
 | \`/clip:read\`                       | \`:r+\` | Read from the clipboard and open the default editor. |
@@ -970,6 +978,10 @@ History: \`${history.length} entries\`\n
 | \`/debug:settings [all\\|*]\`        |         | Lists all current settings without prompts. Use \`all\` or \`*\` to also show prompts. |
 | \`/:quit\`, \`/:exit\`               | \`:q\`  | Will exit (CTRL+D or CTRL+C will also work). |
         `));
+        return true;
+    }
+    if (prompt.text === '/:settings' || prompt.text === ':s') {
+        await config();
         return true;
     }
     if (prompt.text === '/debug:result') {
@@ -1171,13 +1183,131 @@ History: \`${history.length} entries\`\n
 
 
 /**
+ * Allows the user to configure some settings in an interactive way.
+ * @param options array of strings, each one a setting name to change
+ * @returns Promise<void>
+ */
+async function config(options?: string[]) {
+    const OPTS =  {clearPromptOnDone: true, ...TTY_INTERFACE};
+    let done = false;
+    let lastSelection = '';
+
+    do {
+        options = options && options.length 
+            ? options 
+            : [
+                await select({ message: `${packageJSON.name}, v${packageJSON.version}\nℹ️ use CTRL + D to exit at any time.\n\nSettings`, choices: [
+                    new Separator(),
+                    { value: 'done', name: colors.bold('done') },
+                    new Separator(),
+
+                    { value: 'driver', name: `AI Driver: ${colors.blue(drivers[settings.driver]?.name ?? 'unknown')}  ${ settings.driver !== 'ollama' ? (colors.italic(drivers[settings.driver]?.apiKey() ? colors.green('(API key found)') : colors.red('(no API key found)'))) : ''}` },
+                    { value: 'model', name: `AI Model: ${colors.blue(settings.modelName || settings.model || (drivers[settings.driver]?.defaultModel ? colors.italic(colors.gray('(default: ' + drivers[settings.driver]?.defaultModel + ')')) : undefined) || '')}` },
+                    { value: 'temperature', name: `AI Temperature: ${settings.temperature !== 0 ? colors.blue(settings.temperature.toString()) : colors.italic(colors.gray('(default)'))}` },
+                    { value: 'useAllSysEnv', name: `Use all system environment variables: ${colors.blue(settings.useAllSysEnv ? 'yes' : 'no')}` },
+                    { value: 'endIfDone', name: `End if assumed done: ${colors.blue(settings.useAllSysEnv ? 'yes' : 'no')}` },
+                    { value: 'autoExecKeys', name: `Auto execute if commands match: ${colors.blue(settings.autoExecKeys.join(', '))}` },
+                    { value: 'saveSettings', name: `Automatically use the same settings next time: ${colors.blue(settings.saveSettings ? 'yes' : 'no')}` },
+                    
+
+                    ...(!DEBUG_SYSTEMPROMPT ? [] : [
+                        new Separator(), { value: 'systemPrompt', name: 'Edit System Prompt' }
+                    ]),
+
+                    ...(!settings ? [] : [
+                        new Separator(),
+    
+                        { value: 'importAgent', name: `Select agents${!settings.agentNames.length ? '' : ': ' + colors.blue(settings.agentNames?.join(', ') ?? '')}` },
+                        { value: 'importHistory', name: 'Import context from history files' },
+                    ]),
+                ], default: lastSelection }, OPTS)
+            ];
+
+        done = options.includes('done');
+        
+        if (options.includes('driver')) {
+            if (settings.driver === '*') settings.driver = settingsSaved?.driver || ''; // allow default
+            let driverChoices = Object.keys(drivers).map(key => ({ name: drivers[key]?.name, value: key }));
+            settings.driver = await select({ message: 'Select your AI provider API driver:', choices: driverChoices, default: settings.driver || 'ollama' }, OPTS);
+            // force to choose a new one
+            settings.model = ''; 
+            settings.modelName = '';
+            options.push('model');
+        }
+
+        if (options.includes('model')) {
+            let driver:Driver = drivers[settings.driver]!;
+    
+            let models = await getModels();
+            let modelSelected = '';
+            if (models.length) {
+                if (settings.model === '*') settings.model = settingsSaved?.model || ''; // allow default
+                models = models.map(({name, value}) => ({name: name.replace(/([^(]*)/, colors.bold('$1 ')), value}));
+                models.push({ name: colors.green('manual input ...'), value: '' });
+                modelSelected = await select({ message: 'Select your model:', choices: models, default: settings.model || driver.defaultModel }, OPTS);
+                settings.modelName = models.find(({value}) => value === modelSelected)?.name || '';
+            }
+            if (!models.length || !modelSelected) {
+                // if (settings.driver == 'ollama')
+                //     console.warn('⚠️ The model you enter, will be downloaded and this process might really take a while. No progress will show.');
+                modelSelected = await input({ message: 'Enter your model to use:', default: settings.model || driver.defaultModel }, OPTS);
+                settings.modelName = modelSelected;
+            }
+            settings.model = modelSelected;
+        }
+
+        if (options.includes('importAgent'))  {
+            const hasAgentsArgs = !!settingsArgs['agent']?.length;
+            const forceSelection = settingsArgs['agent']?.[0] === '*';
+    
+            const agents = await getAgents();
+    
+            settings.agentFiles = hasAgentsArgs && !forceSelection
+                ? agents.map(({value}) => value) // getAgents returned only the requested ones
+                :  await checkbox({ message: 'Select agents:', choices: [{ name: colors.red('- none -'), value: '' }, ...agents ] }, OPTS);
+            
+            settings.agentNames = agents.filter(({value}) => settings.agentFiles.includes(value)).map(({name}) => name);
+            delete settingsArgs['agent']; // processed
+        }
+
+        if (options.includes('importHistory'))
+            await importHistory('', true);
+        
+        if (options.includes('systemPrompt'))
+            settings.systemPrompt = await input({ message: 'Enter your system prompt', default: settings.systemPrompt }, OPTS);
+    
+        if (options.includes('temperature'))
+            settings.temperature = await input({ message: 'Enter the AI temperature (0 for model\'s default):', default: settings.temperature.toString() }, OPTS).then(answer => parseFloat(answer));
+            
+        if (options.includes('useAllSysEnv'))
+            settings.useAllSysEnv = await toggle({ message: 'Use all system environment variables:', default: settings.useAllSysEnv }, OPTS);
+            
+        if (options.includes('endIfDone'))
+            settings.endIfDone = await toggle({ message: 'End if assumed done:', default: settings.endIfDone }, OPTS);
+    
+        if (options.includes('autoExecKeys'))
+            settings.autoExecKeys = await checkboxWithActions({ message: 'Auto execute, if commands match:', choices: AUTOEXEC_KEYS.map(key => ({ name: key, value: key, checked: settings.autoExecKeys.includes(key) }))}, OPTS);
+        
+        if (options.includes('saveSettings'))
+            settings.saveSettings = await toggle({ message: `Automatically use the same settings next time:`, default: settings.saveSettings }, OPTS);
+
+
+        lastSelection = options?.pop() ?? '';
+        options = undefined; // all options have been processed
+
+    } while (!done);
+}
+
+
+/**
  * Initializes the prompt by asking the user for settings and returns the prompt
  * @returns the prompt
  */
 async function init(): Promise<Prompt> {
-    let askSettings = settingsArgs['ask'] ?? (process.env.ASK_SETTINGS || !settings.saveSettings);
+    let askSettings = settingsArgs['settings'] ?? settingsArgs['ask'] ?? (process.env.ASK_SETTINGS || !settings.saveSettings);
     if (settingsArgs['reset-prompts'] === true) { askSettings = settingsArgs['ask'] ?? false; settingsArgs['config'] = settingsArgs['config'] ?? true; } // do not ask for settings and prompt, if we are resetting the prompts so the other commands are not needed
     let promptAdditions: PromptAdditions;
+    let specificOptions: string[] = [];
 
 
     //*** args with exit ***
@@ -1273,11 +1403,9 @@ async function init(): Promise<Prompt> {
   -a, --agent <agent-name>, ...  Select an agent or multiple, (a set of prompts for specific tasks)
   -a *, --agent *                Ask for agent with a list, even if it would not
 
-  -q, --ask                      Reconfigure to ask everything again
-      --no-ask                   ... to disable
   -s, --sysenv                   Allow to use the complete system environment
       --no-sysenv                ... to disable
-  -e, --end                      End promping if assumed done
+  -e, --end                      End prompting if assumed done
       --no-end                   ... to disable
 
   -i, --import <filename>        Import context from a history file or list files select from
@@ -1285,8 +1413,9 @@ async function init(): Promise<Prompt> {
 
   -f, --file <filename>, ...     Add a single or multiple files to the prompt
 
-  -u, --update                   Update user config (save config)
-  -c, --config                   Config only, do not prompt.
+  -u, --update                   Update user config, and automatically use the same settings next time
+  -c, --config                   Do not prompt, use with other config params
+  --settings                     Only shows the settings to edit
 
   -r, --reset                    Reset (remove) config
   --reset-prompts                Reset prompts only (use this after an update)
@@ -1304,28 +1433,58 @@ async function init(): Promise<Prompt> {
         process.exit(0);
     }
 
-
-    //*** settings ***
-
-
-    if (askSettings)
-    {//* info header
-        console.info(packageJSON.name, 'v' + packageJSON.version);
-        console.info('ℹ️ use CTRL + D to exit at any time.');
-    }
-
     {//* new update info
         if (settings.precheckUpdate)
             await checkUpdateOutput();
     }
 
-    if (askSettings || settings.driver === '*')
-    {//* API/Driver selection
-        if (settings.driver === '*') settings.driver = settingsSaved?.driver || ''; // allow default
-        let driverChoices = Object.keys(drivers).map(key => ({ name: drivers[key]?.name, value: key }));
-        settings.driver = await select({ message: 'Select your API:', choices: driverChoices, default: settings.driver || 'ollama' }, TTY_INTERFACE);
-        settings.model = '*'; // force to choose a new one
+
+    //*** settings ***
+
+
+    {//* these need to be here, since they could be * or need further processing and a simple arg-value to settings-value does not work
+        if (settingsArgs['driver'])
+            specificOptions = [...specificOptions, 'driver', 'done'];
+
+        if (settingsArgs['model'])
+            specificOptions = [...specificOptions, 'model', 'done'];
+
+        if (settingsArgs['import'])
+            specificOptions = [...specificOptions, 'importHistory', 'done'];
+
+        if (settingsArgs['agent'])
+            specificOptions = [...specificOptions, 'importAgent', 'done'];
     }
+    
+    {//* trigger the configuration
+        // force settings menu to show
+        if (settingsArgs['ask'] || settingsArgs['settings'])
+            specificOptions = specificOptions.filter(key => key !== 'done');
+        
+        if (askSettings || specificOptions.length)
+            await config(specificOptions);
+    }
+
+    {//* save settings
+        // write settings if it is asked for, or if it is not asked for but already saved to remove it
+        if ((settingsArgs['reset-prompts'] && settingsSaved !== undefined) || (settingsArgs['update'] ?? (settings.saveSettings || (!settings.saveSettings && settingsSaved)))) {
+
+            let settingsFiltered: Partial<Settings> = Object.fromEntries(Object.entries(settings).filter(([Key]) => !SETTINGS_BLACKLIST.includes(Key)));
+
+            // make extra sure, there is a difference between settings and saveSettings or param was used to save
+            let isDiff = settingsSaved === undefined || settingsArgs['update'] || Object.keys(settings).reduce((acc, key) => acc || settingsFiltered[key] !== settingsSaved[key], false);
+
+            if (isDiff) {
+                spinner.start(`Updating settings in ${RC_FILE} ...`);
+                await writeFile(RC_FILE, JSON.stringify(settingsArgs['update'] ?? settings.saveSettings ? settings : {}, null, 2), 'utf-8');
+                spinner.success();
+            }
+        }
+    }
+
+
+    //*** tests ***/
+
 
     {//* api key test
         if (settings.driver !== 'ollama' && !drivers[settings.driver]?.apiKey()) {
@@ -1334,6 +1493,7 @@ async function init(): Promise<Prompt> {
         }
     }
 
+    
     {//* connection test
         if (settings.precheckDriverApi) {
             let driver:Driver = drivers[settings.driver]!;
@@ -1351,56 +1511,8 @@ async function init(): Promise<Prompt> {
         }
     }
 
-    if (askSettings || settings.model === '*' )
-    {//* model selection
-        let driver:Driver = drivers[settings.driver]!;
-
-        let models = await getModels();
-        let modelSelected = '';
-        if (models.length) {
-            if (settings.model === '*') settings.model = settingsSaved?.model || ''; // allow default
-            models = models.map(({name, value}) => ({name: name.replace(/([^(]*)/, colors.bold('$1 ')), value}));
-            models.push({ name: colors.green('manual input ...'), value: '' });
-            modelSelected = await select({ message: 'Select your model:', choices: models, default: settings.model || driver.defaultModel }, TTY_INTERFACE);
-        }
-        if (!models.length || !modelSelected) {
-            if (settings.driver == 'ollama')
-                console.warn('⚠️ The model you enter, will be downloaded and this process might really take a while. No progress will show.');
-            modelSelected = await input({ message: 'Enter your model to use:', default: settings.model || driver.defaultModel }, TTY_INTERFACE);
-        }
-        settings.model = modelSelected;
-    }
-    
-    if (askSettings)    
-    {//* options
-        if (DEBUG_SYSTEMPROMPT)
-            settings.systemPrompt = await input({ message: 'Enter your system prompt', default: settings.systemPrompt }, TTY_INTERFACE);
-
-        settings.temperature = await input({ message: 'Enter the temperature (0 for model\'s default):', default: settings.temperature.toString() }, TTY_INTERFACE).then(answer => parseFloat(answer));
-        
-        settings.useAllSysEnv = await toggle({ message: 'Use all system environment variables:', default: settings.useAllSysEnv }, TTY_INTERFACE);
-        
-        settings.endIfDone = await toggle({ message: 'End if assumed done:', default: settings.endIfDone }, TTY_INTERFACE);
-
-        settings.autoExecKeys = await checkboxWithActions({ message: 'Auto execute if commands match:', choices: autoExecKeys.map(key => ({ name: key, value: key, checked: settings.autoExecKeys.includes(key) }))}, TTY_INTERFACE);
-    }
-    
-    {//* save settings
-        if (askSettings)
-            settings.saveSettings = await toggle({ message: `Automatically use same settings next time:`, default: settings.saveSettings }, TTY_INTERFACE);
-
-        // write settings if it is asked for, or if it is not asked for but already saved to remove it
-        if ((settingsArgs['reset-prompts'] && settingsSaved !== undefined) || (settingsArgs['update'] ?? (settings.saveSettings || (!settings.saveSettings && settingsSaved)))) {
-
-            // make extra sure, there is a difference between settings and saveSettings or param was used to save
-            let isDiff = settingsSaved === undefined || settingsArgs['update'] || Object.keys(settings).reduce((acc, key) => acc || settings[key] !== settingsSaved[key], false);
-
-            if (isDiff) {
-                spinner.start(`Updating settings in ${RC_FILE} ...`);
-                await writeFile(RC_FILE, JSON.stringify(settingsArgs['update'] ?? settings.saveSettings ? settings : {}, null, 2), 'utf-8');
-                spinner.success();
-            }
-        }
+    {//* check if prompt is actually required
+        if (settingsArgs['config'] || settingsArgs['settings']) process.exit(0);
     }
 
     
@@ -1409,25 +1521,12 @@ async function init(): Promise<Prompt> {
 
     let agentContent = '';
     {//* agent
-        const hasAgentsArgs = !!settingsArgs['agent']?.length;
-        const forceSelection = settingsArgs['agent']?.[0] === '*';
-        let agentFiles:ArgsKeys['agent'] = [];
-
-        const agents = await getAgents();
-
-        if (agents.length)
-            agentFiles = hasAgentsArgs && !forceSelection
-                ? agents.map(({value}) => value) // getAgents returned only the requested ones
-                : (askSettings || forceSelection
-                    ? [await select({ message: 'Select an agent:', choices: [{ name: colors.red('- none -'), value: '' }, ...agents ] }, TTY_INTERFACE)]
-                    : []
-                );
-        
-        if (agentFiles.length) {
-            for (const agentFile of agentFiles) {
+        if (settings.agentFiles.length) {
+            for (const agentFile of settings.agentFiles) {
                 let agentContentFile = await readFile(agentFile, 'utf-8').catch(_ => undefined);
                 // get from file content the content from after the second '---' if available or everything from the beginning (if formating is broken)
-                agentContent += settings.agentPrompt + '\n' + (agentContent ? '\n---\n' : '') + (agentContentFile?.split('---\n')?.[2] || agentContentFile);
+                if (agentContentFile !== undefined)
+                    agentContent += settings.agentPrompt + '\n' + (agentContent ? '\n---\n' : '') + (agentContentFile?.split('---\n')?.[2] || agentContentFile);
             }
         }
     }
@@ -1473,8 +1572,8 @@ async function init(): Promise<Prompt> {
     }
 
     {//* handle files from arguments
-        if (settingsArgs['files']) {
-            for (const filename of settingsArgs['files']) {
+        if (settingsArgs['file']) {
+            for (const filename of settingsArgs['file']) {
                 let result = await addFile(promptAdditions, filename);
                 if (result !== null) promptAdditions = result;
             }
@@ -1488,8 +1587,7 @@ async function init(): Promise<Prompt> {
     {//* import context from history files
         if (settingsArgs['import'])
             await importHistory(settingsArgs['import'] !== '*' ? settingsArgs['import'] : '');
-        else if (askSettings)
-            await importHistory('', true);
+            
     }
     
     {//* system prompt
@@ -1516,6 +1614,9 @@ async function init(): Promise<Prompt> {
         ].forEach(([placeholder, value]) =>
             settings.systemPrompt = settings.systemPrompt.replaceAll(placeholder!, value!)
         );
+
+        // allow any other env, if the user modified the prompt - these key names are NOT preceeded with `process_env_` !
+        Object.entries(process.env).forEach(([key, value]) => settings.systemPrompt.replaceAll(`{{${key}}}`, value!));
 
         if (settings.precheckLinksInstalled) {
             try {

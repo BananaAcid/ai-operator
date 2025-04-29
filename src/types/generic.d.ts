@@ -51,13 +51,14 @@ declare global {
         endIfDone: boolean;
         saveSettings: boolean;
         temperature: number;
-        files: string[];
+        file: string[];
     }
 
     type Settings = {
         [index: string]: string|boolean|number|string[];
         driver: string;
         model: string;
+        modelName: string; // for showing in the settings
         temperature: number;
         useAllSysEnv: boolean;
         endIfDone: boolean;
@@ -76,11 +77,21 @@ declare global {
         historySaveThinking: boolean;
 
         autoExecKeys: string[];
+
+        // -- do not save
+        agentFiles: string[];
+        agentNames: ArgsKeys['agent'];
     };
 
     type InquirerSelection = Array<{
         name: string;
-        value: string
+        value: string;
+    }>;
+
+    type InquirerCheckboxSelection = Array<{
+        name: string;
+        value: string;
+        checked: boolean; // actually optional
     }>;
 }
 
