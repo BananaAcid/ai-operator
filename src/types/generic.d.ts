@@ -83,15 +83,23 @@ declare global {
         agentNames: ArgsKeys['agent'];
     };
 
+    // https://github.com/SBoudrias/Inquirer.js/tree/main/packages/select#choice-object
+    // src: https://github.com/SBoudrias/Inquirer.js/blob/main/packages/select/src/index.ts#L46-L53
     type InquirerSelection = Array<{
         name: string;
         value: string;
+        disabled?: boolean | string; // string would be disbaled and the help string
+        description?: string; // under the list when the cursor highlight a given choice
     }>;
 
+    // https://github.com/SBoudrias/Inquirer.js/blob/main/packages/checkbox/README.md#choice-object
+    // src: https://github.com/SBoudrias/Inquirer.js/blob/main/packages/checkbox/src/index.ts#L62-L70
     type InquirerCheckboxSelection = Array<{
         name: string;
         value: string;
         checked: boolean; // actually optional
+        disabled?: boolean | string; // string would be disbaled and the help string
+        description?: string; // under the list when the cursor highlight a given choice
     }>;
 }
 
