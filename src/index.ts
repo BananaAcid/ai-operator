@@ -1224,10 +1224,8 @@ async function config(options?: string[], prompt?: Prompt): Promise<void> {
                     
                     new Separator(),
 
-                    ...(!prompt ? [] : [
-                        // for each file, there is a prompt about the filename => length / 2  //! TODO do not just devide by 2, but check content
-                        { value: 'addFile', name: `Add a file ${colors.italic(colors.gray(`(currently: ${(prompt.additions?.length ? prompt.additions.length / 2 : 0)})`))}` }
-                    ]),
+                    // for each file, there is a prompt about the filename => length / 2  //! TODO do not just devide by 2, but check content
+                    { value: 'addFile', name: `Add a file ${colors.italic(colors.gray(`(currently: ${(prompt?.additions?.length ? prompt.additions.length / 2 : 0)})`))}`, disabled: !prompt },
 
                     { value: 'importAgent', name: `Select agents${!settings.agentNames.length ? '' : ': ' + colors.blue(settings.agentNames?.join(', ') ?? '')}` },
                     { value: 'importHistory', name: 'Import context from history files' },
@@ -1608,7 +1606,7 @@ async function init(): Promise<Prompt> {
     }
     
     {//* trigger the configuration
-        // force settings menu to show
+        // force settings menu to show (first it does the specificOptions above, then it shows the menu because the 'done' flag was removed)
         if (settingsArgs['ask'] || settingsArgs['settings'])
             specificOptions = specificOptions.filter(key => key !== 'done');
         
@@ -1650,7 +1648,7 @@ async function init(): Promise<Prompt> {
     }
 
     {//* check if prompt is actually required
-        if (settingsArgs['config'] || settingsArgs['settings']) process.exit(0);
+        if (settingsArgs['config']) process.exit(0);
     }
 
     
