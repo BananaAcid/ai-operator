@@ -35,7 +35,6 @@ declare global {
     };
     
     type ArgsKeys = {
-        [index: string]: string|boolean|number|string[];
         version: boolean;
         help: boolean;
         driver: string;
@@ -52,23 +51,17 @@ declare global {
         saveSettings: boolean;
         temperature: number;
         file: string[];
+        settings: boolean;
     }
 
-    type Settings = {
-        [index: string]: string|boolean|number|string[];
+    type Settings = SettingsBlacklisted & SettingsChached & {
         driver: string;
         model: string;
-        modelName: string; // for showing in the settings
         temperature: number;
         useAllSysEnv: boolean;
         endIfDone: boolean;
         saveSettings: boolean;
-        defaultPrompt: string;
-        fixitPrompt: string;
-        agentPrompt: string;
-        fileAddPrompt: string;
-        systemPrompt: string;
-        version: string;
+        autoExecKeys: string[];
 
         precheckUpdate: boolean;
         precheckDriverApi: boolean;
@@ -76,13 +69,27 @@ declare global {
         cmdMaxLengthDisplay: number;
         historySaveThinking: boolean;
 
-        autoExecKeys: string[];
-
-        // -- do not save
+        defaultPrompt: string;
+        fixitPrompt: string;
+        agentPrompt: string;
+        fileAddPrompt: string;
+        systemPrompt: string;
+        
+    };
+    
+    type SettingsChached = {
+        version: string;   // for config file compatibility
+        modelName: string; // for showing in the settings and help only - no functional use
+    }
+    
+    // blacklisted - temporary runtime values - do not save
+    // .. also update index.ts -> SETTINGS_BLACKLIST
+    type SettingsBlacklisted = {
+        addedFiles: Array<{file: string, type: string, mime: string}>; // keep track of added files (paths)
         agentFiles: string[];
         agentNames: ArgsKeys['agent'];
         systemPromptReady: Settings['systemPrompt'];
-    };
+    }
 
     // https://github.com/SBoudrias/Inquirer.js/tree/main/packages/select#choice-object
     // src: https://github.com/SBoudrias/Inquirer.js/blob/main/packages/select/src/index.ts#L46-L53
