@@ -142,7 +142,7 @@ const drivers = {
 
                     messages: [
                         ...history,
-                        { role: 'system', content: settings.systemPrompt },
+                        { role: 'system', content: settings.systemPromptReady },
                         ...(promptAdditions ?? []).map(item => ({ role: 'user', content: item.content })), // Map additional content to user role
                         { role: 'user', content: promptText ?? '' },
                     ],
@@ -251,7 +251,7 @@ const drivers = {
 
                     // https://ai.google.dev/gemini-api/docs/text-generation#system-instructions
                     system_instruction: {
-                        parts: [{ text: settings.systemPrompt }]
+                        parts: [{ text: settings.systemPromptReady }]
                     },
 
                     contents: [

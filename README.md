@@ -301,7 +301,7 @@ This where you are able to modify the system prompt and last selected settings.
 
 ## Shell arguments
 ```
-baio [-vhdmtaqseiucr] ["prompt string"]
+baio [-vhdmtaseifucr] ["prompt string"]
 
   -v, --version
   -h, -?, --help
@@ -326,6 +326,7 @@ baio [-vhdmtaqseiucr] ["prompt string"]
   -f, --file <filename>, ...     Add a single or multiple files to the prompt
 
   -u, --update                   Update user config, and automatically use the same settings next time
+      --no-update                ... to disable
   -c, --config                   Do not prompt, use with other config params
   --settings                     Only shows the settings to edit
 
@@ -557,3 +558,4 @@ I am mainly using `GEMINI 2.5 Flash` for prompt engineering. Feel free to send i
 | v1.0.28 | Allow `--driver *` and `--model *` only get a selection for these, api errors are recoverable and can be retried (mind QUOTA errors), reduced duplicate output (showing the command and the command itself) |
 | v1.0.29 | Removed thinking blocks from history to massively reduce token consumption (`settings.historySaveThinking = false`), allow multiple agents by `--agent agent1 --agent agent2`, changed trigger `/debug:get` to output possible keys if no key was given, changed trigger `/debug:settings` to not show prompts by default, but `/debug:settings all` will, allowed prompt trigger `/history:clear <number>` to clear up to the provided amount in case of quota / token max, added prompt trigger `/file:add` to add a file or show a file picker |
 | v1.0.30 | Settings in a menu, added prompt trigger `/:settings` to open settings any time and argument `--settings`, allowed `{{ENVNAME}}` in custom system prompts, deprecated `--ask`, fixed argument `--files` to `--file` (to match the help), added `settings.autoExecKeys` to allow baio auto execute commands that begin with one of the defined keywords |
+| v1.0.31 | Added saving when opening menu by trigger, enabled agent selection when opening menu by trigger (not just start), menu related cleanup and fixes, fixed send files list was never cleared and always send again |

@@ -81,6 +81,7 @@ declare global {
         // -- do not save
         agentFiles: string[];
         agentNames: ArgsKeys['agent'];
+        systemPromptReady: Settings['systemPrompt'];
     };
 
     // https://github.com/SBoudrias/Inquirer.js/tree/main/packages/select#choice-object

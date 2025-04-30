@@ -5,11 +5,12 @@
  * @license MIT
  */
 
+
 //* node imports
 import packageJSON from '../package.json' with { type: 'json' };
 import { exec } from 'node:child_process';
 import path from 'node:path';
-import { writeFile, readFile, unlink, glob, mkdir, open as fsOpen } from 'node:fs/promises';
+import { writeFile, readFile, unlink, glob, mkdir, open as fsOpen, rm } from 'node:fs/promises';
 import os from 'node:os';
 import { execSync } from 'node:child_process';
 import { parseArgs } from 'node:util';
@@ -38,7 +39,7 @@ const spinner = yoctoSpinner({text: '', ...(isUnicodeSupported() ? {spinner: cli
 
 //* (try to) handle errors
 // catch ctrl+c and show no error on exit, fix it for the toggle prompt
-process.on('uncaughtException', (error) => { if (error instanceof Error && (error.name === 'ExitPromptError' || error.message.indexOf('User force closed the prompt') >= 0)) { /*console.log('👋 until next time!');*/ } else { console.error('🛑', error.name + ':', error.message); /* Rethrow unknown errors */ throw error; } });
+process.on('uncaughtException', (error) => { if (error instanceof Error && (error.name === 'ExitPromptError' || error.message.indexOf('User force closed the prompt') >= 0)) { /*console.log('👋 until next time!');*/ } else { console.error(colors.red(figures.cross), error.name + ':', error.message); /* Rethrow unknown errors */ throw error; } });
 //process.on('warning', (warning) => { if (warning.message.indexOf('unsettled top-level await') == -1) console.warn(warning.name, warning.message); });
 //process.removeAllListeners('warning');
 
@@ -86,8 +87,8 @@ import './types/json.d.ts';
 type Driver = typeof drivers[keyof typeof drivers];
 
 //* defs
-const AUTOEXEC_KEYS = ['links', 'curl', 'wget', 'Invoke-WebRequest', 'iwr'];
-const SETTINGS_BLACKLIST = ['agentFiles', 'agentNames']; // keys not to save
+const AUTOEXEC_KEYS = ['links', 'curl', 'wget', 'Invoke-WebRequest', 'iwr']; // dir, ls, gci, Get-ChildItem ?
+const SETTINGS_BLACKLIST: Partial<(keyof Settings)>[] = ['agentFiles', 'agentNames', 'systemPromptReady']; // keys not to save
 
 //* TTY input overwrite
 let TTY_INTERFACE:any;
@@ -126,7 +127,7 @@ const args = await new Promise<ReturnType<typeof parseArgs>>(resolve => resolve(
     //tokens: true,
     allowNegative: true,
     args: process.argv.slice(2)
-}))).catch(error => { console.error('🛑', error.message); process.exit(1); });
+}))).catch(error => { console.error(colors.red(figures.cross), error.message); process.exit(1); });
 const argsReMap: Record<string, string> = {
     sysenv: 'useAllSysEnv',
     end: 'endIfDone',
@@ -150,7 +151,7 @@ if (settingsArgs.temperature) {
     if (!isNaN(Number(settingsArgs.temperature)))
         settingsArgs.temperature = Number(settingsArgs.temperature) 
     else {
-        console.error('🛑 temperature must be a number, not:', settingsArgs.temperature);
+        console.error(colors.red(figures.cross), 'temperature must be a number, not:', settingsArgs.temperature);
         process.exit(1);
     }
 }
@@ -330,9 +331,12 @@ let settingsDefault: Settings = {
     `,
     version: packageJSON.version,
 
-    // - Temp
+    //* Temp
     agentFiles: [], // blacklisted
     agentNames: [], // blacklisted
+    systemPromptReady: '', // blacklisted
+
+    //* Cached
     modelName: '', // NOT blacklisted !!
 };
 
@@ -378,14 +382,15 @@ let history: MessageItem[] = [];
  * - needMoreInfo: true if the answer contains <NEED-MORE-INFO/>.
  * - isEnd: true if the answer contains <END/>.
  */
-async function api(promptText: PromptText, promptAdditions?: PromptAdditions): Promise<PromptResult> {
+async function api(prompt: Prompt): Promise<PromptResult> {
     const driver: Driver = drivers[settings.driver]!;
 
     let result;
     let retry = false;
     do {
         spinner.start(`Waiting for ${driver.name}\'s response ...`);
-        result = await driver.getChatResponse(settings, history, promptText, promptAdditions);
+        result = await driver.getChatResponse(settings, history, prompt.text, prompt.additions);
+        prompt.additions = undefined; // clear them after having used them
         spinner.success();
     
         // error, ask to retry
@@ -593,7 +598,7 @@ async function checkUpdateOutput(): Promise<boolean> {
 
     if (version !== packageJSON.version) {
         console.warn(colors.yellow(colors.bold(figures.info + ` A new version of ${packageJSON.name} is available, ${packageJSON.version} → ${version}`)));
-        console.warn(`  Run 'npm i -g ${packageJSON.name}' to update!`);
+        console.warn(`  Run 'npm i -g ${packageJSON.name}' to update!\n`);
         result = true;
     }
 
@@ -628,7 +633,7 @@ async function getAgents(): Promise<AgentSelection> {
             const agentName = fileFound ? fileFound.name.replace('.md', '') : agentArg;
 
             if (!fileFound)
-                console.error(`🛑 Agent ${agentArg} file ${file} not found!`);
+                console.error(colors.red(figures.cross), `Agent ${agentArg} file ${file} not found!`);
             else {
                 console.log(colors.green(colors.bold(figures.tick)), `Agent ${agentName} used`);
                 agents.push({name: agentName, value: file, checked: settings.agentNames.includes(agentName)});
@@ -688,7 +693,7 @@ async function doCommands(commands: string[]): Promise<string> {
  * @returns api result
  */
 async function doPrompt(prompt: Prompt): Promise<PromptResult> {
-    const result = await api(prompt.text, prompt.additions);
+    const result = await api(prompt);
     
     // output to the user
     console.log(result.answer);
@@ -862,7 +867,7 @@ async function importHistory(filename: string, isAsk: boolean = false): Promise<
             historyFilesChoices.push({ name: file.name.replace('.json', ''), value: path.join(file.parentPath, file.name) });
 
         if (!historyFilesChoices.length) {
-            !isAsk && console.error('🛑 No history files found');
+            !isAsk && console.error(colors.red(figures.cross), 'No history files found');
             return;
         }
         filename = await select({ message: 'Select a history file to load:', choices: [{ name: colors.red('- none -'), value: '' }, ...historyFilesChoices] }, TTY_INTERFACE);
@@ -874,13 +879,13 @@ async function importHistory(filename: string, isAsk: boolean = false): Promise<
     const historyContent = await readFile(filePath, 'utf-8').catch(_ => undefined);
 
     if (!historyContent)
-        console.error(`🛑 Could not read history file ${filePath}`);
+        console.error(colors.red(figures.cross), `Could not read history file ${filePath}`);
     else {
         let content = JSON.parse(historyContent) as HistoryFile;
 
         let driver: Driver = drivers[settings.driver]!;
         if (content.historyStyle !== driver.historyStyle)
-            console.error(`🛑 Importing history failed. File ${filePath} has an incompatible history style (${drivers[content.historyStyle]?.name ?? content.historyStyle}) than the current API ${driver.name}.`);
+            console.error(colors.red(figures.cross), `Importing history failed. File ${filePath} has an incompatible history style (${drivers[content.historyStyle]?.name ?? content.historyStyle}) than the current API ${driver.name}.`);
         else {
             console.log(`💾 Imported history from ${filePath}`);
             history = content.history;
@@ -902,7 +907,7 @@ async function addFile(promptAdditions: PromptAdditions, filename: string): Prom
     let mimeType = mime.getType(filePath);
 
     if (!mimeType) {
-        console.error(colors.yellow(figures.warning), 'Could get not mimeType for file', filePath, '. Using text/plain.');
+        console.warn(colors.yellow(figures.warning), 'Could get not mimeType for file', filePath, '→ Using text/plain.');
         mimeType = 'text/plain';
         //return null;
     }
@@ -935,6 +940,7 @@ async function addFile(promptAdditions: PromptAdditions, filename: string): Prom
 
     return [ ...(promptAdditions ?? []), additionFileName, addition ];
 }
+
 
 /**
  * Evaluates a given prompt string and executes corresponding debug commands.
@@ -981,7 +987,7 @@ History: \`${history.length} entries\`\n
         return true;
     }
     if (prompt.text === '/:settings' || prompt.text === ':s') {
-        await config();
+        await config(undefined, prompt);
         return true;
     }
     if (prompt.text === '/debug:result') {
@@ -1079,7 +1085,7 @@ History: \`${history.length} entries\`\n
         let saved = await writeFile(historyPath, content, 'utf-8').then(_ => true).catch(e => e.message);
 
         if (saved !== true)
-            console.error(`🛑 Failed to save history to ${historyPath}: ${saved}`);
+            console.error(colors.red(figures.cross), `Failed to save history to ${historyPath}: ${saved}`);
         else
             console.log(`💾 Exported history to ${historyPath}`);
         return true;
@@ -1123,7 +1129,7 @@ History: \`${history.length} entries\`\n
     if (prompt.text === '/clip:read' || prompt.text === ':r+' || prompt.text === ':r +') {
         pasteContent = await clipboard.paste() || '';
         if (!pasteContent) {
-            console.log(`🛑 Failed to read anything from clipboard`);
+            console.log(colors.red(figures.cross), `Failed to read anything from clipboard`);
             return true;
         }
         console.log(`📋 Read from clipboard`);
@@ -1148,7 +1154,7 @@ History: \`${history.length} entries\`\n
     }
     if (prompt.text === '/:write' || prompt.text === ':w') {
         if (!resultPrompt?.answerFull) {
-            console.log(`🛑 There is nothing from a previous AI response`);
+            console.log(colors.red(figures.cross), `There is nothing from a previous AI response`);
             return true;
         }
         await editor({
@@ -1163,7 +1169,7 @@ History: \`${history.length} entries\`\n
     if (prompt.text.startsWith('/file:add') || prompt.text.startsWith(':f')) {
         const key = prompt.text.split(/(?<!\\)\s+/).filter(arg => arg.length > 0).slice(1).join(' ').trim();
         let filename = key || await fileSelector( { message: 'Select a file to add:'}, TTY_INTERFACE);
-        if (!filename) { console.error('🛑 No file selected'); return true; }        
+        if (!filename) { console.error(colors.red(figures.cross), 'No file selected'); return true; }        
         if (filename.startsWith('"') && filename.endsWith('"')) filename = filename.slice(1, -1); // "file name" is possible
 
         let promptAdditions = await addFile(prompt.additions, filename);
@@ -1187,16 +1193,17 @@ History: \`${history.length} entries\`\n
  * @param options array of strings, each one a setting name to change
  * @returns Promise<void>
  */
-async function config(options?: string[]) {
+async function config(options?: string[], prompt?: Prompt): Promise<void> {
     const OPTS =  {clearPromptOnDone: true, ...TTY_INTERFACE};
     let done = false;
     let lastSelection = '';
+    let updateSystemPrompt = false;
 
     do {
         options = options && options.length 
             ? options 
             : [
-                await select({ message: `${packageJSON.name}, v${packageJSON.version}\nℹ️ use CTRL + D to exit at any time.\n\nSettings`, choices: [
+                await select({ message: `Settings:`, choices: [
                     new Separator(),
                     { value: 'done', name: colors.bold('done') },
                     new Separator(),
@@ -1204,26 +1211,30 @@ async function config(options?: string[]) {
                     { value: 'driver', name: `AI Driver: ${colors.blue(drivers[settings.driver]?.name ?? 'unknown')}  ${ settings.driver !== 'ollama' ? (colors.italic(drivers[settings.driver]?.apiKey() ? colors.green('(API key found)') : colors.red('(no API key found)'))) : ''}` },
                     { value: 'model', name: `AI Model: ${colors.blue(settings.modelName || settings.model || (drivers[settings.driver]?.defaultModel ? colors.italic(colors.gray('(default: ' + drivers[settings.driver]?.defaultModel + ')')) : undefined) || '')}` },
                     { value: 'temperature', name: `AI Temperature: ${settings.temperature !== 0 ? colors.blue(settings.temperature.toString()) : colors.italic(colors.gray('(default)'))}` },
-                    { value: 'useAllSysEnv', name: `Use all system environment variables: ${colors.blue(settings.useAllSysEnv ? 'yes' : 'no')}` },
-                    { value: 'endIfDone', name: `End if assumed done: ${colors.blue(settings.useAllSysEnv ? 'yes' : 'no')}` },
+                    { value: 'useAllSysEnv', name: `Use all system environment variables: ${colors.blue(settings.useAllSysEnv ? colors.green('yes') : colors.red('no'))}` },
+                    { value: 'endIfDone', name: `End if assumed done: ${colors.blue(settings.endIfDone ? colors.green('yes') : colors.red('no'))}` },
                     { value: 'autoExecKeys', name: `Auto execute if commands match: ${colors.blue(settings.autoExecKeys.join(', '))}` },
-                    { value: 'saveSettings', name: `Automatically use the same settings next time: ${colors.blue(settings.saveSettings ? 'yes' : 'no')}` },
-                    
+                    { value: 'saveSettings', name: `Automatically use the same settings next time: ${colors.blue(settings.saveSettings ? colors.green('yes') : colors.red('no'))}` },
 
                     ...(!DEBUG_SYSTEMPROMPT ? [] : [
-                        new Separator(), { value: 'systemPrompt', name: 'Edit System Prompt' }
+                        new Separator(),
+                        { value: 'systemPrompt', name: 'Edit System Prompt' },
                     ]),
 
-                    ...(!settings ? [] : [
-                        new Separator(),
-    
-                        { value: 'importAgent', name: `Select agents${!settings.agentNames.length ? '' : ': ' + colors.blue(settings.agentNames?.join(', ') ?? '')}` },
-                        { value: 'importHistory', name: 'Import context from history files' },
+                    
+                    new Separator(),
+
+                    ...(!prompt ? [] : [
+                        // for each file, there is a prompt about the filename => length / 2  //! TODO do not just devide by 2, but check content
+                        { value: 'addFile', name: `Add a file ${colors.italic(colors.gray(`(currently: ${(prompt.additions?.length ? prompt.additions.length / 2 : 0)})`))}` }
                     ]),
+
+                    { value: 'importAgent', name: `Select agents${!settings.agentNames.length ? '' : ': ' + colors.blue(settings.agentNames?.join(', ') ?? '')}` },
+                    { value: 'importHistory', name: 'Import context from history files' },
+                    
                 ], default: lastSelection }, OPTS)
             ];
 
-        done = options.includes('done');
         
         if (options.includes('driver')) {
             if (settings.driver === '*') settings.driver = settingsSaved?.driver || ''; // allow default
@@ -1248,12 +1259,22 @@ async function config(options?: string[]) {
                 settings.modelName = models.find(({value}) => value === modelSelected)?.name || '';
             }
             if (!models.length || !modelSelected) {
-                // if (settings.driver == 'ollama')
-                //     console.warn('⚠️ The model you enter, will be downloaded and this process might really take a while. No progress will show.');
-                modelSelected = await input({ message: 'Enter your model to use:', default: settings.model || driver.defaultModel }, OPTS);
+                let msg = (settings.driver == 'ollama') ?
+                    '⚠️ The model you enter, will be downloaded and this process might really take a while. No progress will be shown.\n  ' : '';
+                modelSelected = await input({ message: msg + 'Enter your model to use:', default: settings.model || driver.defaultModel,  }, OPTS);
                 settings.modelName = modelSelected;
             }
             settings.model = modelSelected;
+        }
+
+        if (options.includes('addFile') && prompt) {
+            let filename = await fileSelector( { message: 'Select a file to add:'}, TTY_INTERFACE);
+            if (filename) {
+                if (filename.startsWith('"') && filename.endsWith('"')) filename = filename.slice(1, -1); // "file name" is possible
+        
+                let promptAdditions = await addFile(prompt.additions, filename);
+                if (promptAdditions) prompt.additions = promptAdditions;
+            }
         }
 
         if (options.includes('importAgent'))  {
@@ -1264,23 +1285,28 @@ async function config(options?: string[]) {
     
             settings.agentFiles = hasAgentsArgs && !forceSelection
                 ? agents.map(({value}) => value) // getAgents returned only the requested ones
-                :  await checkbox({ message: 'Select agents:', choices: [{ name: colors.red('- none -'), value: '' }, ...agents ] }, OPTS);
+                : await checkbox({ message: 'Select agents:', choices: agents}, OPTS);
             
             settings.agentNames = agents.filter(({value}) => settings.agentFiles.includes(value)).map(({name}) => name);
             delete settingsArgs['agent']; // processed
+            options.push('updateSystemPrompt');
         }
 
         if (options.includes('importHistory'))
             await importHistory('', true);
         
-        if (options.includes('systemPrompt'))
+        if (options.includes('systemPrompt')) {
             settings.systemPrompt = await input({ message: 'Enter your system prompt', default: settings.systemPrompt }, OPTS);
+            options.push('updateSystemPrompt');
+        }
     
         if (options.includes('temperature'))
             settings.temperature = await input({ message: 'Enter the AI temperature (0 for model\'s default):', default: settings.temperature.toString() }, OPTS).then(answer => parseFloat(answer));
             
-        if (options.includes('useAllSysEnv'))
+        if (options.includes('useAllSysEnv')) {
             settings.useAllSysEnv = await toggle({ message: 'Use all system environment variables:', default: settings.useAllSysEnv }, OPTS);
+            options.push('updateSystemPrompt');
+        }
             
         if (options.includes('endIfDone'))
             settings.endIfDone = await toggle({ message: 'End if assumed done:', default: settings.endIfDone }, OPTS);
@@ -1292,10 +1318,128 @@ async function config(options?: string[]) {
             settings.saveSettings = await toggle({ message: `Automatically use the same settings next time:`, default: settings.saveSettings }, OPTS);
 
 
-        lastSelection = options?.pop() ?? '';
+        if (options.includes('updateSystemPrompt')) updateSystemPrompt = true; // persist for multiple loops. using options allows it to be set from outside config()
+        done = options.includes('done'); // done is done.
+        lastSelection = options?.filter(option => option !== 'updateSystemPrompt').pop() ?? ''; // last selection if returned to menu from sub item
+        // -----
         options = undefined; // all options have been processed
-
+    
     } while (!done);
+
+    if (updateSystemPrompt) await makeSystemPromptReady(); // redo the system prompt
+    await saveSettings();
+}
+
+
+/**
+ * Saves the current settings to a configuration file if certain conditions are met.
+ *
+ * This function will save settings under the following conditions:
+ * 1. If the 'reset-prompts' argument is set and there are previously saved settings.
+ * 2. If the 'update' argument is provided.
+ * 3. If the 'saveSettings' option is enabled.
+ * 4. If there are no existing saved settings.
+ * 
+ * The function filters out any settings that are blacklisted before saving.
+ * It also ensures that there are actual differences between the current and saved settings
+ * before performing the save operation.
+ * 
+ * The settings are saved to a specified RC_FILE in JSON format.
+ */
+async function saveSettings(): Promise<void> {
+    // write settings if it is asked for, or if it is not asked for but already saved to remove it
+    if ((settingsArgs['reset-prompts'] && settingsSaved !== undefined) || (settingsArgs['update'] ?? (settings.saveSettings || (!settings.saveSettings && settingsSaved)))) {
+
+        let settingsFiltered: Partial<Settings> = Object.fromEntries(Object.entries(settings).filter(([Key]) => !SETTINGS_BLACKLIST.includes(Key)));
+
+        // make extra sure, there is a difference between settings and saveSettings or param was used to save
+        let isDiff = settingsSaved === undefined || settingsArgs['update'] || Object.keys(settingsFiltered).reduce((acc, key) => acc || settingsFiltered[key] !== settingsSaved![key], false);
+
+        if (isDiff) {
+            let saveData = settingsArgs['update'] ?? settings.saveSettings;
+            if (saveData) {
+                spinner.start(`Updating settings in ${RC_FILE} ...`);
+                await writeFile(RC_FILE, JSON.stringify(settingsFiltered, null, 2), 'utf-8');
+            }
+            else {
+                spinner.start(`Removing ${RC_FILE} ...`);
+                await rm(RC_FILE).catch(_ => undefined);
+                settingsSaved = undefined; // clear saved settings
+            }
+            spinner.success();
+        }
+    }
+}
+
+
+/**
+ * Prepares the system prompt by incorporating environment variables and agent content.
+ *
+ * This function reads agent files and integrates their content into the system prompt. It replaces placeholders in the
+ * `settings.systemPrompt` with actual environment variable values and agent contents. The placeholders include system
+ * details such as username, OS, architecture, and more. If the `precheckLinksInstalled` setting is enabled, it checks
+ * if the `links2` tool is installed and updates the prompt accordingly. The final prepared prompt is stored in
+ * `settings.systemPromptReady`.
+ */
+async function makeSystemPromptReady(): Promise<void> {
+    let agentContent = '';
+    {//* agent
+        if (settings.agentFiles.length) {
+            for (const agentFile of settings.agentFiles) {
+                let agentContentFile = await readFile(agentFile, 'utf-8').catch(_ => undefined);
+                // get from file content the content from after the second '---' if available or everything from the beginning (if formating is broken)
+                if (agentContentFile !== undefined)
+                    agentContent += settings.agentPrompt + '\n' + (agentContent ? '\n---\n' : '') + (agentContentFile?.split('---\n')?.[2] || agentContentFile);
+            }
+        }
+    }
+
+    {//* system prompt
+        settings.systemPromptReady = settings.systemPrompt;
+
+        [
+        // always apply consts here, otherwise they would be saved and this be hard coded
+            ['{{process_env_USERNAME}}', process.env.USERNAME!],
+            ['{{process_env_OS}}', process.env.OS!],
+            ['{{process_platform}}', process.platform],
+            ['{{process_arch}}', process.arch],
+            ['{{process_env_COMPUTERNAME}}', process.env.COMPUTERNAME!],
+            ['{{process_env_SHELL}}', process.env.SHELL ?? process.env.COMSPEC!],
+            ['{{process_env_POSH_SHELL}}', process.env.POSH_SHELL!],
+            ['{{process_env_POSH_SHELL_VERSION}}', process.env.POSH_SHELL_VERSION!],
+            ['{{process_env_HOME}}', process.env.HOME ?? process.env.USERPROFILE!],
+            ['{{process_cwd}}', process.cwd()],
+
+        // apply invoking shell to system prompt
+            ['{{invokingShell}}', getInvokingShell() ?? 'unknown'],
+
+        // apply system env to system prompt or clean up the placeholder
+            ['{{useAllSysEnv}}', settings.useAllSysEnv ? `- You are running on (system environment): ${JSON.stringify(process.env)}` : ''],
+
+            ['{{useAgent}}', agentContent ? `---\n${agentContent}\n---\n` : ''],
+        ].forEach(([placeholder, value]) =>
+            settings.systemPromptReady = settings.systemPromptReady.replaceAll(placeholder!, value!)
+        );
+
+        // allow any other env, if the user modified the prompt - these key names are NOT preceeded with `process_env_` !
+        Object.entries(process.env).forEach(([key, value]) => settings.systemPromptReady.replaceAll(`{{${key}}}`, value!));
+
+        if (settings.precheckLinksInstalled) {
+            try {
+                let output = execSync('links -version', { shell: getInvokingShell() });
+                settings.systemPromptReady = settings.systemPromptReady.replaceAll('{{linksIsInstalled}}', '- links2 is installed and can be used: ' + output);
+                DEBUG_OUTPUT && console.log(colors.green(figures.tick), 'links2 is installed');
+            }
+            catch (error) {
+                settings.systemPromptReady = settings.systemPromptReady.replaceAll('{{linksIsInstalled}}', '- links2 is not yet installed');
+                DEBUG_OUTPUT && console.warn(colors.yellow(figures.cross), 'links2 is not installed');
+            }
+        }
+        else
+            settings.systemPromptReady = settings.systemPromptReady.replaceAll('{{linksIsInstalled}}', '- you need to check if links2 is installed');
+
+        DEBUG_OUTPUT_SYSTEMPROMPT && console.log('DEBUG\n', 'systemPrompt:', settings.systemPromptReady);
+    }
 }
 
 
@@ -1338,7 +1482,7 @@ async function init(): Promise<Prompt> {
 
             case 'config':
                 if (!fs.existsSync(RC_FILE)) {
-                    console.error(`🛑 You have to run at least once and choose to 'Automatically use same settings next time' or use --update, for ${RC_FILE} to exist`);
+                    console.error(colors.red(figures.cross), `You have to run at least once and choose to 'Automatically use same settings next time' or use --update, for ${RC_FILE} to exist`);
                     process.exit(1);
                 }
                 console.info(`✔ Opening ${RC_FILE}`);
@@ -1367,7 +1511,7 @@ async function init(): Promise<Prompt> {
                 break;
 
             default:
-                console.error(`🛑 Unknown option: ${settingsArgs['open']}`);
+                console.error(colors.red(figures.cross), `Unknown option: ${settingsArgs['open']}`);
         }
 
         // give launchEditor a chance to spawn the editor proccess
@@ -1388,7 +1532,7 @@ async function init(): Promise<Prompt> {
 
         await checkUpdateOutput() && console.info('\n');
 
-        console.info(`baio [-vhdmtaqseiucr] ["prompt string"]`);
+        console.info(`baio [-vhdmtaseifucr] ["prompt string"]`);
 
         console.info(`
   -v, --version
@@ -1414,6 +1558,7 @@ async function init(): Promise<Prompt> {
   -f, --file <filename>, ...     Add a single or multiple files to the prompt
 
   -u, --update                   Update user config, and automatically use the same settings next time
+      --no-update                ... to disable
   -c, --config                   Do not prompt, use with other config params
   --settings                     Only shows the settings to edit
 
@@ -1431,6 +1576,12 @@ async function init(): Promise<Prompt> {
         console.info(`History config path: ${RC_HISTORY_PATH}`);
 
         process.exit(0);
+    }
+
+    if (askSettings)
+    {
+        console.log(`${packageJSON.name}, v${packageJSON.version}`);
+        console.log('ℹ️ use CTRL + D to exit at any time.\n');
     }
 
     {//* new update info
@@ -1467,19 +1618,7 @@ async function init(): Promise<Prompt> {
 
     {//* save settings
         // write settings if it is asked for, or if it is not asked for but already saved to remove it
-        if ((settingsArgs['reset-prompts'] && settingsSaved !== undefined) || (settingsArgs['update'] ?? (settings.saveSettings || (!settings.saveSettings && settingsSaved)))) {
-
-            let settingsFiltered: Partial<Settings> = Object.fromEntries(Object.entries(settings).filter(([Key]) => !SETTINGS_BLACKLIST.includes(Key)));
-
-            // make extra sure, there is a difference between settings and saveSettings or param was used to save
-            let isDiff = settingsSaved === undefined || settingsArgs['update'] || Object.keys(settings).reduce((acc, key) => acc || settingsFiltered[key] !== settingsSaved[key], false);
-
-            if (isDiff) {
-                spinner.start(`Updating settings in ${RC_FILE} ...`);
-                await writeFile(RC_FILE, JSON.stringify(settingsArgs['update'] ?? settings.saveSettings ? settings : {}, null, 2), 'utf-8');
-                spinner.success();
-            }
-        }
+        await saveSettings();
     }
 
 
@@ -1488,11 +1627,10 @@ async function init(): Promise<Prompt> {
 
     {//* api key test
         if (settings.driver !== 'ollama' && !drivers[settings.driver]?.apiKey()) {
-            console.error(`🛑 ${drivers[settings.driver]?.name ?? settings.driver} has no API key configured in the environment`);
+            console.error(colors.red(figures.circleCross), `${drivers[settings.driver]?.name ?? settings.driver} has no API key configured in the environment`);
             process.exit(1);
         }
     }
-
     
     {//* connection test
         if (settings.precheckDriverApi) {
@@ -1516,22 +1654,6 @@ async function init(): Promise<Prompt> {
     }
 
     
-    //*** the following options are NOT saved, but can add to settings ***
-
-
-    let agentContent = '';
-    {//* agent
-        if (settings.agentFiles.length) {
-            for (const agentFile of settings.agentFiles) {
-                let agentContentFile = await readFile(agentFile, 'utf-8').catch(_ => undefined);
-                // get from file content the content from after the second '---' if available or everything from the beginning (if formating is broken)
-                if (agentContentFile !== undefined)
-                    agentContent += settings.agentPrompt + '\n' + (agentContent ? '\n---\n' : '') + (agentContentFile?.split('---\n')?.[2] || agentContentFile);
-            }
-        }
-    }
-
-
     //*** initialize for content ***
 
 
@@ -1590,49 +1712,8 @@ async function init(): Promise<Prompt> {
             
     }
     
-    {//* system prompt
-        [
-        // always apply consts here, otherwise they would be saved and this be hard coded
-            ['{{process_env_USERNAME}}', process.env.USERNAME!],
-            ['{{process_env_OS}}', process.env.OS!],
-            ['{{process_platform}}', process.platform],
-            ['{{process_arch}}', process.arch],
-            ['{{process_env_COMPUTERNAME}}', process.env.COMPUTERNAME!],
-            ['{{process_env_SHELL}}', process.env.SHELL ?? process.env.COMSPEC!],
-            ['{{process_env_POSH_SHELL}}', process.env.POSH_SHELL!],
-            ['{{process_env_POSH_SHELL_VERSION}}', process.env.POSH_SHELL_VERSION!],
-            ['{{process_env_HOME}}', process.env.HOME ?? process.env.USERPROFILE!],
-            ['{{process_cwd}}', process.cwd()],
-
-        // apply invoking shell to system prompt
-            ['{{invokingShell}}', getInvokingShell() ?? 'unknown'],
-
-        // apply system env to system prompt or clean up the placeholder
-            ['{{useAllSysEnv}}', settings.useAllSysEnv ? `- You are running on (system environment): ${JSON.stringify(process.env)}` : ''],
-
-            ['{{useAgent}}', agentContent ? `---\n${agentContent}\n---\n` : ''],
-        ].forEach(([placeholder, value]) =>
-            settings.systemPrompt = settings.systemPrompt.replaceAll(placeholder!, value!)
-        );
-
-        // allow any other env, if the user modified the prompt - these key names are NOT preceeded with `process_env_` !
-        Object.entries(process.env).forEach(([key, value]) => settings.systemPrompt.replaceAll(`{{${key}}}`, value!));
-
-        if (settings.precheckLinksInstalled) {
-            try {
-                let output = execSync('links -version', { shell: getInvokingShell() });
-                settings.systemPrompt = settings.systemPrompt.replaceAll('{{linksIsInstalled}}', '- links2 is installed and can be used: ' + output);
-                DEBUG_OUTPUT && console.log(colors.green(figures.tick), 'links2 is installed');
-            }
-            catch (error) {
-                settings.systemPrompt = settings.systemPrompt.replaceAll('{{linksIsInstalled}}', '- links2 is not yet installed');
-                DEBUG_OUTPUT && console.warn(colors.yellow(figures.cross), 'links2 is not installed');
-            }
-        }
-        else
-            settings.systemPrompt = settings.systemPrompt.replaceAll('{{linksIsInstalled}}', '- you need to check if links2 is installed');
-
-        DEBUG_OUTPUT_SYSTEMPROMPT && console.log('DEBUG\n', 'systemPrompt:', settings.systemPrompt);
+    {//* import agent and set params in systemprompt
+        await makeSystemPromptReady();
     }
 
     return { additions: promptAdditions, text: '' };

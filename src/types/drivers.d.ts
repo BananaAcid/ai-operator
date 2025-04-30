@@ -5,7 +5,7 @@ declare global {
         driver: string;
         model: string;
         temperature: number;
-        systemPrompt: string;
+        systemPromptReady: string;
         historySaveThinking: boolean;
     }
     type ModelSelectionSettings = ChatResponseSettings; // Partial<Settings>;
