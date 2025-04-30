@@ -20,12 +20,12 @@
   "scripts": {
     "start": "node --no-warnings=ExperimentalWarning --env-file-if-exists=.env index.ts",
     "test": "node ./bin/baio",
-    "config:create": "node ./bin/baio --config --update --no-ask",
-    "config:remove": "node ./bin/baio --config --reset --no-ask",
+    "config:create": "node ./bin/baio --config --update --no-settings",
+    "config:remove": "node ./bin/baio --config --reset --no-settings",
     "config:promptsreset": "node ./bin/baio --prompts-reset",
-    "test:prompts": "node ./bin/baio --no-config --reset-prompts --no-ask --agent ChickenTalk",
+    "test:prompts": "node ./bin/baio --no-config --reset-prompts --no-settings --agent ChickenTalk",
     "x-postinstall": "npm run updatecheck",
-    "updatecheck": "node ./bin/baio --config --no-ask",
+    "updatecheck": "node ./bin/baio --config --no-settings",
     "prepare": "npx -y npm-check-updates"
   },
   "bin": {
