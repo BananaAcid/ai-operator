@@ -1,6 +1,6 @@
 {
   "name": "baio",
-  "version": "1.0.32",
+  "version": "1.0.33",
   "description": "Simple AI operator for the CLI, for any LLM",
   "main": "src/index.ts",
   "type": "module",

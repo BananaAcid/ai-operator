@@ -242,6 +242,10 @@ Alternative tools to install:
 
 To have it do, what it can't, tell it to use PowerShell or write to a PowerShell script, then let it execute the script.
 
+### The system prompt of this version does not work for me
+
+You can modify the system prompt yourself when opening the config (`baio --open config`). This enables you to check the previous system prompts in the git repository and copy-paste them in to to the config.
+
 ### What providers can Baio be used with?
 
 All can be used with the OpenAI API.

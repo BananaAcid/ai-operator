@@ -416,34 +416,39 @@ async function api(prompt: Prompt): Promise<PromptResult> {
 
     let commands: PromptCommand[] = [];
 
-    {// find all commands with format `<CMD>the commandline command</CMD>` which can be in the middle of a string,
-        //                               /\`?\ *<CMD>(.*?)<\/CMD>\ *\`?/gs;
-        const matches = content.matchAll(/\`*\ *<CMD>(.*?)<\/CMD>\ *\`*/gs);
-        for (const match of matches) {
-            commands.push({type: 'command', line: match[1]!});
+    //                                  /\`?\ *<CMD>(.*?)<\/CMD>\ *\`?
+    //                                  /\`*\ *<CMD>(.*?)<\/CMD>\ *\`*
+    const combinedRegexNamed = /(?<isCmd>\`*\ *<CMD>(?<cmdContent>.*?)<\/CMD>\ *\`*)|(?<isFileWrite>\`?\ *<WRITE-FILE FILEPATH="(?<filePath>.*?)">(?<fileContent>.*?)<\/WRITE-FILE>\ *\`?)/gs;
+    const matches = content.matchAll(combinedRegexNamed);
 
-            // User output:
-            // add ` before and after all <CMD> tags and after all </CMD> tags, if missing --- also remove tags
-            // markdown messed up with commands. use fenced code blocks for long commands to make markdown work
-            if (match[1]?.includes('`') || match[1]?.trim().includes('\n'))
-                content = content.replaceAll(match[0], '\n ▶️ Command: \n```'+getShellName()+'\n' + match[1]?.trim() + '\n```\n');
+    // Iterate over all matches found by the combined regex to preserve the order
+    for (const match of matches) {
+        const fullMatch = match[0];
+        const groups = match.groups;
+        let replacementString = '';
+
+        if (groups?.isCmd) {
+            commands.push({type: 'command', line: groups.cmdContent!});
+
+            // Use fenced code block for commands with backticks or newlines
+            if (groups.cmdContent?.includes('`') || groups.cmdContent?.trim().includes('\n'))
+                replacementString = '\n' + colors.bgBlack(' ▶️  Command:') + '\n```'+getShellName()+'\n' + groups.cmdContent?.trim() + '\n```\n';
+            // Use inline code block for simple commands
             else
-                content = content.replaceAll(match[0], '\n ▶️ `' + match[1]?.trim() + '`');
+                replacementString = '\n ▶️ `' + groups.cmdContent?.trim() + '`';
+            
         }
+        else if (groups?.isFileWrite) {
+            DEBUG_OUTPUT && console.log('file.write', groups.filePath!, 'mime:', mime.getType(groups.filePath!) ?? 'text', 'content length:', groups.fileContent!.length);
+
+            commands.push({type: 'file.write', file: {path: groups.filePath!, mimeType: mime.getType(groups.filePath!) ?? 'text', content: groups.fileContent!}});
+            replacementString = '\n' + colors.bgBlack(' ▶️  Write file: ') + '`' + groups.filePath +'`\n```'+'\n' + groups.fileContent + '\n```\n';
+        }
+
+        if (replacementString) content = content.replaceAll(fullMatch, replacementString);
     }
 
-    {// do files
-        const matchesFiles = content.matchAll(/\`?\ *<WRITE-FILE FILEPATH="(.*?)">(.*?)<\/WRITE-FILE>\ *\`?/gs);
-        for (const match of matchesFiles) {
-            DEBUG_OUTPUT && console.log('file.write', match[1]!, 'mime:', mime.getType(match[1]!) ?? 'text', 'content length:', match[2]!.length);
-
-            commands.push({type: 'file.write', file: {path: match[1]!, mimeType: mime.getType(match[1]!) ?? 'text', content: match[2]!}});
-
-            // prepare for output
-            content = content.replaceAll(match[0], '\n ▶️ Write file: `' + match[1] +'`\n```'+'\n' + match[2] + '\n```\n');
-        }
-    }
-
+    
     // go for agents, that are created by the ai
     // const matchesHelpers = content.matchAll(/\`?\ *<AGENT-DEFINITION NAME="(.*?)">(.*?)<\/AGENT-DEFINITION>\ *\`?/g);
     // for (const match of matchesHelpers)
