@@ -1523,7 +1523,7 @@ async function init(): Promise<Prompt> {
 
             case 'env':
                 if (!fs.existsSync(RC_ENVFILE)) writeFile(RC_ENVFILE, '# To enable the Google API (GEMINI) key, remove the "#" and enter a correct key\n#GEMINI_API_KEY=abcdefg1234567890', 'utf-8');
-                console.info(`✔ Opening ${RC_ENVFILE}`);
+                console.info(colors.green(figures.tick), `Opening ${RC_ENVFILE}`);
                 launchEditor(RC_ENVFILE, (f,e) => console.error(e, f));
                 await new Promise(resolve => setTimeout(resolve, 5000)); // windows explorer needs some time to start up ...
 
@@ -1534,27 +1534,27 @@ async function init(): Promise<Prompt> {
                     console.error(colors.red(figures.cross), `You have to run at least once and choose to 'Automatically use same settings next time' or use --update, for ${RC_FILE} to exist`);
                     process.exit(1);
                 }
-                console.info(`✔ Opening ${RC_FILE}`);
+                console.info(colors.green(figures.tick), `Opening ${RC_FILE}`);
                 launchEditor(RC_FILE);
                 break;
 
             //? special hidden case, will only work if an editor is open that supports opening folders, like vscode / sublime / textwrangler
             case 'pathfiles': 
                 mkdir(RC_PATH, { recursive: true }).catch(_ => {});
-                console.info(`✔ Opening ${RC_PATH}`);
+                console.info(colors.green(figures.tick), `Opening ${RC_PATH}`);
                 launchEditor(RC_PATH);
                 break;
 
             case 'agents':
                 mkdir(RC_AGENTS_PATH, { recursive: true }).catch(_ => {});
-                console.info(`✔ Opening ${RC_AGENTS_PATH}`);
+                console.info(colors.green(figures.tick), `Opening ${RC_AGENTS_PATH}`);
                 await open(RC_AGENTS_PATH); // await does not wait for subprocess to finish spawning
                 await new Promise(resolve => setTimeout(resolve, 1000)); // windows explorer needs some time to start up ...
                 break;
 
             case 'history':
                 mkdir(RC_HISTORY_PATH, { recursive: true }).catch(_ => {});
-                console.info(`✔ Opening ${RC_HISTORY_PATH}`);
+                console.info(colors.green(figures.tick), `Opening ${RC_HISTORY_PATH}`);
                 await open(RC_HISTORY_PATH); // await does not wait for subprocess to finish spawning
                 await new Promise(resolve => setTimeout(resolve, 1000)); // windows explorer needs some time to start up ...
                 break;
@@ -1570,20 +1570,18 @@ async function init(): Promise<Prompt> {
 
     if (settingsArgs['help'])
     {
-        console.info(packageJSON.name,'v' + packageJSON.version);
+        console.info(colors.bold(`${packageJSON.name} v${packageJSON.version}`));
         console.info(packageJSON.description);
         console.info('');
-        console.info(`Copyright (c) ${new Date().getFullYear()} ${packageJSON.author.name} <${packageJSON.author.email}>`);
-        console.info('MIT License');
-        
-        console.info(packageJSON.homepage);
+        console.info(colors.dim( `Copyright (c) ${new Date().getFullYear()} ${packageJSON.author.name} <${packageJSON.author.email}>`) );
+        console.info(colors.dim( `License: ${packageJSON.license}, ${packageJSON.homepage}`) );
         console.info('\n');
 
         await checkUpdateOutput() && console.info('\n');
 
-        console.info(`baio [-vhdmtaseifucr] ["prompt string"]`);
+        console.info(colors.bold('baio'), colors.dim('[-vhdmtaseifucr]'), colors.dim('["prompt string"]'));
 
-        console.info(`
+        const helpText = `
   -v, --version
   -h, -?, --help
 
@@ -1615,14 +1613,26 @@ async function init(): Promise<Prompt> {
   --reset-prompts                Reset prompts only (use this after an update)
 
   --open <config>                Open the file in the default editor or the agents path (env, config, agents, history)
-        `);
+        `;
         // You can pipe in text (like from a file) to be send to the API before your prompt.
 
+        const colorizeHelp = (text: string): string => {
+            const tokenRegex = /(-[\w?]|--[\w-]+|<[^>]+>|\*|[\d.]+)/g;
+            const colorizeToken = (tokenMatch: string): string => {
+                if (tokenMatch.startsWith('-') || tokenMatch.startsWith('--')) return colors.bold(tokenMatch);
+                else if (tokenMatch === '*') return colors.blue(tokenMatch);
+                else if (tokenMatch.startsWith('<') && tokenMatch.endsWith('>')) return colors.yellow(tokenMatch);                
+                return tokenMatch;
+            };
+            return text.split('\n').map(line => line.replace(tokenRegex, colorizeToken)).join('\n');
+        };
+        console.log(colorizeHelp(helpText));
+
         console.info('');
-        console.info(`Settings config path: ${RC_FILE}`);
-        console.info(`Environment config path: ${RC_ENVFILE}`);
-        console.info(`Agents config path: ${RC_AGENTS_PATH}`);
-        console.info(`History config path: ${RC_HISTORY_PATH}`);
+        console.info(colors.bold('Settings config path:'), RC_FILE);
+        console.info(colors.bold('Environment config path:'), RC_ENVFILE);
+        console.info(colors.bold('Agents config path:'), RC_AGENTS_PATH);
+        console.info(colors.bold('History config path:'), RC_HISTORY_PATH);
 
         process.exit(0);
     }
