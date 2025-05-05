@@ -39,7 +39,7 @@ const spinner = yoctoSpinner({text: '', ...(isUnicodeSupported() ? {spinner: cli
 
 //* (try to) handle errors
 // catch ctrl+c and show no error on exit, fix it for the toggle prompt
-process.on('uncaughtException', (error) => { if (error instanceof Error && (error.name === 'ExitPromptError' || error.message.indexOf('User force closed the prompt') >= 0)) { /*console.log('👋 until next time!');*/ } else { console.error(colors.red(figures.cross), error.name + ':', error.message); /* Rethrow unknown errors */ throw error; } });
+process.on('uncaughtException', (error) => { if (error instanceof Error && (error.name === 'ExitPromptError' || error.message.indexOf('User force closed the prompt') >= 0)) { /*console.log('👋 until next time!');*/ } else { console.error(colors.red(figures.cross), error.name + ':', error.message); /* Rethrow unknown errors */ if (!!process.env.DEBUG_ERROR) throw error; } });
 //process.on('warning', (warning) => { if (warning.message.indexOf('unsettled top-level await') == -1) console.warn(warning.name, warning.message); });
 //process.removeAllListeners('warning');
 
@@ -62,6 +62,7 @@ const RC_HISTORY_PATH = path.join(RC_PATH, 'history');
 
 
 //* set DEBUG consts
+const DEBUG_ERROR = !!process.env.DEBUG_ERROR;
 const DEBUG_OUTPUT = !!process.env.DEBUG_OUTPUT;
 const DEBUG_APICALLS = !!process.env.DEBUG_APICALLS;
 const DEBUG_SYSTEMPROMPT = !!process.env.DEBUG_SYSTEMPROMPT;

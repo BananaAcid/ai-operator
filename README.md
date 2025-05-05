@@ -347,6 +347,7 @@ History config path: ................../.baio/history/
 The following environment variables can be used to output debug info. All default to false.
 
 ```env
+DEBUG_ERROR=<boolean>
 DEBUG_OUTPUT=<boolean>
 DEBUG_APICALLS=<boolean>
 DEBUG_SYSTEMPROMPT=<boolean>
@@ -356,6 +357,8 @@ DEBUG_OUTPUT_EXECUTION=<boolean>
 DEBUG_OUTPUT_SYSTEMPROMPT=<boolean>
 DEBUG_APICALLS_PRETEND_ERROR=<boolean>
 ```
+
+`DEBUG_ERROR` enables the details for crash related errors.
 
 `DEBUG_SYSTEMPROMPT` prompts you to optionally overwrite the system prompt. And it outputs it (all of it). And it would be saved if modified and `automatically use settings next time` is selected.
 
@@ -560,3 +563,4 @@ I am mainly using `GEMINI 2.5 Flash` for prompt engineering. Feel free to send i
 | v1.0.30 | Settings in a menu, added prompt trigger `/:settings` to open settings any time and argument `--settings`, allowed `{{ENVNAME}}` in custom system prompts, deprecated `--ask`, fixed argument `--files` to `--file` (to match the help), added `settings.autoExecKeys` to allow baio auto execute commands that begin with one of the defined keywords |
 | v1.0.31 | Added saving when opening menu by trigger, enabled agent selection when opening menu by trigger (not just start), menu related cleanup and fixes, fixed send files list was never cleared and always send again |
 | v1.0.32 | Added addFile to menu on start, fix commandline `*` options to work with new settings |
+| v1.0.33 | Added directly outputting to files |
