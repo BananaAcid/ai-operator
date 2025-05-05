@@ -492,6 +492,9 @@ I expect it
 - **no `tsconfig.json`**, rely on vscode to not need a config (I only used one to check for possible errors in v1.0.27)
 - use a **single monolithic file** and try everything to keep it all readable while going for spaghetti-code (functions mainly for code grouping)
 - **`tsx` to make baio work as a commandline command**, since type-stripped files are not allowed in node modules (like how baio is installed)
+- no classes, try to keep the amount of functions low (but do not repeat code!), use a minimal amount of modules
+
+**Why you ask?** Because I want to use it as testbed for code-transformations by AI. And test my argument on writing this style would require a lot of refactoring each time.
 
 <details>
 <summary>This `tsconfig.json` was used to check:</summary>
@@ -511,7 +514,7 @@ I expect it
     "skipLibCheck": false,
     "sourceMap": true,
     "strict": true,
-    "target": "es2022",
+    "target": "es2024",
     "allowImportingTsExtensions": true, // required to work with NODEJS
     "noEmit": true
   }
