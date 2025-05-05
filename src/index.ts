@@ -1739,7 +1739,7 @@ async function init(): Promise<Prompt> {
 
     {//* api key test
         if (settings.driver !== 'ollama' && !drivers[settings.driver]?.apiKey()) {
-            console.error(colors.red(figures.circleCross), `${drivers[settings.driver]?.name ?? settings.driver} has no API key configured in the environment`);
+            console.error(colors.red(figures.cross), `${drivers[settings.driver]?.name ?? settings.driver} has no API key configured in the environment`);
             process.exit(1);
         }
     }
@@ -1762,7 +1762,7 @@ async function init(): Promise<Prompt> {
     }
 
     {//* check if prompt is actually required
-        if (settingsArgs['config']) process.exit(0);
+        if (settingsArgs['config']) { await new Promise(resolve => setTimeout(resolve, 100)); process.exit(0); }  //! THIS NEEDS TO CONTAIN A TIMEOUT TO FIX A NODEJS ISSUE: https://github.com/nodejs/node/issues/56645
     }
 
     
