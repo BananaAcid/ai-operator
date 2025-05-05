@@ -237,6 +237,7 @@ let settingsDefault: Settings = {
 
         ### Output Rules:
         - Explain **briefly** what you are doing and what each command does.
+        - To directly create or overwrite a file, you need to use \`<WRITE-FILE FILEPATH="filepath/filename">content</WRITE-FILE>\`.
         - **DO NOT** use fenced code blocks (\`\`\`) for executable commands. Instead, always use:  
             \`<CMD>command_here</CMD>\`
         - **If multiple commands need to be executed in sequence, combine them into one <CMD>** to maintain the shell context.  
@@ -253,7 +254,7 @@ let settingsDefault: Settings = {
         - If more info is needed, ask the user and **append** <NEED-MORE-INFO/>.
         - If responding to a user without generating a command, **append** <NEED-MORE-INFO/>.
         - If asked to read a website or url, you need to do so.
-        - You can create and edit or append to files by creating commands that will be executed that write the content into a file.
+        - You can edit or append to files by creating commands that will be executed that write the content into a file.
         - Do not show the commands you are executing without <CMD> tags separately, directly show the commands with <CMD> tags in the response.
 
         ### Execution Results (MUST BE USED BEFORE GENERATING A NEW RESPONSE):
@@ -323,7 +324,7 @@ let settingsDefault: Settings = {
                 You_will_do_something_prompt_texts_here
             - If asked to create an @agent, you will need to:
                 1. Ask what it should be named in a single word, and what it should do (the action will be a prompt for later use)
-                2. Create command to create a new file in the previously mentioned "User's Home Directory" in \`./.baio/agents/<agent_name>.md\` that contains the users prompt (elaborate on the action) and will be phrased like "You will do something"
+                2. Create a new file in the previously mentioned "User's Home Directory" in \`./.baio/agents/<agent_name>.md\` that contains the users prompt (elaborate on the action) and will be phrased like "You will do something"
 
         {{useAgent}}
 
@@ -399,11 +400,10 @@ async function api(prompt: Prompt): Promise<PromptResult> {
             console.error(colors.red(colors.bold(figures.cross)), colors.red(`API Error (${driver.name}): ${result.message}`));
             retry = await toggle({ message: `Do you want to try again?`, default: true }, TTY_INTERFACE);
             if (!retry)
-                return {answer: '', answerFull: '', helpers: [], commands: [], needMoreInfo: true, isEnd: false};
+                return {answer: '', answerFull: '', commands: [], needMoreInfo: true, isEnd: false};
         }
 
     } while(retry);
-
 
     let {contentRaw, history: historyNew} = result as ChatResponse;
     
@@ -413,20 +413,21 @@ async function api(prompt: Prompt): Promise<PromptResult> {
     // remove the <think>...</think> block from the visible output
     let content = contentRaw.replaceAll(/<think>.*?<\/think>/gis, '');
 
-    // find all commands with format `<CMD>the commandline command</CMD>` which can be in the middle of a string,
-    const matches = content.matchAll(/\`?\ *<CMD>(.*?)<\/CMD>\ *\`?/gs);
-    let commands: string[] = [];
-    for (const match of matches)
-        commands.push(match[1]!);
 
+    let commands: PromptCommand[] = [];
 
-    let helpers: PromptHelper[] = [];
+    {// find all commands with format `<CMD>the commandline command</CMD>` which can be in the middle of a string,
+        const matches = content.matchAll(/\`?\ *<CMD>(.*?)<\/CMD>\ *\`?/gs);
+        for (const match of matches)
+            commands.push({type: 'command', line: match[1]!});
+    }
 
     {// do files
         const matchesFiles = content.matchAll(/\`?\ *<WRITE-FILE FILEPATH="(.*?)">(.*?)<\/WRITE-FILE>\ *\`?/gs);
         for (const match of matchesFiles) {
-            helpers.push({type: 'file.write', file: {name: match[1]!, mimeType: mime.getType(match[1]!) ?? 'text', content: match[2]!}});
             DEBUG_OUTPUT && console.log('file.write', match[1]!, 'mime:', mime.getType(match[1]!) ?? 'text', 'content length:', match[2]!.length);
+
+            commands.push({type: 'file.write', file: {path: match[1]!, mimeType: mime.getType(match[1]!) ?? 'text', content: match[2]!}});
 
             // prepare for output
             content = content.replaceAll(match[0], '\nWrite file: `' + match[1] +'`\n```'+'\n' + match[2] + '\n```\n');
@@ -467,7 +468,6 @@ async function api(prompt: Prompt): Promise<PromptResult> {
     return {
         answerFull: contentRaw, // for thinking models debugging
         answer: content,
-        helpers,
         commands,
         needMoreInfo: contentRaw.indexOf('<NEED-MORE-INFO/>') > -1,
         isEnd: contentRaw.indexOf('<END/>') > -1,
@@ -661,25 +661,38 @@ let doCommandsLastResult = '';
  * @param commands The commands to execute
  * @returns The results of the commands as a single string
  */
-async function doCommands(commands: string[]): Promise<string> {
+async function doCommands(commands: PromptCommand[]): Promise<string> {
     let results: string[] = [];
 
     for (const command of commands) {
         spinner.start(`Executing command: ${displayCommand(command)}`);
 
-        // execute command mith node and a promise and wait
-        let result = await new Promise((resolve, reject) => {
-            const child = exec(command, {shell: getInvokingShell() }, (error, stdout, stderr) => {
-                if (error)
-                    reject(error);
-                else
-                    resolve(stdout);
-            });
-        })
-        .then(stdout => '<CMD-OUTPUT>' + stdout + '</CMD-OUTPUT>')
-        .catch(error => '<CMD-ERROR>' + error + '</CMD-ERROR>');
-        
-        results.push('<CMD-INPUT>' + command + '</CMD-INPUT>\n' + result);
+        let result = '';
+        let commandStr = '';
+        if (command.type === 'command') {
+            commandStr = command.line;
+
+            // execute command mith node and a promise and wait
+            result = await new Promise((resolve, reject) => {
+                const child = exec(command.line, {shell: getInvokingShell() }, (error, stdout, stderr) => {
+                    if (error)
+                        reject(error);
+                    else
+                        resolve(stdout);
+                });
+            })
+            .then(stdout => '<CMD-OUTPUT>' + stdout + '</CMD-OUTPUT>')
+            .catch(error => '<CMD-ERROR>' + error + '</CMD-ERROR>');
+        }
+
+        if (command.type === 'file.write') {
+            commandStr = displayCommand(command);
+            result = await writeFile(command.file.path, command.file.content, 'utf-8')
+            .then(stdout => '<CMD-OUTPUT>File written' + (command.userModified ? ' (user modified the content):\n' + command.file.content : '') + '</CMD-OUTPUT>')
+            .catch(error => '<CMD-ERROR>Error writing file:\n' + error + '</CMD-ERROR>');
+        }
+    
+        results.push('<CMD-INPUT>' + commandStr + '</CMD-INPUT>\n' + result);
 
         spinner.success();
     }
@@ -707,14 +720,58 @@ async function doPrompt(prompt: Prompt): Promise<PromptResult> {
 
 
 /**
+ * Retrieves or updates the content of a command based on its type.
+ * 
+ * * commandCaption must have the same commands as commandContent, as defined in PromptCommand
+ * 
+ * @param command - The command object to process.
+ * @param content - Optional new content to update the command with.
+ * @returns The current or updated content of the command.
+ */
+function commandContent(command: PromptCommand, content?: string): string {
+    let result = '';
+    if (command.type === 'command') {
+        if (content !== undefined) { command.userModified = true; command.line = content; }
+        result = command.line;
+    }
+    if (command.type === 'file.write') {
+        if (content !== undefined) { command.userModified = true; command.file.content = content; }
+        result = command.file.content;
+    }
+    return result;
+}
+
+
+/**
+ * Generates a caption for a given command based on its type and modification status.
+ * 
+ * * commandCaption must have the same commands as commandContent, as defined in PromptCommand
+ * 
+ * @param command - The `PromptCommand` object containing information about the command.
+ * @returns A string caption describing the command.
+ */
+function commandCaption(command: PromptCommand): string {
+    let result = '';
+    if (command.type === 'command') result = command.line;
+    if (command.type === 'file.write') result = `Write file: ${colors.italic(command.file.path)}`;
+
+    if (command.userModified) result = colors.blue(figures.star) + ' ' + result;
+    return result;
+}
+
+
+/**
  * Shorten a command for displaying it, limiting it to a maximum length and replace linebreaks with an enter-arrow symbol
  * @param command The command to shorten
  * @returns The shortened command
  */
-function displayCommand(command: string): string {
-    return (command.length > settings.cmdMaxLengthDisplay 
-        ? command.substring(0, settings.cmdMaxLengthDisplay - 4) + ' ...' 
-        : command
+function displayCommand(command: PromptCommand): string {
+
+    let commandStr = commandCaption(command);
+
+    return (commandStr.length > settings.cmdMaxLengthDisplay 
+        ? commandStr.substring(0, settings.cmdMaxLengthDisplay - 4) + ' ...' 
+        : commandStr
     ).replaceAll(/[\n\r]+/g, colors.blue(colors.bold('↵')));
 }
 
@@ -745,16 +802,7 @@ async function doPromptWithCommands(result: PromptResult|undefined): Promise<str
     
         resultCommands = prompt;
     }
-    //* helpers
-    if (result?.helpers.length) {
-        
 
-        // TODO ... make it work ... like writing files. --> checkboxWithActions
-
-
-        console.log( colors.yellow(figures.warning), colors.bold('W O R K   I N   P R O G R E S S.') );
-        console.log('Helpers:', JSON.stringify(result.helpers, null, 2));
-    }
     //* no commands
     if (result && !result.commands.length) {
         //* check if there was a <NEED-MORE-INFO/> in the response
@@ -781,7 +829,7 @@ async function doPromptWithCommands(result: PromptResult|undefined): Promise<str
         for (let command of result.commands) {
             let allowCmd = false;
             for (let key of settings.autoExecKeys) {
-                if (command.startsWith(key)) allowCmd = true;
+                if (command.type == 'command' && command.line.startsWith(key)) allowCmd = true;
             }
             allow &&= allowCmd;
         }
@@ -790,7 +838,7 @@ async function doPromptWithCommands(result: PromptResult|undefined): Promise<str
     //* there are commands
     if (result?.commands.length) {
         let canceled: boolean|'edit' = false;
-        let activeItem:{name:string,value:string,index:number};
+        let activeItem:{name:string,value:PromptCommand,index:number};
         let options = {...TTY_INTERFACE, clearPromptOnDone: false}
         const commands = allow 
             ? result.commands
@@ -823,18 +871,18 @@ async function doPromptWithCommands(result: PromptResult|undefined): Promise<str
 
         if (canceled || !commands.length)
             //@ts-expect-error somehow the type is not correctly inferred
-            if (canceled === 'edit') {
+            if (canceled === 'edit' && activeItem) {
                 let val = await editor({
                     message: 'Waiting for you to close the editor (and you can modify the command).',
                     waitForUseInput: false,
                     theme: { style: { help: () => ``, } },
-                    default: activeItem!.value,
+                    default: commandContent(activeItem.value),
                     postfix: getShellExt(),
                 }, {...TTY_INTERFACE, clearPromptOnDone: true})
                 .catch(_ => undefined);
 
                 if (val !== undefined)
-                    result.commands[activeItem!.index] = val;
+                    commandContent(result.commands[activeItem.index]!, val);
 
                 return undefined;
             }
@@ -1123,7 +1171,6 @@ History: \`${history.length} entries\`\n
             resultPrompt.answer = '';
             resultPrompt.answerFull = '';
             resultPrompt.commands = [];
-            resultPrompt.helpers = [];
             resultPrompt.needMoreInfo = true;
             resultPrompt.isEnd = false;
         }

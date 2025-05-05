@@ -16,6 +16,7 @@ It connects directly to the REST API endpoints of Ollama, OpenAI, Google's AI an
 
 2. Get the AI's response:
     - extract the strings within the `<CMD>...</CMD>` tags
+    - extract content of a file to write within the `<WRITE-FILE FILEPATH="">...</WRITE-FILE>` tags
     - execute the commands locally (for simplicity, each command is spawned in a new shell context)
 
 3. Return the execution results as text to the API
@@ -240,6 +241,36 @@ Alternative tools to install:
 ### It doesn't know how to do something
 
 To have it do, what it can't, tell it to use PowerShell or write to a PowerShell script, then let it execute the script.
+
+### What providers can Baio be used with?
+
+All can be used with the OpenAI API.
+But there are also specific drivers for Google and Ollama (model list is specific) for more detailed model infos and in case of google also better handling like system prompts.
+
+Note: To get the correct URL, try finding `cURL` or `REST` or `Bash` examples for `OpenAI API` on the providers website. The correct URL should end with (but doesn't always) `/v1/chat/completions`.
+
+- Baseten - https://www.baseten.co/
+- Cloudflare Workers AI - https://developers.cloudflare.com/workers-ai/configuration/open-ai-compatibility/
+- gpt4all - https://github.com/nomic-ai/gpt4all
+- Google AI Studio - https://ai.google.dev/gemini-api/docs/openai#node.js
+- Groq - https://groq.com/ - https://docs.x.ai/docs/api-reference
+- Hugging Face Inference API - https://huggingface.co/docs/api-inference/tasks/chat-completion
+- Jan - https://jan.ai/docs/api-server
+- Lightning AI - https://lightning.ai/
+- LiteLLM - https://www.litellm.ai/
+- llama.cpp - https://github.com/ggml-org/llama.cpp?tab=readme-ov-file#llama-server
+- llamafile - https://github.com/Mozilla-Ocho/llamafile
+- LlamaIndex - https://www.llamaindex.ai/
+- LM Studio - https://lmstudio.ai/
+- LMDeploy - https://github.com/InternLM/lmdeploy
+- LocalAI - https://localai.io/
+- Mistral AI - https://mistral.ai/
+- Ollama - https://github.com/ollama/ollama/blob/main/docs/openai.md
+- OpenRouter - https://openrouter.ai/
+- Titan ML - https://www.titanml.co/
+- Vllm - https://docs.vllm.ai/en/v0.6.0/index.html
+- and many more...
+
 
 
 ## Env Config
@@ -563,4 +594,4 @@ I am mainly using `GEMINI 2.5 Flash` for prompt engineering. Feel free to send i
 | v1.0.30 | Settings in a menu, added prompt trigger `/:settings` to open settings any time and argument `--settings`, allowed `{{ENVNAME}}` in custom system prompts, deprecated `--ask`, fixed argument `--files` to `--file` (to match the help), added `settings.autoExecKeys` to allow baio auto execute commands that begin with one of the defined keywords |
 | v1.0.31 | Added saving when opening menu by trigger, enabled agent selection when opening menu by trigger (not just start), menu related cleanup and fixes, fixed send files list was never cleared and always send again |
 | v1.0.32 | Added addFile to menu on start, fix commandline `*` options to work with new settings |
-| v1.0.33 | Added directly outputting to files |
+| v1.0.33 | Added direct writing of file and massivly reducing tokens used due to not including the file content twice (not in the response from the system anymore needed, unless the content was edited in the selection), added a workaround for a Node23 bug |

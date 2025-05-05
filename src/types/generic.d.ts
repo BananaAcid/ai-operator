@@ -8,28 +8,32 @@ declare global {
     };
 
     type PromptFile = {
-        name: string;
+        path: string;
         mimeType: string;
         content: string;
     }
 
-    type PromptHelper = {
-        type: 'agent';
-        name: string;
-        definition: string;
+    type PromptCommand = {
+        type: 'command';
+        userModified?: boolean;
+        line: string;
     } | {
         type: 'file.write';
+        userModified?: boolean; // is a "tainted" flag: if user modifies the content after ai response and before saving
         file: PromptFile;
-    } | {
-        type: 'files.write';
-        files: PromptFile[];
-    };
+    }/* | {
+        type: 'agent';
+        userModified?: boolean;
+        agent: {
+            name: string;
+            definition: string;
+        };
+    }*/;
 
     type PromptResult = {
         answerFull: string; // for thinking models debugging
         answer: string;
-        helpers: PromptHelper[];
-        commands: string[];
+        commands: PromptCommand[];
         needMoreInfo: boolean;
         isEnd: boolean;
     };
