@@ -1213,8 +1213,8 @@ async function config(options: string[]|undefined, prompt: Prompt): Promise<void
                     new Separator(),
 
                     { value: 'driver', name: `AI Driver: ${colors.blue(drivers[settings.driver]?.name ?? 'unknown')}  ${ settings.driver !== 'ollama' ? (colors.italic(drivers[settings.driver]?.apiKey() ? colors.green('(API key found)') : colors.red('(no API key found)'))) : ''}` },
-                    { value: 'model', name: `AI Model: ${colors.blue(settings.modelName || settings.model || (drivers[settings.driver]?.defaultModel ? colors.italic(colors.gray('(default: ' + drivers[settings.driver]?.defaultModel + ')')) : undefined) || '')}` },
-                    { value: 'temperature', name: `AI Temperature: ${settings.temperature !== 0 ? colors.blue(settings.temperature.toString()) : colors.italic(colors.gray('(default)'))}` },
+                    { value: 'model', name: `AI Model: ${colors.blue(settings.modelName || settings.model || (drivers[settings.driver]?.defaultModel ? colors.italic(colors.dim('(default: ' + drivers[settings.driver]?.defaultModel + ')')) : undefined) || '')}` },
+                    { value: 'temperature', name: `AI Temperature: ${settings.temperature !== 0 ? colors.blue(settings.temperature.toString()) : colors.italic(colors.dim('(default)'))}` },
                     { value: 'useAllSysEnv', name: `Use all system environment variables: ${colors.blue(settings.useAllSysEnv ? colors.green('yes') : colors.red('no'))}` },
                     { value: 'endIfDone', name: `End if assumed done: ${colors.blue(settings.endIfDone ? colors.green('yes') : colors.red('no'))}` },
                     { value: 'autoExecKeys', name: `Auto execute if commands match: ${colors.blue(settings.autoExecKeys.join(', '))}` },
@@ -1228,7 +1228,7 @@ async function config(options: string[]|undefined, prompt: Prompt): Promise<void
                     new Separator(),
 
                     // for each file, there is a prompt about the filename => length / 2  //! TODO do not just devide by 2, but check content
-                    { value: 'addFile', name: `Add a file ${colors.italic(colors.gray(`(currently: ${(prompt?.additions?.length ? prompt.additions.length / 2 : 0)})`))}` },
+                    { value: 'addFile', name: `Add a file ${colors.italic(colors.dim(`(currently: ${(prompt?.additions?.length ? prompt.additions.length / 2 : 0)})`))}` },
 
                     { value: 'importAgent', name: `Select agents${!settings.agentNames.length ? '' : ': ' + colors.blue(settings.agentNames?.join(', ') ?? '')}` },
                     { value: 'importHistory', name: 'Import context from history files' },
