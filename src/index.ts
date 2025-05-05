@@ -1786,7 +1786,8 @@ async function init(): Promise<Prompt> {
 
     {//* api key test
         if (settings.driver !== 'ollama' && !drivers[settings.driver]?.apiKey()) {
-            console.error(colors.red(figures.cross), `${drivers[settings.driver]?.name ?? settings.driver} has no API key configured in the environment`);
+            console.error(colors.red(figures.cross), colors.red(`${drivers[settings.driver]?.name ?? settings.driver} has no API key configured in the environment.`));
+            console.info(colors.blueBright(figures.info), `You can run '${packageJSON.name} --open env' to open the environment file and enter your API key.`);
             process.exit(1);
         }
     }
