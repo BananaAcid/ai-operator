@@ -1,7 +1,7 @@
 .history
 __TODO.txt
 test-*.*
-test-stuff
+test-*
 tsconfig.json
 baio-*.tgz
 rollup.*

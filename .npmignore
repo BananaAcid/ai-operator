@@ -2,7 +2,7 @@
 __TODO.txt
 examples
 test-*.*
-test-stuff
+test-*
 tsconfig.json
 baio-*.tgz
 rollup.*
