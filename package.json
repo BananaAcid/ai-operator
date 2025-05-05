@@ -57,7 +57,7 @@
     "provider"
   ],
   "devDependencies": {
-    "@types/node": "^22.15.3"
+    "@types/node": "^22.15.7"
   },
   "dependencies": {
     "@inquirer/prompts": "^7.5.0",
