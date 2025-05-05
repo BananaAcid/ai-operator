@@ -237,7 +237,7 @@ let settingsDefault: Settings = {
 
         ### Output Rules:
         - Explain **briefly** what you are doing and what each command does.
-        - To directly create or overwrite a file, you need to use \`<WRITE-FILE FILEPATH="filepath/filename">content</WRITE-FILE>\`.
+        - To **directly create or overwrite a file**, you need to use \`<WRITE-FILE FILEPATH="filepath/filename">content</WRITE-FILE>\`. This is the **preferred** way of writing files.
         - **DO NOT** use fenced code blocks (\`\`\`) for executable commands. Instead, always use:  
             \`<CMD>command_here</CMD>\`
         - **If multiple commands need to be executed in sequence, combine them into one <CMD>** to maintain the shell context.  
@@ -417,9 +417,19 @@ async function api(prompt: Prompt): Promise<PromptResult> {
     let commands: PromptCommand[] = [];
 
     {// find all commands with format `<CMD>the commandline command</CMD>` which can be in the middle of a string,
-        const matches = content.matchAll(/\`?\ *<CMD>(.*?)<\/CMD>\ *\`?/gs);
-        for (const match of matches)
+        //                               /\`?\ *<CMD>(.*?)<\/CMD>\ *\`?/gs;
+        const matches = content.matchAll(/\`*\ *<CMD>(.*?)<\/CMD>\ *\`*/gs);
+        for (const match of matches) {
             commands.push({type: 'command', line: match[1]!});
+
+            // User output:
+            // add ` before and after all <CMD> tags and after all </CMD> tags, if missing --- also remove tags
+            // markdown messed up with commands. use fenced code blocks for long commands to make markdown work
+            if (match[1]?.includes('`') || match[1]?.trim().includes('\n'))
+                content = content.replaceAll(match[0], '\n ▶️ Command: \n```'+getShellName()+'\n' + match[1]?.trim() + '\n```\n');
+            else
+                content = content.replaceAll(match[0], '\n ▶️ `' + match[1]?.trim() + '`');
+        }
     }
 
     {// do files
@@ -430,7 +440,7 @@ async function api(prompt: Prompt): Promise<PromptResult> {
             commands.push({type: 'file.write', file: {path: match[1]!, mimeType: mime.getType(match[1]!) ?? 'text', content: match[2]!}});
 
             // prepare for output
-            content = content.replaceAll(match[0], '\nWrite file: `' + match[1] +'`\n```'+'\n' + match[2] + '\n```\n');
+            content = content.replaceAll(match[0], '\n ▶️ Write file: `' + match[1] +'`\n```'+'\n' + match[2] + '\n```\n');
         }
     }
 
@@ -445,21 +455,6 @@ async function api(prompt: Prompt): Promise<PromptResult> {
     // clean <NEED-MORE-INFO/> tags, because sometimes they are within strange places
     content = content.replaceAll(/<NEED-MORE-INFO\/>/g, '');
 
-    // User output:
-    // add ` before and after all <CMD> tags and after all </CMD> tags, if missing --- also remove tags
-    // markdown messed up with commands. use fenced code blocks for long commands to make markdown work
-    const regex = /\`*\ *<CMD>(.*?)<\/CMD>\ *\`*/gs;
-    let m;
-
-    while ((m = regex.exec(content)) !== null) {                                       //! TODO  ---  do same syntax as above
-        // This is necessary to avoid infinite loops with zero-width matches
-        if (m.index === regex.lastIndex) regex.lastIndex++;
-
-        if (m[1]?.includes('`') || m[1]?.trim().includes('\n'))
-            content = content.replaceAll(m[0], '\n ▶️ Command: \n```'+getShellName()+'\n' + m[1]?.trim() + '\n```\n');
-        else
-            content = content.replaceAll(m[0], '\n ▶️ `' + m[1]?.trim() + '`');
-    }
 
     try {
         content = cliMd(content); // crashes sometimes : Cannot read properties of undefined (reading 'at') -- /node_modules/cli-html/lib/tags/code.js:12:25
