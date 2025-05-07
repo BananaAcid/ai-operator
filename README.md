@@ -7,7 +7,7 @@ BananaAcid's Artificial Intelligence Operator - made in Germany.
 
 ## How this works
 
-**It is an AI copilot for any of your terminals, on MacOS, Linux, Windows for Google's AI (Gemini), OpenAI (ChatGPT), Ollama (any LLM) and OpenAI-Compatible APIs (like OpenRouter).**
+**It is an AI copilot for any of your terminals, on MacOS, Linux, Windows for Google's AI (Gemini), OpenAI (ChatGPT), Ollama (any LLM) and OpenAI-compatible APIs (like OpenRouter, [example list](#what-providers-can-baio-be-used-with)).**
 
 It connects directly to the REST API endpoints of Ollama, OpenAI, Google's AI and does not use the AI-Tools mechanism so it will work on any AI. The only dependencies are related to the CLI interface. (And tsx for the time being to run the bin.)
 
@@ -587,22 +587,24 @@ done
 
 I am mainly using `GEMINI 2.5 Flash` for prompt engineering. Feel free to send in optimized versions as issues.
 
-| Version | Change Description |
-|---------|---|
-| v1.0.11 | Argument change: `-a` to `-q`, added @agents |
-| v1.0.13 | Argument added: `--open`, Fix: endIfDone:false asks for next objective |
-| v1.0.15 | Changed TSX to be used implicitly from the included version |
-| v1.0.17 | Prompt trigger added `/history:export [<filename>]` and `/history:import [<filename>]`, Argument added: `--import` (history) |
-| v1.0.19 | fixed first prompt did not accept prompt triggers, changed triggers (renamed `/:exit`, `/:quit`, `:q`), added triggers (`:h`, `:r`, `/:read`, `:w`, `/:write`, `/:end`, `/history:export:md` ), added basic support for piping in text (experimental) |
-| v1.0.22 | Added copy-paste, added triggers (`:w+`, `:r+`) |
-| v1.0.23 | Fixed trigger (`:r`, `:r+`), added update check, added options for faster startup, added keys to fall back to the prompt (<kbd>:</kbd> or <kbd>/</kbd> or <kbd>ESC</kbd>) |
-| v1.0.24 | Added showing/editing (by pressing <kbd>w</kbd> or <kbd>right</kbd>) highlighted command (in selection) in the default editor |
-| v1.0.25 | Added prompt trigger (`/history:clear`, `/:clear`), corrected help to show correct `/debug:result` trigger, better display of multiline commands and with backticks, command selection items are cropped, added `settings.cmdMaxLengthDisplay` |
-| v1.0.27 | Argument added: `--file <image/text/...>` and support for adding files (text and image, ...), added fixes for possible bugs, added `precheckLinksInstalled`, fixed multiline commands in selection and progress to be single line and shortened |
-| v1.0.28 | Allow `--driver *` and `--model *` only get a selection for these, api errors are recoverable and can be retried (mind QUOTA errors), reduced duplicate output (showing the command and the command itself) |
-| v1.0.29 | Removed thinking blocks from history to massively reduce token consumption (`settings.historySaveThinking = false`), allow multiple agents by `--agent agent1 --agent agent2`, changed trigger `/debug:get` to output possible keys if no key was given, changed trigger `/debug:settings` to not show prompts by default, but `/debug:settings all` will, allowed prompt trigger `/history:clear <number>` to clear up to the provided amount in case of quota / token max, added prompt trigger `/file:add` to add a file or show a file picker |
-| v1.0.30 | Settings in a menu, added prompt trigger `/:settings` to open settings any time and argument `--settings`, allowed `{{ENVNAME}}` in custom system prompts, deprecated `--ask`, fixed argument `--files` to `--file` (to match the help), added `settings.autoExecKeys` to allow baio auto execute commands that begin with one of the defined keywords |
-| v1.0.31 | Added saving when opening menu by trigger, enabled agent selection when opening menu by trigger (not just start), menu related cleanup and fixes, fixed send files list was never cleared and always send again |
-| v1.0.32 | Added addFile to menu on start, fix commandline `*` options to work with new settings |
-| v1.0.33 | **Added direct writing of files**, this will massivly reduce tokens used due to not including the file content twice (not in the response from the system anymore needed, unless the content was edited in the selection), added a workaround for a Node23 bug |
-| v1.0.34 | Added trigger `::` to return to command selection, added trigger `/history:open` to edit the current context in an editor, added trigger `/history:open:md` to view the context |
+Note: The Git page for the change logs folds the commits with multiple messages.
+
+| Version | Change Description | change logs |
+|---------|---|---|
+| v1.0.11 | Argument change: `-a` to `-q`, added @agents | [1.0.0...1.0.13](https://github.com/BananaAcid/ai-operator/compare/1.0.0...1.0.11) |
+| v1.0.13 | Argument added: `--open`, Fix: endIfDone:false asks for next objective | [1.0.11...1.0.13](https://github.com/BananaAcid/ai-operator/compare/1.0.11...1.0.13) |
+| v1.0.15 | Changed TSX to be used implicitly from the included version | [1.0.13...1.0.15](https://github.com/BananaAcid/ai-operator/compare/1.0.13...1.0.15) |
+| v1.0.17 | Prompt trigger added `/history:export [<filename>]` and `/history:import [<filename>]`, Argument added: `--import` (history) | [1.0.15...1.0.17](https://github.com/BananaAcid/ai-operator/compare/1.0.15...1.0.17) |
+| v1.0.19 | fixed first prompt did not accept prompt triggers, changed triggers (renamed `/:exit`, `/:quit`, `:q`), added triggers (`:h`, `:r`, `/:read`, `:w`, `/:write`, `/:end`, `/history:export:md` ), added basic support for piping in text (experimental) | [1.0.17...1.0.19](https://github.com/BananaAcid/ai-operator/compare/1.0.17...1.0.19) |
+| v1.0.22 | Added copy-paste, added triggers (`:w+`, `:r+`) | [1.0.19...1.0.22](https://github.com/BananaAcid/ai-operator/compare/1.0.19...1.0.22) |
+| v1.0.23 | Fixed trigger (`:r`, `:r+`), added update check, added options for faster startup, added keys to fall back to the prompt (<kbd>:</kbd> or <kbd>/</kbd> or <kbd>ESC</kbd>) | [1.0.22...1.0.23](https://github.com/BananaAcid/ai-operator/compare/1.0.22...1.0.23) |
+| v1.0.24 | Added showing/editing (by pressing <kbd>w</kbd> or <kbd>right</kbd>) highlighted command (in selection) in the default editor | [1.0.23...1.0.24](https://github.com/BananaAcid/ai-operator/compare/1.0.23...1.0.24) |
+| v1.0.25 | Added prompt trigger (`/history:clear`, `/:clear`), corrected help to show correct `/debug:result` trigger, better display of multiline commands and with backticks, command selection items are cropped, added `settings.cmdMaxLengthDisplay` | [1.0.24...1.0.25](https://github.com/BananaAcid/ai-operator/compare/1.0.24...1.0.25) |
+| v1.0.27 | Argument added: `--file <image/text/...>` and support for adding files (text and image, ...), added fixes for possible bugs, added `precheckLinksInstalled`, fixed multiline commands in selection and progress to be single line and shortened | [1.0.25...1.0.27](https://github.com/BananaAcid/ai-operator/compare/1.0.25...1.0.27) |
+| v1.0.28 | Allow `--driver *` and `--model *` only get a selection for these, api errors are recoverable and can be retried (mind QUOTA errors), reduced duplicate output (showing the command and the command itself) | [1.0.27...1.0.28](https://github.com/BananaAcid/ai-operator/compare/1.0.27...1.0.28) |
+| v1.0.29 | Removed thinking blocks from history to massively reduce token consumption (`settings.historySaveThinking = false`), allow multiple agents by `--agent agent1 --agent agent2`, changed trigger `/debug:get` to output possible keys if no key was given, changed trigger `/debug:settings` to not show prompts by default, but `/debug:settings all` will, allowed prompt trigger `/history:clear <number>` to clear up to the provided amount in case of quota / token max, added prompt trigger `/file:add` to add a file or show a file picker | [1.0.28...1.0.29](https://github.com/BananaAcid/ai-operator/compare/1.0.28...1.0.29) |
+| v1.0.30 | Settings in a menu, added prompt trigger `/:settings` to open settings any time and argument `--settings`, allowed `{{ENVNAME}}` in custom system prompts, deprecated `--ask`, fixed argument `--files` to `--file` (to match the help), added `settings.autoExecKeys` to allow baio auto execute commands that begin with one of the defined keywords | [1.0.29...1.0.30](https://github.com/BananaAcid/ai-operator/compare/1.0.29...1.0.30) |
+| v1.0.31 | Added saving when opening menu by trigger, enabled agent selection when opening menu by trigger (not just start), menu related cleanup and fixes, fixed send files list was never cleared and always send again | [1.0.30...1.0.31](https://github.com/BananaAcid/ai-operator/compare/1.0.30...1.0.31) |
+| v1.0.32 | Added addFile to menu on start, fix commandline `*` options to work with new settings | [1.0.31...1.0.32](https://github.com/BananaAcid/ai-operator/compare/1.0.31...1.0.32) |
+| v1.0.33 | **Added direct writing of files**, this will massivly reduce tokens used due to not including the file content twice (not in the response from the system anymore needed, unless the content was edited in the selection), added a workaround for a Node23 bug | [1.0.32...1.0.33](https://github.com/BananaAcid/ai-operator/compare/1.0.32...1.0.33) |
+| v1.0.34 | Added trigger `::` to return to command selection, added trigger `/history:open` to edit the current context in an editor, added trigger `/history:open:md` to view the context | [1.0.33...1.0.34](https://github.com/BananaAcid/ai-operator/compare/1.0.33...1.0.34) |
