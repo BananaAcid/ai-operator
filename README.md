@@ -475,17 +475,21 @@ node bin/baio --reset-prompts ...
 
 ### Testing the package locally (+ installation)
 
+package in powershell, install it globally and test (get version)
 ```powershell
 $BaioVersion = (gc .\package.json | ConvertFrom-Json).version
 rm ./baio-${BaioVersion}.tgz ; npm uninstall -g baio ; npm pack ; npm install -g ./baio-${BaioVersion}.tgz
 baio --version
-baio what is this folder about
 ```
 
+test output (and inner workings)
+```powershell
+baio what is this folder about
+```
 I expect it
 - to scan the folder for files
 - then to read the readme
-- and sum it up
+- and output a summary
 
 
 ### This project is developed with the following specifications in mind:
@@ -528,14 +532,21 @@ I expect it
 
 </details>
 
-## `drivers.ts`
+## `drivers.ts` - AI REST APIs
 
-This file holds Ollama, OpenAI and Google's API in simple self-contained files.
+This file holds Ollama, OpenAI and Google's REST API in a simple **self-contained** file.
 
-No dependencies are used: it uses `fetch()` to connect to the REST API endpoints of the mentioned APIs.
+**No dependencies** are used: it uses `fetch()` to connect to the REST API endpoints of the mentioned APIs.
 
 Feel free to use these in your own projects.
 
+Methods for accessing the functionality:
+
+```typescript
+getModels(settings: ModelSelectionSettings, showSimple = true): Promise<ModelSelection>
+makePromptAddition(type: string, content: string, mimeType: string): GoogleAiPromptAddition|PromptAdditionError
+getChatResponse(settings: ChatResponseSettings, history: any[], promptText: PromptText, promptAdditions?: PromptAdditions): Promise<ChatResponse|ChatResponseError>
+```
 
 ## Helper
 
