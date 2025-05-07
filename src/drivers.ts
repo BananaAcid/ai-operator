@@ -127,6 +127,11 @@ const drivers = {
         async getChatResponse(settings: ChatResponseSettings, history: any[], promptText: PromptText, promptAdditions?: PromptAdditions): Promise<ChatResponse|ChatResponseError> {
             let resultOrig:any;
 
+            // https://cdn.openai.com/spec/model-spec-2024-05-08.html#definitions
+            //  role (required): one of "platform", "developer"(/"system"), "user", "assistant", or "tool"
+            //  role developer<-->system, 'developer' not being backward compatible: https://community.openai.com/t/how-is-developer-message-better-than-system-prompt/1062784
+            //  ollama compatibility: https://www.ollama.com/blog/openai-compatibility
+            //  newer openai models use developer role, but will openai will convert sytem to developer. Ollama does not support developer role, but system role is fine
             const response = await fetch(this.urlChat, {
                 method: 'POST',
                 headers: {

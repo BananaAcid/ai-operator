@@ -409,25 +409,28 @@ To trigger these, **_if you are not on a prompt_**,
 
 | Trigger | Short | Description |
 |---|---|---|
-| `/:help`                           | `:h`  | Shows this help. |
-| `/:settings`                       | `:s`  | Opens settings menu to change the configuration. |
-| `/:read`                           | `:r`  | Opens the default editor for a multiline input. |
-| `/:write`                          | `:w`  | Opens the default editor to show the last AI response. Use to save to a file. |
-| `/clip:read`                       | `:r+` | Read from the clipboard and open the default editor. |
-| `/clip:write`                      | `:w+` | Write the the last AI response to the clipboard. |
-| `/file:add [<filename>]`           | `:f [<filename>]`     | Adds a file to the prompt. Or shows a file selection. |
-| `/history:export [<filename>]`     | `:he [<filename>]`    | Exports the current context to a file with date-time as name or an optional custom filename. |
-| `/history:export:md [<filename>]`  | `:he:md [<filename>]` | Exports the current context to a markdown file for easier reading (can not be imported). |
-| `/history:import [<filename>]`     | `:hi [<filename>]`    | Imports the context from a history file or shows a file selection. |
-| `/history:clear [<number>]`        | `:hc [<number>]`      | Clears the current context (to use current prompt without context). Optionally keeps an amount
-| `/:clear`                          | `:c`  | Clears the current context and current prompt (use for changing topics). |
-| `/:end [<boolean>]`                |       | Toggles end if assumed done, or turns it on or off. |
-| `/debug:result`                    |       | Shows what the API generated and what the tool understood. |
-| `/debug:exec`                      |       | Shows what the system got returned from the shell. Helps debug strange situations. |
-| `/debug:get <.baiorc-key>`         |       | Gets the current value of the key. If no key is given, lists all possible keys. |
-| `/debug:set <.baiorc-key> <value>` |       | Overwrites a setting. The value must be a JSON formatted value. |
-| `/debug:settings [all\|*]`         |       | Lists all current settings without prompts. Use `all` or `*` to also show prompts. |
-| `/:quit`, `/:exit`                 | `:q`  | Will exit (CTRL+D or CTRL+C will also work). |
+| `/:help`                        | `:h`                | Shows this help. |
+| `/:cmds`                        | `::`                | Return to the command selection, if possible. |
+| `/:settings`                    | `:s`                | Opens settings menu to change the configuration. |
+| `/:read`                        | `:r`                | Opens the default editor for a multiline input. |
+| `/:write`                       | `:w`                | Opens the default editor to show the last AI response. Use to save to a file. |
+| `/clip:read`                    | `:r+`, `:cr`      | Read from the clipboard and open the default editor. |
+| `/clip:write`                   | `:w+`, `:cw`      | Write the the last AI response to the clipboard. |
+| `/file:add [<file>]`            | `:f [<file>]`       | Adds a file to the prompt. Or shows a file selection. |
+| `/history:export [<file>]`      | `:he [<file>]`      | Exports the current context to a file with date-time as name or an optional custom filename. |
+| `/history:export:md [<file>]`   | `:he:md [<file>]`   | Exports the current context to a markdown file for easier reading (can not be re-imported). |
+| `/history:open`                 | `:ho`               | Opens the current context in the default editor to edit. |
+| `/history:open:md`              | `:ho:md`            | Opens the current context in the default editor to view it as markdown. |
+| `/history:import [<file>]`      | `:hi [<file>]`      | Imports the context from a history file or shows a file selection. |
+| `/history:clear [<number>]`     | `:hc [<number>]`    | Clears the current context. Optionally: positive number keeps last entries, negative cuts last entries. |
+| `/:clear`                       | `:c`                | Clears the current context and current prompt (use for changing topics). |
+| `/:end [<boolean>]`             |                       | Toggles end if assumed done, or turns it on (true) or off (false). |
+| `/debug:result`                 |                       | Shows what the API generated and what the tool understood. |
+| `/debug:exec`                   |                       | Shows what the system got returned from the shell. Helps debug strange situations. |
+| `/debug:get <key>`              |                       | Gets the current value of the key (same as in baiorc). If no key is given, lists all possible keys. |
+| `/debug:set <key> <value>`      |                       | Overwrites a setting. The value must be a JSON formatted value. |
+| `/debug:settings [all\\|*]`     |                       | Lists all current settings without prompts. Use `all` or `*` to also show prompts. |
+| `/:quit`, `/:exit`            | `:q`                | Will exit (CTRL+D or CTRL+C will also work). |
 
 
 **Note:** If you want to continue, just press enter without any text.
@@ -602,3 +605,4 @@ I am mainly using `GEMINI 2.5 Flash` for prompt engineering. Feel free to send i
 | v1.0.31 | Added saving when opening menu by trigger, enabled agent selection when opening menu by trigger (not just start), menu related cleanup and fixes, fixed send files list was never cleared and always send again |
 | v1.0.32 | Added addFile to menu on start, fix commandline `*` options to work with new settings |
 | v1.0.33 | **Added direct writing of files**, this will massivly reduce tokens used due to not including the file content twice (not in the response from the system anymore needed, unless the content was edited in the selection), added a workaround for a Node23 bug |
+| v1.0.34 | Added trigger `::` to return to command selection, added trigger `/history:open` to edit the current context in an editor, added trigger `/history:open:md` to view the context |

@@ -93,6 +93,12 @@ type Driver = typeof drivers[keyof typeof drivers];
 function isSettingsKey(key: string|undefined): key is keyof Settings { return (key !== undefined && key in settings); }
 
 
+//* extend basic types
+declare global { interface String { trimBlock(left?: number): string; } }
+String.prototype.trimBlock = function (left = 0): string {
+    return this.split('\n').map(line => ' '.repeat(left) + line.trim()).join('\n');
+};
+
 //* defs
 const AUTOEXEC_KEYS = ['links', 'curl', 'wget', 'Invoke-WebRequest', 'iwr']; // dir, ls, gci, Get-ChildItem ?
 const SETTINGS_BLACKLIST: Array<keyof SettingsBlacklisted> = ['addedFiles', 'agentFiles', 'agentNames', 'systemPromptReady']; // keys not to save
@@ -904,7 +910,7 @@ async function doPromptWithCommands(result: PromptResult|undefined): Promise<str
 /**
  * Import a context (history file) from a file name or selection.
  * @param filename the file name of the history file to import
- * @param isAsk    defaults to false. If true, the user will be asked even if by the settings it would not and if no filename is given
+ * @param isAsk    defaults to false. If true, there will be a prompt for the user (used by menu)
  * @returns if done
  */
 async function importHistory(filename: string, isAsk: boolean = false): Promise<void> {
@@ -917,6 +923,7 @@ async function importHistory(filename: string, isAsk: boolean = false): Promise<
 
         if (!historyFilesChoices.length) {
             !isAsk && console.error(colors.red(figures.cross), 'No history files found');
+            isAsk && await input({ message: 'No history files found. Press enter to continue', default: '', theme: {prefix: colors.bold(colors.red(figures.cross))} }, {clearPromptOnDone: true, ...TTY_INTERFACE});
             return;
         }
         filename = await select({ message: 'Select a history file to load:', choices: [{ name: colors.red('- none -'), value: '' }, ...historyFilesChoices] }, TTY_INTERFACE);
@@ -1007,57 +1014,62 @@ async function addFile(promptAdditions: PromptAdditions, filename: string): Prom
  */
 async function promptTrigger(/*inout*/ prompt: Prompt, /*inout*/ resultPrompt?: PromptResult): Promise<boolean> {
 
-    if (prompt.text === ':h' || prompt.text === '/:help') {
+    let trigger = prompt.text.match(/^[^\s]*/)?.[0].toLowerCase() || '';
+
+    if (trigger === ':h' || trigger === '/:help') {
         console.info(packageJSON.name,'v' + packageJSON.version);
         console.log(cliMd(`
-AI Driver: \`${drivers[settings.driver]?.name ?? settings.driver}\`\n
-AI Model: \`${settings.modelName || (settings.model ?? drivers[settings.model]?.defaultModel)}\`\n
-History: \`${history.length} entries\`\n
+            AI Driver: \`${drivers[settings.driver]?.name ?? settings.driver}\`\n
+            AI Model: \`${settings.modelName || (settings.model ?? drivers[settings.model]?.defaultModel)}\`\n
+            History: \`${history.length} entries\`\n
 
-| Possible prompt triggers | Short | Description |
-|---|---|---|
-| \`/:help\`                           | \`:h\`  | Shows this help. |
-| \`/:settings\`                       | \`:s\`  | Opens settings menu to change the configuration. |
-| \`/:read\`                           | \`:r\`  | Opens the default editor for a multiline input. |
-| \`/:write\`                          | \`:w\`  | Opens the default editor to show the last AI response. Use to save to a file. |
-| \`/clip:read\`                       | \`:r+\` | Read from the clipboard and open the default editor. |
-| \`/clip:write\`                      | \`:w+\` | Write the the last AI response to the clipboard. |
-| \`/file:add [<filename>]\`           | \`:f [<filename>]\`     | Adds a file to the prompt. Or shows a file selection. |
-| \`/history:export [<filename>]\`     | \`:he [<filename>]\`    | Exports the current context to a file with date-time as name or an optional custom filename. |
-| \`/history:export:md [<filename>]\`  | \`:he:md [<filename>]\` | Exports the current context to a markdown file for easier reading (can not be imported). |
-| \`/history:import [<filename>]\`     | \`:hi [<filename>]\`    | Imports the context from a history file or shows a file selection. |
-| \`/history:clear [<number>]\`        | \`:hc [<number>]\`      | Clears the current context (to use current prompt without context). Optionally keeps an amount. |
-| \`/:clear\`                          | \`:c\`  | Clears the current context and current prompt (use for changing topics). |
-| \`/:end [<boolean>]\`                |         | Toggles end if assumed done, or turns it on or off. |
-| \`/debug:result\`                    |         | Shows what the API generated and what the tool understood. |
-| \`/debug:exec\`                      |         | Shows what the system got returned from the shell. Helps debug strange situations. |
-| \`/debug:get <.baiorc-key>\`         |         | Gets the current value of the key. If no key is given, lists all possible keys. |
-| \`/debug:set <.baiorc-key> <value>\` |         | Overwrites a setting. The value must be a JSON formatted value. |
-| \`/debug:settings [all\\|*]\`        |         | Lists all current settings without prompts. Use \`all\` or \`*\` to also show prompts. |
-| \`/:quit\`, \`/:exit\`               | \`:q\`  | Will exit (CTRL+D or CTRL+C will also work). |
-        `));
+            | Possible prompt triggers | Short | Description |
+            |---|---|---|
+            | \`/:help\`                        | \`:h\`                | Shows this help. |
+            | \`/:cmds\`                        | \`::\`                | Return to the command selection, if possible. |
+            | \`/:settings\`                    | \`:s\`                | Opens settings menu to change the configuration. |
+            | \`/:read\`                        | \`:r\`                | Opens the default editor for a multiline input. |
+            | \`/:write\`                       | \`:w\`                | Opens the default editor to show the last AI response. Use to save to a file. |
+            | \`/clip:read\`                    | \`:r+\`, \`:cr\`      | Read from the clipboard and open the default editor. |
+            | \`/clip:write\`                   | \`:w+\`, \`:cw\`      | Write the the last AI response to the clipboard. |
+            | \`/file:add [<file>]\`            | \`:f [<file>]\`       | Adds a file to the prompt. Or shows a file selection. |
+            | \`/history:export [<file>]\`      | \`:he [<file>]\`      | Exports the current context to a file with date-time as name or an optional custom filename. |
+            | \`/history:export:md [<file>]\`   | \`:he:md [<file>]\`   | Exports the current context to a markdown file for easier reading (can not be re-imported). |
+            | \`/history:open\`                 | \`:ho\`               | Opens the current context in the default editor to edit. |
+            | \`/history:open:md\`              | \`:ho:md\`            | Opens the current context in the default editor to view it as markdown. |
+            | \`/history:import [<file>]\`      | \`:hi [<file>]\`      | Imports the context from a history file or shows a file selection. |
+            | \`/history:clear [<number>]\`     | \`:hc [<number>]\`    | Clears the current context. Optionally: positive number keeps last entries, negative cuts last entries. |
+            | \`/:clear\`                       | \`:c\`                | Clears the current context and current prompt (use for changing topics). |
+            | \`/:end [<boolean>]\`             |                       | Toggles end if assumed done, or turns it on (true) or off (false). |
+            | \`/debug:result\`                 |                       | Shows what the API generated and what the tool understood. |
+            | \`/debug:exec\`                   |                       | Shows what the system got returned from the shell. Helps debug strange situations. |
+            | \`/debug:get <key>\`              |                       | Gets the current value of the key (same as in baiorc). If no key is given, lists all possible keys. |
+            | \`/debug:set <key> <value>\`      |                       | Overwrites a setting. The value must be a JSON formatted value. |
+            | \`/debug:settings [all\\|*]\`     |                       | Lists all current settings without prompts. Use \`all\` or \`*\` to also show prompts. |
+            | \`/:quit\`, \`/:exit\`            | \`:q\`                | Will exit (CTRL+D or CTRL+C will also work). |
+        `.trimBlock()));
         return true;
     }
-    if (prompt.text === '/:settings' || prompt.text === ':s') {
+    if (trigger === '/:settings' || trigger === ':s') {
         await config(undefined, prompt);
         return true;
     }
-    if (prompt.text === '/debug:result') {
+    if (trigger === '/debug:result') {
         console.log(resultPrompt);
         return true;
     }
-    if (prompt.text === '/debug:exec') {
+    if (trigger === '/debug:exec') {
         console.log(doCommandsLastResult);
         return true;
     }
-    if (prompt.text.startsWith('/debug:settings')) {
+    if (trigger === '/debug:settings') {
         const key = prompt.text.split(/(?<!\\)\s+/)[1];
         // if all or *, return all. if no key, return all settings where the key does not start with prompt
         const settingsOutput = key == 'all' || key == '*' ? settings : Object.fromEntries(Object.entries(settings).filter(([key]) => !key.endsWith('Prompt')));
         console.log(colors.green(figures.info), `settings =`, settingsOutput);
         return true;
     }
-    if (prompt.text.startsWith('/debug:get')) {
+    if (trigger === '/debug:get') {
         const key = prompt.text.split(/(?<!\\)\s+/)[1];
         if (key)
             console.log(colors.green(figures.info), `settings.${key} =`, isSettingsKey(key) ? settings[key] : 'not found');
@@ -1065,10 +1077,14 @@ History: \`${history.length} entries\`\n
             console.log(colors.blueBright('?'), `Possible keys:`, Object.keys(settings).join(', '));
         return true;
     }
-    if (prompt.text.startsWith('/debug:set ')) {
+    if (trigger === '/debug:set') {
         //* will not work with useAllSysEnv (is systemPrompt is already generated with this), saveSettings (saved already)
-        //*  /debug:set <.baiorc-key> <JSON_formatted_value>
+        //*  /debug:set <baiorc-key> <JSON_formatted_value>
         const args = prompt.text.split(/(?<!\\)\s+/).filter(arg => arg.length > 0);
+        if (!args || args.length < 2) {
+            console.error(colors.red(figures.cross), `Usage: /debug:set <baiorc-key> <JSON_formatted_value>`);
+            return true;
+        }
         const key = args[1],
               val = args.slice(2).join(' ');
         try {
@@ -1082,7 +1098,7 @@ History: \`${history.length} entries\`\n
         }
         return true;
     }
-    if (prompt.text.startsWith('/:end')) { // ==> /debug:set endIfDone <boolean>
+    if (trigger === '/:end') { // ==> /debug:set endIfDone <boolean>
         const key = prompt.text.split(/(?<!\\)\s+/)[1];
         if (key === undefined || key.trim() === '')
             settings.endIfDone = !settings.endIfDone;
@@ -1092,11 +1108,34 @@ History: \`${history.length} entries\`\n
         console.log(`${settings.endIfDone ? '🟢' : '🔴'}End if assumed done: ${settings.endIfDone ? 'yes' : 'no'}`);
         return true;
     }
-    let exportType='json';
-    if (prompt.text.startsWith('/history:export:md') || prompt.text.startsWith(':he:md')) {
-        exportType = 'md';
+    let exportOpenType:false|'edit'|'view' = false;
+    if (trigger === '/history:open:md' || trigger === ':ho:md' || trigger === ':he:md:o') {
+        exportOpenType = 'view';
+        trigger = '/history:export:md'; // how to handle next
     }
-    if (prompt.text.startsWith('/history:export') || prompt.text.startsWith(':he')) {
+    let exportType='json';
+    if (trigger === '/history:export:md' || trigger === ':he:md') {
+        exportType = 'md';
+        trigger = '/history:export'; // how to handle next
+    }
+    if (trigger === '/history:open' || trigger === ':ho' || trigger === ':he:o') {
+        exportOpenType = 'edit';
+        //trigger = '/history:export'; // how to handle next
+
+        const value = await editor({
+            message: 'Waiting for your input in the editor.',
+            waitForUseInput: false,
+            default: JSON.stringify(history, null, 2) ?? '{}',
+            theme: { style: { help: () => `Edit the history content in the editor, save the file and close it.`, } }
+        }, TTY_INTERFACE).catch(_ => undefined);
+        if (value) {
+            try { history = JSON.parse(value); }
+            catch (e) { console.error(colors.red(figures.cross), colors.red('Failed to parse JSON.\n  ' + (e as SyntaxError).message)); }
+        }
+
+        return true;
+    }
+    if (trigger === '/history:export' || trigger === ':he') {
         const key = prompt.text.split(/(?<!\\)\s+/).filter(arg => arg.length > 0).slice(1).join(' ').trim();
         let filename = key || (new Date()).toLocaleString().replace(/[ :]/g, '-').replace(/,/g, '')+`_${settings.driver}_${settings.model.replace(/[^a-zA-Z0-9_-]/g, '_')}`;
         if (filename.startsWith('"') && filename.endsWith('"')) filename = filename.slice(1, -1); // "file name" is possible
@@ -1109,10 +1148,12 @@ History: \`${history.length} entries\`\n
         }
         else if (exportType == 'md') {
             if (!filename.toLowerCase().endsWith('.json')) filename += '.md';
-            //content =  a flattened object, where all keys that do not have a child, will be inlcuded with key:content
+            //content =  a flattened object, where all keys that do not have a child, will be inlcuded
             let contentStrings:string[] = [];
             function walk(obj:Record<string, any>) {
+                if (obj['role']) contentStrings.push(obj['role']); // output first
                 for (const key in obj) {
+                    if (key === 'role') continue;
                     if (typeof obj[key] === 'string') {
                         contentStrings.push(obj[key]);
                     } else {
@@ -1121,14 +1162,26 @@ History: \`${history.length} entries\`\n
                 }
             }
             walk(history);
-            contentStrings = contentStrings
-                // remove role strings
-                .filter(item => !['user', 'model', 'library', 'assistant'].includes(item))
-                // remove ansi escape codes (cli output colors and alike)
-                .map(item => item.replace(/[\u001b\u009b][[()#;?]*(?:[0-9]{1,4}(?:;[0-9]{0,4})*)?[0-9A-ORZcf-nqry=><]/g,""));
+            contentStrings = [
+                `   ---
+                    title: Baio context export
+                    description: Readable context as markdown
+                    editor: markdown
+                    dateCreated: ${(new Date()).toISOString()}
+                    ---
+                `.trimBlock(),
+                ...contentStrings
+                    // remove unnecessary strings
+                    //.filter(item => !['...'].includes(item))
+                    // add headers for each section by role (google can have multiple messages per role)
+                    //   text becomes header by having --- directly below it, no need for extra hashes
+                    .map(item => ['user',   'library', 'model', 'assistant'].includes(item) ? '\n'.repeat(1) + `**${item}:**\n` : '\n'.repeat(3) + item + '\n'.repeat(3))
+                    // remove ansi escape codes (cli output colors and alike)
+                    .map(item => item.replace(/[\u001b\u009b][[()#;?]*(?:[0-9]{1,4}(?:;[0-9]{0,4})*)?[0-9A-ORZcf-nqry=><]/g,""))
+            ];
 
             // add separators
-            content = contentStrings.join( '\n'.repeat(4) + '-'.repeat(30) + '\n'.repeat(4) );
+            content = contentStrings.join( '-'.repeat(30) );
 
             console.log(`⚠️ This type of history can NOT be imported and is only for viewing.`);
         }
@@ -1139,31 +1192,42 @@ History: \`${history.length} entries\`\n
 
         if (saved !== true)
             console.error(colors.red(figures.cross), `Failed to save history to ${historyPath}: ${saved}`);
-        else
+        else {
             console.log(`💾 Exported history to ${historyPath}`);
+
+            if (exportOpenType === 'view') launchEditor(historyPath);
+        }
         return true;
     }
-    if (prompt.text.startsWith('/history:import') || prompt.text.startsWith(':hi')) {
+    if (trigger === '/history:import' || trigger === ':hi') {
         let filename = prompt.text.split(/(?<!\\)\s+/).filter(arg => arg.length > 0).slice(1).join(' ').trim();
         await importHistory(filename);
         return true;
     }
-    if (prompt.text.startsWith('/history:clear') || prompt.text.startsWith(':hc')) {
+    if (trigger === '/history:clear' || trigger === ':hc') {
         const key = prompt.text.split(/(?<!\\)\s+/)[1];
+        const historyOldLength = history.length;
         if (key) {
             const num = parseInt(key);
             if (Number.isNaN(num)) {
                 console.error(colors.red(figures.cross), `Not a number: ${key}`);
                 return true;
             }
-            history = history.slice(-num);
+            // (-3) => lenght-3 to length
+            // (0, -1) => 0 to length-1
+            history = num < 0 ? history.slice(0, /* is negative */ num) : history.slice(-num);
+            if (num < 0 && history.length > 0)
+                console.log(colors.green('') +`🗑️ Last ${colors.green((-num).toString())} history entries removed (${colors.blue(historyOldLength.toString())} → ${colors.blue(history.length.toString())}). Last entry now is from: ${colors.green(history[history.length-1]?.role ?? '')}`);
+            else 
+                console.log(`🗑️ History cleared (${colors.blue(historyOldLength.toString())} → ${colors.blue(history.length.toString())}).`);
         }
-        else
+        else {
             history = [];
-        console.log(`🗑️ History cleared.`);
+            console.log(`🗑️ History cleared.`);
+        }
         return true;
     }
-    if (prompt.text.startsWith('/:clear') || prompt.text.startsWith(':c')) {
+    if (trigger === '/:clear' || trigger === ':c') {
         history = [];
         prompt.text = '';
         prompt.additions = undefined;
@@ -1178,7 +1242,7 @@ History: \`${history.length} entries\`\n
         return true;
     }
     let pasteContent: string|undefined = undefined;
-    if (prompt.text === '/clip:read' || prompt.text === ':r+' || prompt.text === ':r +') {
+    if (trigger === '/clip:read' || trigger === ':cr' || trigger === ':r+' || prompt.text === ':r +') {
         pasteContent = await clipboard.paste() || '';
         if (!pasteContent) {
             console.log(colors.red(figures.cross), `Failed to read anything from clipboard`);
@@ -1186,7 +1250,7 @@ History: \`${history.length} entries\`\n
         }
         console.log(`📋 Read from clipboard`);
     }
-    if (prompt.text === '/:read' || prompt.text === ':r' || pasteContent) {
+    if (trigger === '/:read' || trigger === ':r' || pasteContent) {
         const value = await editor({
             message: 'Waiting for your input in the editor.',
             waitForUseInput: false,
@@ -1199,12 +1263,12 @@ History: \`${history.length} entries\`\n
         }
         return true;
     }
-    if (prompt.text === '/clip:write' || prompt.text === ':w+' || prompt.text === ':w +') {
+    if (trigger === '/clip:write' || trigger === ':cw' || trigger === ':w+' || prompt.text === ':w +') {
         clipboard.copy(resultPrompt?.answerFull ?? '');
         console.log(`📋 Copied to clipboard`);
         return true;
     }
-    if (prompt.text === '/:write' || prompt.text === ':w') {
+    if (trigger === '/:write' || trigger === ':w') {
         if (!resultPrompt?.answerFull) {
             console.log(colors.red(figures.cross), `There is nothing from a previous AI response`);
             return true;
@@ -1218,7 +1282,7 @@ History: \`${history.length} entries\`\n
         }, TTY_INTERFACE).catch(_ => undefined);
         return true;
     }
-    if (prompt.text.startsWith('/file:add') || prompt.text.startsWith(':f')) {
+    if (trigger === '/file:add' || trigger === ':f') {
         const key = prompt.text.split(/(?<!\\)\s+/).filter(arg => arg.length > 0).slice(1).join(' ').trim();
         let filename = key || await fileSelector( { message: 'Select a file to add:'}, TTY_INTERFACE);
         if (!filename) { console.error(colors.red(figures.cross), 'No file selected'); return true; }        
@@ -1231,7 +1295,11 @@ History: \`${history.length} entries\`\n
         return true;
     }
 
-    if (prompt.text === '/:exit' || prompt.text === '/:quit' || prompt.text === ':q') {
+    if (trigger === '/:cmds' || trigger === '::') {
+        return true;
+    }
+
+    if (trigger === '/:exit' || trigger === '/:quit' || trigger === ':q') {
         process.exit(0);
     }
 
@@ -1369,9 +1437,12 @@ async function config(options: string[]|undefined, prompt: Prompt): Promise<void
     
             const agents = await getAgents();
     
-            settings.agentFiles = hasArgs && !forceSelection
-                ? agents.map(({value}) => value) // getAgents returned only the requested ones
-                : await checkbox({ message: 'Select agents:', choices: agents}, OPTS);
+            if (!getAgents.length)
+                await input({ message: 'No agents found. Press enter to continue', default: '', theme: {prefix: colors.bold(colors.red(figures.cross))} }, OPTS);
+            else 
+                settings.agentFiles = hasArgs && !forceSelection
+                    ? agents.map(({value}) => value) // getAgents returned only the requested ones
+                    : await checkbox({ message: 'Select agents:', choices: agents}, OPTS);
             
             settings.agentNames = agents.filter(({value}) => settings.agentFiles.includes(value)).map(({name}) => name);
             options.push('updateSystemPrompt');
@@ -1630,38 +1701,38 @@ async function init(): Promise<Prompt> {
         console.info(colors.bold('baio'), colors.dim('[-vhdmtaseifucr]'), colors.dim('["prompt string"]'));
 
         const helpText = `
-  -v, --version
-  -h, -?, --help
+            -v, --version
+            -h, -?, --help
 
-  -d, --driver <api-driver>      Select a driver (ollama, openai, googleai)
-  -d *, --driver *               Ask for a driver with a list, even if it would not
-  -m, --model <model-name>       Select a model
-  -m *, --model *                Ask for a model with a list, even if it would not
-  -t, --temp <float>             Set a temperature, e.g. 0.7 (0 for model default)
+            -d, --driver <api-driver>      Select a driver (ollama, openai, googleai)
+            -d *, --driver *               Ask for a driver with a list, even if it would not
+            -m, --model <model-name>       Select a model
+            -m *, --model *                Ask for a model with a list, even if it would not
+            -t, --temp <float>             Set a temperature, e.g. 0.7 (0 for model default)
 
-  -a, --agent <agent-name>, ...  Select an agent or multiple, (a set of prompts for specific tasks)
-  -a *, --agent *                Ask for agent with a list, even if it would not
+            -a, --agent <agent-name>, ...  Select an agent or multiple, (a set of prompts for specific tasks)
+            -a *, --agent *                Ask for agent with a list, even if it would not
 
-  -s, --sysenv                   Allow to use the complete system environment
-      --no-sysenv                ... to disable
-  -e, --end                      End prompting if assumed done
-      --no-end                   ... to disable
+            -s, --sysenv                   Allow to use the complete system environment
+                --no-sysenv                ... to disable
+            -e, --end                      End prompting if assumed done
+                --no-end                   ... to disable
 
-  -i, --import <filename>        Import context from a history file or list files select from
-  -i *, --import *               Ask for history file with a list, even if it would not
+            -i, --import <filename>        Import context from a history file or list files select from
+            -i *, --import *               Ask for history file with a list, even if it would not
 
-  -f, --file <filename>, ...     Add a single or multiple files to the prompt
+            -f, --file <filename>, ...     Add a single or multiple files to the prompt
 
-  -u, --update                   Update user config, and automatically use the same settings next time
-      --no-update                ... to disable
-  -c, --config                   Do not prompt, use with other config params
-  --settings                     Only shows the settings to edit
+            -u, --update                   Update user config, and automatically use the same settings next time
+                --no-update                ... to disable
+            -c, --config                   Do not prompt, use with other config params
+            --settings                     Only shows the settings to edit
 
-  -r, --reset                    Reset (remove) config
-  --reset-prompts                Reset prompts only (use this after an update)
+            -r, --reset                    Reset (remove) config
+            --reset-prompts                Reset prompts only (use this after an update)
 
-  --open <config>                Open the file in the default editor or the agents path (env, config, agents, history)
-        `;
+            --open <config>                Open the file in the default editor or the agents path (env, config, agents, history)
+        `.trimBlock(2);
         // You can pipe in text (like from a file) to be send to the API before your prompt.
 
         const colorizeHelp = (text: string): string => {
