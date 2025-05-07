@@ -377,28 +377,6 @@ Agents config path: ................../.baio/agents/
 History config path: ................../.baio/history/
 ```
 
-
-## Debugging
-The following environment variables can be used to output debug info. All default to false.
-
-```env
-DEBUG_ERROR=<boolean>
-DEBUG_OUTPUT=<boolean>
-DEBUG_APICALLS=<boolean>
-DEBUG_SYSTEMPROMPT=<boolean>
-DEBUG_OUTPUT_MODELS=<boolean>
-DEBUG_OUTPUT_MODELNAME=<boolean>
-DEBUG_OUTPUT_EXECUTION=<boolean>
-DEBUG_OUTPUT_SYSTEMPROMPT=<boolean>
-DEBUG_APICALLS_PRETEND_ERROR=<boolean>
-```
-
-`DEBUG_ERROR` enables the details for crash related errors.
-
-`DEBUG_SYSTEMPROMPT` prompts you to optionally overwrite the system prompt. And it outputs it (all of it). And it would be saved if modified and `automatically use settings next time` is selected.
-
-Setting these in Powershell, here is an example: `$env:DEBUG_OUTPUT = $true ; baio ...`
-
 ### Prompt Triggers
 
 To trigger these, **_if you are not on a prompt_**,
@@ -433,7 +411,31 @@ To trigger these, **_if you are not on a prompt_**,
 | `/:quit`, `/:exit`            | `:q`                | Will exit (CTRL+D or CTRL+C will also work). |
 
 
-**Note:** If you want to continue, just press enter without any text.
+**Note:** If you want to continue, just press enter without any text, if you want to get the last command selection (if there are commands to execute) enter `::`.
+
+
+## Debugging
+The following environment variables can be used to output debug info. All default to false.
+
+```env
+DEBUG_ERROR=<boolean>
+DEBUG_OUTPUT=<boolean>
+DEBUG_APICALLS=<boolean>
+DEBUG_SYSTEMPROMPT=<boolean>
+DEBUG_OUTPUT_MODELS=<boolean>
+DEBUG_OUTPUT_MODELNAME=<boolean>
+DEBUG_OUTPUT_EXECUTION=<boolean>
+DEBUG_OUTPUT_SYSTEMPROMPT=<boolean>
+DEBUG_APICALLS_PRETEND_ERROR=<boolean>
+```
+
+`DEBUG_ERROR` enables the details for crash related errors.
+
+`DEBUG_SYSTEMPROMPT` prompts you to optionally overwrite the system prompt. And it outputs it (all of it). And it would be saved if modified and `automatically use settings next time` is selected.
+
+Setting these in Powershell, here is an example: `$env:DEBUG_OUTPUT = $true ; baio ...`
+
+They can also be set in `.baioenvrc` to active on each start of Baio.
 
 
 ## Faster startup
