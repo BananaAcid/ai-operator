@@ -1923,4 +1923,6 @@ async function init(): Promise<Prompt> {
 
 
     DEBUG_OUTPUT && console.log(resultPrompt);
+
+    process.exit(0); // make sure, we exit the process (and no open pipe is blocking it)
 }
