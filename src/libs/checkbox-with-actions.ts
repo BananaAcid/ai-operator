@@ -5,6 +5,7 @@
 
   Modified by Nabil Redmann.
     added config.keypressHandler
+    added shortcuts.texts = { key: string; text: string }[] => {key: 'e', text: 'edit'},
 */
 import {
     createPrompt,
@@ -54,7 +55,7 @@ import {
   type CheckboxShortcuts = {
     all?: string | null;
     invert?: string | null;
-    edit?: string | null;
+    texts?: { key: string; text: string }[] | null;
   };
   
   const checkboxTheme: CheckboxTheme = {
@@ -188,7 +189,7 @@ import {
         required,
         validate = () => true,
       } = config;
-      const shortcuts = { all: 'a', invert: 'i', edit: null, ...config.shortcuts };
+      const shortcuts = { all: 'a', invert: 'i', texts: null, ...config.shortcuts };
       const theme = makeTheme<CheckboxTheme>(checkboxTheme, config.theme);
       const firstRender = useRef(true);
       const [status, setStatus] = useState<Status>('idle');
@@ -328,7 +329,7 @@ import {
             shortcuts.invert
               ? `${theme.style.key(shortcuts.invert)} to invert selection`
               : '',
-            shortcuts.edit ? `${theme.style.key(shortcuts.edit)} to edit` : '',
+            ...(shortcuts.texts ? shortcuts.texts.map(({key, text}) => `${theme.style.key(key)} to ${text}`) : []),
             `and ${theme.style.key('enter')} to proceed`,
           ];
           helpTipTop = ` (Press ${keys.filter((key) => key !== '').join(', ')})`;

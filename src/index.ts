@@ -850,7 +850,7 @@ async function doPromptWithCommands(result: PromptResult|undefined): Promise<str
             ? result.commands
             : await checkboxWithActions({
                 message: 'Select the commands to execute',
-                shortcuts: { edit: 'e' },
+                shortcuts: { texts: [{key: 'e', text: 'edit'}, {key: 'esc', text: 'type'}] },
                 choices: result.commands.map((command) => ({ name: displayCommand(command), value: command, checked: true })),
                 keypressHandler: async function({key, active, items}) {
                     activeItem = {...items[active], index: active};
