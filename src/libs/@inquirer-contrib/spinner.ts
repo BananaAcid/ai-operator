@@ -7,9 +7,9 @@
  * @author Nabil Redmann <repo@bananaacid.de>
  * @license MIT
  */
-import {type Status, type Theme, createPrompt, useState, usePrefix, useEffect, makeTheme, } from '@inquirer/core';
+import {type Status, type Theme, createPrompt, useState, usePrefix, useEffect, makeTheme, useKeypress, } from '@inquirer/core';
 import type { Context, InquirerReadline, PartialDeep } from '@inquirer/type';
-import colors from 'yoctocolors-cjs';
+import type { KeypressEvent } from '@inquirer/core';import colors from 'yoctocolors-cjs';
 import figures from '@inquirer/figures';
 import ansiEscapes from 'ansi-escapes';
 
@@ -31,6 +31,7 @@ type SpinnerConfig = {
     messageDone?: string;
     messageError?: string;
 
+    keypressHandler?: KeypressHandler;
     theme?: PartialDeep<Theme<SpinnerTheme>>;
 };
 
@@ -80,6 +81,15 @@ type SpinnerControl = {
 };
 
 
+type KeypressHandler = ({
+    key, rl,
+    config, theme, status, setStatus, prefix
+}:{
+    key: KeypressEvent & {meta?:boolean, sequence?:string, shift?:boolean}, rl: InquirerReadline,
+    config: SpinnerConfig, theme: any, status: any, setStatus: any, prefix: any}
+) => Promise<{isDone?:boolean, isConsumed?:boolean}|void>;
+
+
 const spinner = function Spinner(config: SpinnerConfig, context?: Context): SpinnerControl {
 
     const innerContext = context || {};
@@ -103,6 +113,23 @@ const spinner = function Spinner(config: SpinnerConfig, context?: Context): Spin
         const output = status === 'done' ? message : status === 'error' ? theme.style.error(config.messageError ?? text) : message;
 
         const prefix = usePrefix({ status, theme });
+
+
+        useKeypress(async (key, rl) => {
+            let isDone = false;
+            if (config.keypressHandler) {
+                let act = await config.keypressHandler({key, rl, config, theme, status, setStatus, prefix});
+                if (act && act?.isDone) {
+                    isDone = true;
+                    // setStatus('done');
+                    // done();
+                    resolveDone('done');
+                }
+                if (act && act?.isConsumed) return;
+            }
+            
+            // no target for isConsumed, since there is no default handler
+        });
 
         const start = async(rl: InquirerReadline) => {
             rl.pause();
@@ -176,6 +203,7 @@ export {
     type SpinnerTheme,
     type SpinnerConfig,
     type SpinnerControl,
+    type KeypressHandler,
 
     spinner,
 };

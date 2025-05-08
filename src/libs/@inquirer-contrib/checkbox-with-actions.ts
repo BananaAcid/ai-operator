@@ -99,11 +99,11 @@ import {
 
   export type KeypressHandler = ({
     key, rl,
-    shortcuts, theme, firstRender, status, setStatus, prefix, items, setItems, active, setActive, showHelpTip, setShowHelpTip,
+    shortcuts, config, theme, firstRender, status, setStatus, prefix, items, setItems, active, setActive, showHelpTip, setShowHelpTip,
     isUpKey, isDownKey, isSpaceKey, isBackspaceKey, isNumberKey, isEnterKey
 }:{
     key: KeypressEvent & {meta?:boolean, sequence?:string, shift?:boolean}, rl: InquirerReadline
-    shortcuts: any, theme: any, firstRender: any, status: any, setStatus: any, prefix: any, items: any, setItems: any, active: any, setActive: any, showHelpTip: any, setShowHelpTip: any,
+    shortcuts: any, config: CheckboxConfig<any>, theme: any, firstRender: any, status: any, setStatus: any, prefix: any, items: any, setItems: any, active: any, setActive: any, showHelpTip: any, setShowHelpTip: any,
     isUpKey: (key:KeypressEvent) => Boolean, isDownKey: (key:KeypressEvent) => Boolean, isSpaceKey: (key:KeypressEvent) => Boolean, isBackspaceKey: (key:KeypressEvent) => Boolean, isNumberKey: (key:KeypressEvent) => Boolean, isEnterKey: (key:KeypressEvent) => Boolean,
 }) => Promise<{isDone?:boolean, isConsumed?:boolean}|void>;
 
@@ -225,7 +225,7 @@ import {
 
         let isDone = false;
         if (config.keypressHandler) {
-            let act = await config.keypressHandler({key, rl, shortcuts, theme, firstRender, status, setStatus, prefix, items, setItems, active, setActive, showHelpTip, setShowHelpTip, isUpKey, isDownKey, isSpaceKey, isBackspaceKey, isNumberKey, isEnterKey});
+            let act = await config.keypressHandler({key, rl, shortcuts, config, theme, firstRender, status, setStatus, prefix, items, setItems, active, setActive, showHelpTip, setShowHelpTip, isUpKey, isDownKey, isSpaceKey, isBackspaceKey, isNumberKey, isEnterKey});
             if (act && act?.isDone) {
                 isDone = true;
                 setStatus('done');

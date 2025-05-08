@@ -41,11 +41,11 @@ import {
   export type KeypressHandler = ({
     key, rl,
     value, setValue, defaultValue, setDefaultValue,
-    theme, status, setStatus, prefix
+    config, theme, status, setStatus, prefix
   }:{
     key: KeypressEvent & {meta?:boolean, sequence?:string, shift?:boolean}, rl: InquirerReadline,
     value: string, setValue: (value: string) => void, defaultValue: string, setDefaultValue: (value: string) => void,
-    theme: any, status: any, setStatus: any, prefix: any}
+    config: InputConfig, theme: any, status: any, setStatus: any, prefix: any}
   ) => Promise<{isDone?:boolean, isConsumed?:boolean}|void>;
 
   type InputConfig = {
@@ -84,7 +84,7 @@ import {
 
       let isDone = false;
       if (config.keypressHandler) {
-          let act = await config.keypressHandler({key, rl, theme, status, setStatus, prefix, value, setValue, defaultValue, setDefaultValue,});
+          let act = await config.keypressHandler({key, rl, config, theme, status, setStatus, prefix, value, setValue, defaultValue, setDefaultValue,});
           if (act && act?.isDone) {
               isDone = true;
               setStatus('done');
