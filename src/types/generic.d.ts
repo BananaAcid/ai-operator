@@ -21,7 +21,12 @@ declare global {
         type: 'file.write';
         userModified?: boolean; // is a "tainted" flag: if user modifies the content after ai response and before saving
         file: PromptFile;
-    }/* | {
+    } | {
+        type: 'dir.change';
+        userModified?: boolean; // is a "tainted" flag: if user modifies the content after ai response and before saving
+        dir: string;
+    }
+    /* | {
         type: 'agent';
         userModified?: boolean;
         agent: {

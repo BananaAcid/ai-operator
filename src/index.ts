@@ -54,6 +54,7 @@ const RC_FILE = path.join(os.homedir(), '.baiorc');
 const RC_PATH = path.join(os.homedir(), '.baio');
 const RC_AGENTS_PATH = path.join(RC_PATH, 'agents');
 const RC_HISTORY_PATH = path.join(RC_PATH, 'history');
+const PROCESS_PATH_INITIAL = process.cwd();
 
 
 //* get user dot env
@@ -247,7 +248,11 @@ let settingsDefault: Settings = {
 
         ### Output Rules:
         - Explain **briefly** what you are doing and what each command does.
+        - Never explain, what Tags you are using to execute commands.
         - To **directly create or overwrite a file**, you need to use \`<WRITE-FILE FILEPATH="filepath/filename">content</WRITE-FILE>\`. This is the **preferred** way of writing files.
+        - To persistently change the current working directory, you need to use \`<DIR-CHANGE>dirpath</DIR-CHANGE>\` command. This is the **preferred** way of changing the current working directory.
+            - Do this if you are asked to change or go to a specific directory, or there are multiple commands to be executed there.
+            - After changing to this path, any commands after will execute in this directory (this is will be your new Current Working Directory).
         - **DO NOT** use fenced code blocks (\`\`\`) for executable commands. Instead, always use:  
             \`<CMD>command_here</CMD>\`
         - **If multiple commands need to be executed in sequence, combine them into one <CMD>** to maintain the shell context.  
@@ -428,7 +433,7 @@ async function api(prompt: Prompt): Promise<PromptResult> {
 
     //                                  /\`?\ *<CMD>(.*?)<\/CMD>\ *\`?
     //                                  /\`*\ *<CMD>(.*?)<\/CMD>\ *\`*
-    const combinedRegexNamed = /(?<isCmd>\`*\ *<CMD>(?<cmdContent>.*?)<\/CMD>\ *\`*)|(?<isFileWrite>\`?\ *<WRITE-FILE FILEPATH="(?<filePath>.*?)">(?<fileContent>.*?)<\/WRITE-FILE>\ *\`?)/gs;
+    const combinedRegexNamed = /(?<isCmd>\`*\ *<CMD>(?<cmdContent>.*?)<\/CMD>\ *\`*)|(?<isFileWrite>\`?\ *<WRITE-FILE FILEPATH="(?<filePath>.*?)">(?<fileContent>.*?)<\/WRITE-FILE>\ *\`?)|(?<isDirChange>\`*\ *<DIR-CHANGE>(?<dirContent>.*?)<\/DIR-CHANGE>\ *\`*)/gs;
     const matches = content.matchAll(combinedRegexNamed);
 
     // Iterate over all matches found by the combined regex to preserve the order
@@ -453,6 +458,11 @@ async function api(prompt: Prompt): Promise<PromptResult> {
 
             commands.push({type: 'file.write', file: {path: groups.filePath!, mimeType: mime.getType(groups.filePath!) ?? 'text', content: groups.fileContent!}});
             replacementString = '\n' + colors.bgBlack(' ▶️  Write file: ') + '`' + groups.filePath +'`\n```'+'\n' + groups.fileContent + '\n```\n';
+        }
+        else if (groups?.isDirChange) {
+            DEBUG_OUTPUT && console.log('dir.change', groups.dirContent!);
+            commands.push({type: 'dir.change', dir: groups.dirContent!});
+            replacementString = '\n' + colors.bgBlack(' ▶️  Change dir: ') + '`' + groups.dirContent +'`\n';
         }
 
         if (replacementString) content = content.replaceAll(fullMatch, replacementString);
@@ -673,6 +683,7 @@ let doCommandsLastResult = '';
  */
 async function doCommands(commands: PromptCommand[]): Promise<string> {
     let results: string[] = [];
+    let updateSystemPrompt = false;
 
     for (const command of commands) {
         spinner.start(`Executing command: ${displayCommand(command)}`);
@@ -701,11 +712,23 @@ async function doCommands(commands: PromptCommand[]): Promise<string> {
             .then(stdout => '<CMD-OUTPUT>File written' + (command.userModified ? ' (user modified the content):\n' + command.file.content : '') + '</CMD-OUTPUT>')
             .catch(error => '<CMD-ERROR>Error writing file:\n' + error + '</CMD-ERROR>');
         }
+
+        if (command.type === 'dir.change') {
+            commandStr = displayCommand(command);
+            result = await new Promise(resolve => resolve(process.chdir(command.dir)))
+            .then(stdout => '<CMD-OUTPUT>Current directory changed to ' + command.dir + '</CMD-OUTPUT>')
+            .catch(error => '<CMD-ERROR>Error changing directory:\n' + error + '</CMD-ERROR>');
+
+            updateSystemPrompt = true;
+        }
     
         results.push('<CMD-INPUT>' + commandStr + '</CMD-INPUT>\n' + result);
 
         spinner.success();
     }
+
+    if (updateSystemPrompt)
+        await makeSystemPromptReady();
 
     return doCommandsLastResult = results.join('\n<-----/>\n');
 }
@@ -748,6 +771,10 @@ function commandContent(command: PromptCommand, content?: string): string {
         if (content !== undefined) { command.userModified = true; command.file.content = content; }
         result = command.file.content;
     }
+    if (command.type === 'dir.change') {
+        if (content !== undefined) { command.userModified = true; command.dir = content; }
+        result = command.dir;
+    }
     return result;
 }
 
@@ -764,6 +791,7 @@ function commandCaption(command: PromptCommand): string {
     let result = '';
     if (command.type === 'command') result = command.line;
     if (command.type === 'file.write') result = `Write file: ${colors.italic(command.file.path)}`;
+    if (command.type === 'dir.change') result = `Change directory to: ${colors.italic(command.dir)}`;
 
     if (command.userModified) result = colors.blue(figures.star) + ' ' + result;
     return result;
@@ -1323,6 +1351,7 @@ async function promptTrigger(/*inout*/ prompt: Prompt, /*inout*/ resultPrompt?: 
     }
 
     if (trigger === '/:exit' || trigger === '/:quit' || trigger === ':q') {
+        if (PROCESS_PATH_INITIAL !== process.cwd()) console.log(colors.green(figures.info), `I was last working in: ${process.cwd()}`);
         process.exit(0);
     }
 
@@ -1973,6 +2002,8 @@ async function init(): Promise<Prompt> {
 
 
     DEBUG_OUTPUT && console.log(resultPrompt);
+
+    if (PROCESS_PATH_INITIAL !== process.cwd()) console.log(colors.green(figures.info), `I was last working in: ${process.cwd()}`);
 
     process.exit(0); // make sure, we exit the process (and no open pipe is blocking it)
 }

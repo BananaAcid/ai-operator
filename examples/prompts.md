@@ -29,3 +29,15 @@ how do i install nuxt using npm? read the nuxt website to find out
 - involes links2
 - sometimes searches duckduckgo first for the url
 - reads the nuxt installation page and gets the correct result (GEMINI only knows an outdated command)
+
+```
+go user folder and tell me about the files
+``` 
+- does a change dir command
+- then a list files/folders command
+
+```
+go user folder and exlpain files
+```
+- does a change dir command
+- creates a table with the file names and a description
