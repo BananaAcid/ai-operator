@@ -25,7 +25,7 @@ import mime from 'mime';
 import colors from 'yoctocolors-cjs'; // installed by @inquirer/prompts
 import figures from '@inquirer/figures'; // installed by @inquirer/prompts
 import { input, select, Separator, editor, checkbox } from '@inquirer/prompts';
-import checkboxWithActions from './libs/checkbox-with-actions.ts';
+import checkboxWithActions from './libs/@inquirer-contrib/checkbox-with-actions.ts';
 import { default as tgl } from 'inquirer-toggle';
 //@ts-ignore
 const toggle = tgl.default;

@@ -1,12 +1,17 @@
-/*
-  This is a modified version of the @inquirer/checkbox with some added features.
-  Original: https://github.com/SBoudrias/Inquirer.js
-  
-
-  Modified by Nabil Redmann.
-    added config.keypressHandler
-    added shortcuts.texts = { key: string; text: string }[] => {key: 'e', text: 'edit'},
-*/
+/**
+ * This is a modified version of the @inquirer/checkbox with some added features.
+ * Original: https://github.com/SBoudrias/Inquirer.js
+ *  
+ * @package @inquirer-contrib/checkbox-with-actions
+ *
+ * @modified by Nabil Redmann.
+ *   added config.keypressHandler
+ *   added shortcuts.texts = { key: string; text: string }[] => {key: 'e', text: 'edit'},
+ *
+ * @see @inquirer/checkbox@4.1.5
+ * @version 1.0.0
+ * @license MIT
+ */
 import {
     createPrompt,
     useState,
