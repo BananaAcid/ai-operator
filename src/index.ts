@@ -870,6 +870,8 @@ async function doPromptWithCommands(result: PromptResult|undefined): Promise<str
             let allowCmd = false;
             for (let key of settings.autoExecKeys) {
                 if (command.type == 'command' && command.line.startsWith(key)) allowCmd = true;
+                // setting autoExecKeys to ['file.write', 'dir.change'], or all commands with 'command' (allows all, or everything with '')
+                if (command.type === key) allowCmd = true; 
             }
             allow &&= allowCmd;
         }

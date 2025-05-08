@@ -204,7 +204,11 @@ or
 
 ### If you want specific commands to be automatically to be executed
 
-It checks if the command in the config's list ist in the beginning of the line.
+It checks if the command in the config's list is in the beginning of the line or one of the inbuild commands (or a tool name => an MCP function).
+
+A predefined set is in the settings "Auto execute if commands match".
+
+#### To extend the list with more identifiers
 
 Edit the config:
 
@@ -213,6 +217,15 @@ baio --open config
 ```
 
 and change the key: `autoExecKeys`
+
+#### Special use
+
+Adding a an item "" will allow everything = auto accept commands.
+
+For the inbuild commands:
+- `command`
+- `file.write`
+- `dir.change`
 
 
 ### Wrong shell for suggested commands
