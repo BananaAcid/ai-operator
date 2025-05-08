@@ -1,3 +1,7 @@
+//! THIS has issues - still needs testing and a rework of the factory part
+//!
+//!  it is supposed to replace the yocto-spinner in the future, with the added benefit of having a keypress handler
+
 /**
  * Spinner for @inquirer/prompt (v8+)
  * 
