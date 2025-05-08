@@ -26,6 +26,7 @@ import colors from 'yoctocolors-cjs'; // installed by @inquirer/prompts
 import figures from '@inquirer/figures'; // installed by @inquirer/prompts
 import { input, select, Separator, editor, checkbox } from '@inquirer/prompts';
 import checkboxWithActions from './libs/@inquirer-contrib/checkbox-with-actions.ts';
+import inputWithActions from './libs/@inquirer-contrib/input-with-actions.ts';
 import { default as tgl } from 'inquirer-toggle';
 //@ts-ignore
 const toggle = tgl.default;
@@ -844,6 +845,7 @@ async function doPromptWithCommands(result: PromptResult|undefined): Promise<str
     //* there are commands
     if (result?.commands.length) {
         let canceled: boolean|'edit' = false;
+        let canceledLetter: string = '';
         let activeItem:{name:string,value:PromptCommand,index:number};
         let options = {...TTY_INTERFACE, clearPromptOnDone: false}
         const commands = allow 
@@ -856,6 +858,7 @@ async function doPromptWithCommands(result: PromptResult|undefined): Promise<str
                     activeItem = {...items[active], index: active};
 
                     if (key.name == 'escape' || key.sequence == ':' || key.sequence == '/') {
+                        canceledLetter = key.sequence ?? '';
                         canceled = true;   // let us know, that we should not care about the values
                         options.clearPromptOnDone = true; // clear the line after exit by this
                         return {
@@ -892,14 +895,30 @@ async function doPromptWithCommands(result: PromptResult|undefined): Promise<str
 
                 return undefined;
             }
-            else
-                resultCommands = await input({ message: 'Enter more info:' }, TTY_INTERFACE);
+            else {
+                let TTY_INTERFACE_OPTS = { ...TTY_INTERFACE, clearPromptOnDone: false };
+                let canceled = false;
+                resultCommands = await inputWithActions({ message: 'Enter more info:', initial: canceledLetter,
+                    keypressHandler: async function({rl, key}) {
+                        if (key.name == 'escape') {
+                            canceled = true;   // let us know, that we should not care about the values
+                            TTY_INTERFACE_OPTS.clearPromptOnDone = true; // clear the line after exit by this
+                            
+                            return {
+                                isDone: true, // tell the elment to exit and return selected values
+                                isConsumed: true, // prevent original handler to process this key
+                            }
+                        }
+                    }
+                }, TTY_INTERFACE_OPTS);
+                if (canceled) resultCommands = '/:cmds';
+            }
         else {
-                resultCommands = await doCommands(commands);
+            resultCommands = await doCommands(commands);
 
-                (DEBUG_OUTPUT || DEBUG_OUTPUT_EXECUTION) && console.info('DEBUG\n', resultCommands);
+            (DEBUG_OUTPUT || DEBUG_OUTPUT_EXECUTION) && console.info('DEBUG\n', resultCommands);
 
-                // ... go and evaluate the commands result
+            // ... go and evaluate the commands result
         }
     }
 
