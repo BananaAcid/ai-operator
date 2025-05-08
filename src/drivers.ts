@@ -56,7 +56,7 @@ const drivers = {
             DEBUG_OUTPUT && console.log('models', models);
 
             // more details about the models
-            let modelSelection: ModelSelection = models.map(model => ({ name: showSimple ? `${model.details.family} : ${model.details.parameter_size} (${(model.size / (1024 * 1024 * 1024)).toFixed(2)} GB) --- ${model.name}` : JSON.stringify(model), value: model.name }));
+            let modelSelection: ModelSelection = models.map(model => ({ name: showSimple ? `${model.details.family} : ${model.details.parameter_size} (${(model.size / (1024 * 1024 * 1024)).toFixed(2)} GB) --- ${model.name}` : JSON.stringify(model), value: model.name, description: model.name }));
 
             return modelSelection;
         },
@@ -105,7 +105,7 @@ const drivers = {
 
             (DEBUG_OUTPUT || DEBUG_OUTPUT_MODELS) && console.log('models', models);
 
-            let modelSelection: ModelSelection = models.map(model => ({ name: showSimple ? `${model.id} (${model.owned_by})` : JSON.stringify(model), value: model.id }));
+            let modelSelection: ModelSelection = models.map(model => ({ name: showSimple ? `${model.id} (${model.owned_by})` : JSON.stringify(model), value: model.id, description: model.id }));
 
             return modelSelection;
         },
@@ -225,7 +225,7 @@ const drivers = {
 
             (DEBUG_OUTPUT || DEBUG_OUTPUT_MODELS) && console.log('models', response);
 
-            let modelSelection: ModelSelection = models.map(model => ({ name: showSimple ? `${model.displayName} ${model.description && model.description !== model.displayName ? `(${model.description})` : ''}` : JSON.stringify(model), value: model.name.replace(/^models\//, '') }));
+            let modelSelection: ModelSelection = models.map(model => ({ name: showSimple ? `${model.displayName} ${model.description && model.description !== model.displayName ? `(${model.description})` : ''}` : JSON.stringify(model), value: model.name.replace(/^models\//, ''), description: model.name.replace(/^models\//, '') }));
 
             return modelSelection;
         },

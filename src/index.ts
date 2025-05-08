@@ -15,6 +15,7 @@ import os from 'node:os';
 import { execSync } from 'node:child_process';
 import { parseArgs } from 'node:util';
 import fs from 'node:fs';
+import util from 'node:util';
 
 import cliMd from 'cli-markdown';
 import launchEditor from 'launch-editor';
@@ -25,8 +26,10 @@ import mime from 'mime';
 import colors from 'yoctocolors-cjs'; // installed by @inquirer/prompts
 import figures from '@inquirer/figures'; // installed by @inquirer/prompts
 import { input, select, Separator, editor, checkbox } from '@inquirer/prompts';
+import { isSpaceKey } from '@inquirer/core';
 import checkboxWithActions from './libs/@inquirer-contrib/checkbox-with-actions.ts';
 import inputWithActions from './libs/@inquirer-contrib/input-with-actions.ts';
+import selectWithActions from './libs/@inquirer-contrib/select-with-actions.ts';
 import { default as tgl } from 'inquirer-toggle';
 //@ts-ignore
 const toggle = tgl.default;
@@ -1405,15 +1408,42 @@ async function config(options: string[]|undefined, prompt: Prompt): Promise<void
 
             let driver:Driver = drivers[settings.driver]!;
     
+            let styleModels = (models: InquirerSelection) => {
+                models = models.map(({name, value}) => ({name: name.replace(/([^(]*)/, colors.bold('$1 ')), value}));
+                models.push({ name: colors.green('manual input ...'), value: '' });
+                return models;
+            }
             let models = await getModels();
             let modelSelected = '';
             if (models.length) {
-                models = models.map(({name, value}) => ({name: name.replace(/([^(]*)/, colors.bold('$1 ')), value}));
-                models.push({ name: colors.green('manual input ...'), value: '' });
-                
+                models = styleModels(models);
+                let modelListSimple = false;
+                let options: any;
                 modelSelected = hasArg && !forceSelection 
                     ? settings.model 
-                    : await select({ message: 'Select your model:', choices: models, default: settings.model || driver.defaultModel }, OPTS);
+                    : await selectWithActions(options={ message: 'Select your model:', choices: models, default: settings.model || driver.defaultModel, instructions: {navigation: 'Use arrow keys or space to switch details', pager: 'Use arrow keys to reveal more choicesor space to switch details'},
+                        //@ts-expect-error
+                        keypressHandler: async function({key, rl}) {
+                            // only allow switching to commands selection, if there are commands
+                            if (isSpaceKey(key)) {
+                                modelListSimple = !modelListSimple;
+
+                                if (!modelListSimple) {
+                                    options.choices = models;
+                                }
+                                else {
+                                    let driver:Driver = drivers[settings.driver]!;
+                                    let modelsSimple = await driver.getModels(settings, false);
+                                    if (modelsSimple.length)
+                                        options.choices = modelsSimple
+                                            .map(({name, value}) => ({name: util.inspect(JSON.parse(name), { compact: true, showHidden: false, depth: null, colors: true }).replaceAll('\n', '') +'\n', value}));
+                                    
+                                }
+                                return {
+                                    needRefresh: true,
+                                }
+                            }
+                        }}, OPTS);
                 settings.modelName = models.find(({value}) => value === modelSelected)?.name || '';
             }
             // if it was used from select, we do not need to check
