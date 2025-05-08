@@ -17,6 +17,7 @@ import {
     useState,
     useKeypress,
     usePrefix,
+    useEffect,
     isEnterKey,
     isBackspaceKey,
     makeTheme,
@@ -55,7 +56,7 @@ import {
     validate?: (value: string) => boolean | string | Promise<string | boolean>;
     theme?: PartialDeep<Theme<InputTheme>>;
     keypressHandler?: KeypressHandler;
-    initialString?: string;
+    initial?: string;
   };
   
   export default createPrompt<string, InputConfig>((config, done) => {
@@ -64,19 +65,18 @@ import {
     const [status, setStatus] = useState<Status>('idle');
     const [defaultValue = '', setDefaultValue] = useState<string>(config.default);
     const [errorMsg, setError] = useState<string>();
-    let [value, setValue] = useState<string>('');
+    const [value, setValue] = useState<string>('');
   
     const prefix = usePrefix({ status, theme });
 
-    useKeypress(async (key, rl) => {
-
-      if (config.initialString) {
-        value = config.initialString;
-        setValue(config.initialString);
-        rl.write(config.initialString);
-        config.initialString = undefined;
+    useEffect((rl) => {
+      if (config.initial) {
+        setValue(config.initial);
+        rl.write(config.initial);
       }
+    }, []);
 
+    useKeypress(async (key, rl) => {
       // Ignore keypress while our prompt is doing other processing.
       if (status !== 'idle') {
         return;
