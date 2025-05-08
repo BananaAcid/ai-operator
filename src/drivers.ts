@@ -225,7 +225,7 @@ const drivers = {
 
             (DEBUG_OUTPUT || DEBUG_OUTPUT_MODELS) && console.log('models', response);
 
-            let modelSelection: ModelSelection = models.map(model => ({ name: showSimple ? `${model.displayName} ${model.description && model.description !== model.displayName ? `(${model.description})` : ''}` : JSON.stringify(model), value: model.name.replace(/^models\//, ''), description: model.name.replace(/^models\//, '') }));
+            let modelSelection: ModelSelection = models.map(model => ({ name: showSimple ? `${model.displayName} ${model.name.toLowerCase().includes('think') ? '[THINKING] ' : ''}${model.description && model.description !== model.displayName ? `(${model.description})` : ''}` : JSON.stringify(model), value: model.name.replace(/^models\//, ''), description: model.name.replace(/^models\//, '') }));
 
             return modelSelection;
         },

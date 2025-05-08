@@ -1409,7 +1409,7 @@ async function config(options: string[]|undefined, prompt: Prompt): Promise<void
             let driver:Driver = drivers[settings.driver]!;
     
             let styleModels = (models: InquirerSelection) => {
-                models = models.map(({name, value}) => ({name: name.replace(/([^(]*)/, colors.bold('$1 ')), value}));
+                models = models.map(({name, value}) => ({name: name.replace(/([^(]*)(.*)/, ('$1 ') + colors.dim('$2')).replace('[THINKING]', colors.blue('[THINKING]')), value}));
                 models.push({ name: colors.green('manual input ...'), value: '' });
                 return models;
             }
