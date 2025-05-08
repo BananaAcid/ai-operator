@@ -899,7 +899,8 @@ async function doPromptWithCommands(result: PromptResult|undefined): Promise<str
                 let TTY_INTERFACE_OPTS = { ...TTY_INTERFACE, clearPromptOnDone: false };
                 let canceled = false;
                 resultCommands = await inputWithActions({ message: 'Enter more info:', initial: canceledLetter,
-                    keypressHandler: async function({rl, key}) {
+                    keypressHandler: async function({key}) {
+                        // only allow switching to commands selection, if there are commands
                         if (key.name == 'escape') {
                             canceled = true;   // let us know, that we should not care about the values
                             TTY_INTERFACE_OPTS.clearPromptOnDone = true; // clear the line after exit by this

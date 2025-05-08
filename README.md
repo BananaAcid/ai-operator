@@ -380,7 +380,7 @@ History config path: ................../.baio/history/
 ### Prompt Triggers
 
 To trigger these, **_if you are not on a prompt_**,
-1. you can press <kbd>:</kbd>, <kbd>/</kbd> or <kbd>ESC</kbd> to fall back to the prompt (the key press is not preserved) (e.g. to show the help you could type `::h`)
+1. you can press <kbd>:</kbd>, <kbd>/</kbd> or <kbd>ESC</kbd> to fall back to the prompt (e.g. to show the help you could type `:h`)
 2. **OR**: you **unselect any command and press enter** to fall back to the prompt
 
 **then enter** one of the following:
@@ -411,7 +411,7 @@ To trigger these, **_if you are not on a prompt_**,
 | `/:quit`, `/:exit`            | `:q`                | Will exit (CTRL+D or CTRL+C will also work). |
 
 
-**Note:** If you want to continue, just press enter without any text, if you want to get the last command selection (if there are commands to execute) enter `::`.
+**Note:** If you want to continue, just press enter without any text, if you want to get the last command selection (if there are commands to execute) enter `::` or press <kbd>ESC</kbd>.
 
 
 ## Debugging
@@ -620,4 +620,4 @@ Note: The Git page for the change logs folds the commits with multiple messages.
 | v1.0.31 | Added saving when opening menu by trigger, enabled agent selection when opening menu by trigger (not just start), menu related cleanup and fixes, fixed send files list was never cleared and always send again | [1.0.30...1.0.31](https://github.com/BananaAcid/ai-operator/compare/1.0.30...1.0.31) |
 | v1.0.32 | Added addFile to menu on start, fix commandline `*` options to work with new settings | [1.0.31...1.0.32](https://github.com/BananaAcid/ai-operator/compare/1.0.31...1.0.32) |
 | v1.0.33 | **Added direct writing of files**, this will massivly reduce tokens used due to not including the file content twice (not in the response from the system anymore needed, unless the content was edited in the selection), added a workaround for a Node23 bug | [1.0.32...1.0.33](https://github.com/BananaAcid/ai-operator/compare/1.0.32...1.0.33) |
-| v1.0.34 | Added trigger `::` to return to command selection, added trigger `/history:open` to edit the current context in an editor, added trigger `/history:open:md` to view the context | [1.0.33...1.0.34](https://github.com/BananaAcid/ai-operator/compare/1.0.33...1.0.34) |
+| v1.0.34 | Added trigger `::` to return to command selection, added trigger `/history:open` to edit the current context in an editor, added trigger `/history:open:md` to view the context, added switching back and forth between commands/input with pressing <kbd>ESC</kbd>, added `:` or `/` to input when closing commands selection with it | [1.0.33...1.0.34](https://github.com/BananaAcid/ai-operator/compare/1.0.33...1.0.34) |
