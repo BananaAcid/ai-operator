@@ -915,18 +915,27 @@ async function doPromptWithCommands(result: PromptResult|undefined): Promise<str
             ? result.commands
             : await checkboxWithActions({
                 message: 'Select the commands to execute',
-                shortcuts: { texts: [{key: 'e', text: 'edit'}, {key: 'esc', text: 'type'}] },
+                shortcuts: { texts: [{key: 'e', text: 'edit'}, {key: 'esc> or <.', text: 'type'}] },
                 choices: result.commands.map((command) => ({ name: displayCommand(command), value: command, checked: true })),
                 keypressHandler: async function({key, active, items}) {
                     activeItem = {...items[active], index: active};
 
-                    if (key.name == 'escape' || key.sequence == ':' || key.sequence == '/') {
-                        canceledLetter = key.sequence ?? '';
+                    if (key.name == 'escape' || key.sequence == '.') {
                         canceled = true;   // let us know, that we should not care about the values
                         options.clearPromptOnDone = true; // clear the line after exit by this
                         return {
                             isDone: true, // tell the elment to exit and return selected values
                             isConsumed: true, // prevent original handler to process this key         ... ignores any validation error (we did not setup validations for this prompt)
+                        }
+                    }
+
+                    if (key.sequence == ':' || key.sequence == '/') {
+                        canceledLetter = key.sequence ?? '';
+                        canceled = true;
+                        options.clearPromptOnDone = true;
+                        return {
+                            isDone: true,
+                            isConsumed: true,
                         }
                     }
 
