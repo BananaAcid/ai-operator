@@ -197,6 +197,8 @@ let settingsDefault: Settings = {
     cmdMaxLengthDisplay: 100,   // set the maximum length of a command to display
     historySaveThinking: false, // save the thinking block to the history
 
+    allowGeneralPrompts: false, // Allow to answer general questions, this will also allow to loose the ultimate focus on creating commands
+
     /** Prompts **/
     defaultPrompt: 'show me a table of all files in the current directory',
 
@@ -222,13 +224,17 @@ let settingsDefault: Settings = {
         Try again with a different approach, and if more information is needed, request it.
     `,
 
+    generalPrompt: `
+        You are also proficient in coding for the commandline and software in general.
+        If you are asked for non commandline or coding tasks, you act as a general assistant.
+    `,
+
     systemPrompt: `
         Your name is Baio.
         You are a helpful AI operator that generates and validates command-line commands. 
         You create commandline commands for your system and validate the result. The commands will automatically be executed on the host system with the next prompt by your doing.
         You want to solve the users prompt with concise and meaningful commandline commands and avoid guessing or duplicates and supply executable commands that will be executed.
-        You are also proficient in coding for the commandline and software in general.
-        If you are asked for non commandline or coding tasks, you act as a general assistant.
+        {{generalPrompt}}
 
         ### Your System Information:
         - User: {{process_env_USERNAME}}
@@ -241,6 +247,8 @@ let settingsDefault: Settings = {
         - Installed PowerShell: {{process_env_POSH_SHELL}}, version {{process_env_POSH_SHELL_VERSION}}
         - User's Home Directory (user home folder): {{process_env_HOME}}
         - Current Working Directory (cwd, here you are always): {{process_cwd}}
+        - Currently active AI Provider ("driver"): {{currentDriver}}
+        - Currently active AI Model: {{currentModel}}
         {{linksIsInstalled}}
         {{useAllSysEnv}}
 
@@ -255,6 +263,7 @@ let settingsDefault: Settings = {
         - To persistently change the current working directory, you need to use \`<DIR-CHANGE>dirpath</DIR-CHANGE>\` command. This is the **preferred** way of changing the current working directory.
             - Do this if you are asked to change or go to a specific directory, or there are multiple commands to be executed there.
             - After changing to this path, any commands after will execute in this directory (this is will be your new Current Working Directory).
+        - To get a list of available models for the current AI, use \`<MODELS-GETCURRENT />\`.
         - **DO NOT** use fenced code blocks (\`\`\`) for executable commands. Instead, always use:  
             \`<CMD>command_here</CMD>\`
         - **If multiple commands need to be executed in sequence, combine them into one <CMD>** to maintain the shell context.  
@@ -365,7 +374,7 @@ let resetPrompts = false;
 if (settingsSaved !== undefined && !settingsArgs['version'] && !settingsArgs['help'] && !settingsArgs['reset-prompts'] && !settingsArgs['reset'] && !settingsArgs['open'] && (settingsSaved.version !== settingsDefault.version)) {
     //* really check if the prompts have changed
     if ( (settingsSaved.defaultPrompt && settingsDefault.defaultPrompt !== settingsSaved.defaultPrompt) || (settingsSaved.fixitPrompt && settingsDefault.fixitPrompt !== settingsSaved.fixitPrompt) || (settingsSaved.systemPrompt && settingsDefault.systemPrompt !== settingsSaved.systemPrompt) ) {
-        const isNonInteractive = !process.stdin.isTTY || process.env.npm_lifecycle_event === 'updatecheck';
+        const isNonInteractive = !process.stdin.isTTY || process.env.npm_lifecycle_event === 'updatecheck' || settingsArgs['config'];
         if (isNonInteractive)
             console.info('The system prompts have been updated. To update saved system prompts from your previous version to the current version, use: `baio --reset-prompts`' );
         else
@@ -435,7 +444,7 @@ async function api(prompt: Prompt): Promise<PromptResult> {
 
     //                                  /\`?\ *<CMD>(.*?)<\/CMD>\ *\`?
     //                                  /\`*\ *<CMD>(.*?)<\/CMD>\ *\`*
-    const combinedRegexNamed = /(?<isCmd>\`*\ *<CMD>(?<cmdContent>.*?)<\/CMD>\ *\`*)|(?<isFileWrite>\`?\ *<WRITE-FILE FILEPATH="(?<filePath>.*?)">(?<fileContent>.*?)<\/WRITE-FILE>\ *\`?)|(?<isDirChange>\`*\ *<DIR-CHANGE>(?<dirContent>.*?)<\/DIR-CHANGE>\ *\`*)/gs;
+    const combinedRegexNamed = /(?<isCmd>\`*\ *<CMD>(?<cmdContent>.*?)<\/CMD>\ *\`*)|(?<isFileWrite>\`?\ *<WRITE-FILE FILEPATH="(?<filePath>.*?)">(?<fileContent>.*?)<\/WRITE-FILE>\ *\`?)|(?<isDirChange>\`*\ *<DIR-CHANGE>(?<dirContent>.*?)<\/DIR-CHANGE>\ *\`*)|(?<isModelsGetCurrent>\`*\ *<MODELS-GETCURRENT \/>\ *\`*)/gs;
     const matches = content.matchAll(combinedRegexNamed);
 
     // Iterate over all matches found by the combined regex to preserve the order
@@ -465,6 +474,11 @@ async function api(prompt: Prompt): Promise<PromptResult> {
             DEBUG_OUTPUT && console.log('dir.change', groups.dirContent!);
             commands.push({type: 'dir.change', dir: groups.dirContent!});
             replacementString = '\n' + colors.bgBlack(' ▶️  Change dir: ') + '`' + groups.dirContent +'`\n';
+        }
+        else if (groups?.isModelsGetCurrent) {
+            DEBUG_OUTPUT && console.log('get current models');
+            commands.push({type: 'models.getcurrent', filter: '/.*/'});
+            replacementString = '\n' + colors.bgBlack(' ▶️  Get current models') + '\n';
         }
 
         if (replacementString) content = content.replaceAll(fullMatch, replacementString);
@@ -723,6 +737,15 @@ async function doCommands(commands: PromptCommand[]): Promise<string> {
 
             updateSystemPrompt = true;
         }
+
+        if (command.type === 'models.getcurrent') {
+            let driver = drivers[settings.driver]!;
+            commandStr = displayCommand(command);
+            result = await driver.getModels(settings, false) // false => get JSON string
+            .then(models => models.map(model => (RegExp(command.filter).test(model.name)) ? JSON.parse(model.name) : false).filter(Boolean)) // change to array of raw model data
+            .then(stdout => '<CMD-OUTPUT>' + JSON.stringify(stdout, null, 2) + '</CMD-OUTPUT>')
+            .catch(error => '<CMD-ERROR>Error getting current models:\n' + error + '</CMD-ERROR>');
+        }
     
         results.push('<CMD-INPUT>' + commandStr + '</CMD-INPUT>\n' + result);
 
@@ -777,6 +800,10 @@ function commandContent(command: PromptCommand, content?: string): string {
         if (content !== undefined) { command.userModified = true; command.dir = content; }
         result = command.dir;
     }
+    if (command.type === 'models.getcurrent') {
+        if (content !== undefined) { command.userModified = true; command.filter = content; }
+        result = command.filter;
+    }
     return result;
 }
 
@@ -794,6 +821,7 @@ function commandCaption(command: PromptCommand): string {
     if (command.type === 'command') result = command.line;
     if (command.type === 'file.write') result = `Write file: ${colors.italic(command.file.path)}`;
     if (command.type === 'dir.change') result = `Change directory to: ${colors.italic(command.dir)}`;
+    if (command.type === 'models.getcurrent') result = `Get current models` + (command.filter !== '/.*/' ? ` with RegEx filter: ${colors.italic(command.filter)}` : '');
 
     if (command.userModified) result = colors.blue(figures.star) + ' ' + result;
     return result;
@@ -1384,13 +1412,22 @@ async function config(options: string[]|undefined, prompt: Prompt): Promise<void
                     { value: 'done', name: colors.bold('done') },
                     new Separator(),
 
-                    { value: 'driver', name: `AI Driver: ${colors.blue(drivers[settings.driver]?.name ?? 'unknown')}  ${ settings.driver !== 'ollama' ? (colors.italic(drivers[settings.driver]?.apiKey() ? colors.green('(API key found)') : colors.red('(no API key found)'))) : ''}` },
-                    { value: 'model', name: `AI Model: ${colors.blue(settings.modelName || settings.model || (drivers[settings.driver]?.defaultModel ? colors.italic(colors.dim('(default: ' + drivers[settings.driver]?.defaultModel + ')')) : undefined) || '')}` },
-                    { value: 'temperature', name: `AI Temperature: ${settings.temperature !== 0 ? colors.blue(settings.temperature.toString()) : colors.italic(colors.dim('(default)'))}` },
-                    { value: 'useAllSysEnv', name: `Use all system environment variables: ${colors.blue(settings.useAllSysEnv ? colors.green('yes') : colors.red('no'))}` },
-                    { value: 'endIfDone', name: `End if assumed done: ${colors.blue(settings.endIfDone ? colors.green('yes') : colors.red('no'))}` },
-                    { value: 'autoExecKeys', name: `Auto execute if commands match: ${colors.blue(settings.autoExecKeys.join(', '))}` },
-                    { value: 'saveSettings', name: `Automatically use the same settings next time: ${colors.blue(settings.saveSettings ? colors.green('yes') : colors.red('no'))}` },
+                    { value: 'driver', name: `AI Driver: ${colors.blue(drivers[settings.driver]?.name ?? 'unknown')}  ${ settings.driver !== 'ollama' ? (colors.italic(drivers[settings.driver]?.apiKey() ? colors.green('(API key found)') : colors.red('(no API key found)'))) : ''}`,
+                        description: 'Select an AI driver for your provider. API key and URL are configured with environment variables.' },
+                    { value: 'model', name: `AI Model: ${colors.blue(settings.modelName || settings.model || (drivers[settings.driver]?.defaultModel ? colors.italic(colors.dim('(default: ' + drivers[settings.driver]?.defaultModel + ')')) : undefined) || '')}`,
+                        description: 'Select an AI model for your provider.' },
+                    { value: 'temperature', name: `AI Temperature: ${settings.temperature !== 0 ? colors.blue(settings.temperature.toString()) : colors.italic(colors.dim('(default)'))}`,
+                        description: 'Select a temperature for the models creativity.' },
+                    { value: 'useAllSysEnv', name: `Use all system environment variables: ${colors.blue(settings.useAllSysEnv ? colors.green('yes') : colors.red('no'))}`,
+                        description: 'Allow to use all environment variables in the prompt.' },
+                    { value: 'endIfDone', name: `End if assumed done: ${colors.blue(settings.endIfDone ? colors.green('yes') : colors.red('no'))}`,
+                        description: 'End the prompt if the answer is assumed done. Good if you have single tasks to be done.' },
+                    { value: 'autoExecKeys', name: `Auto execute if commands match: ${colors.blue(settings.autoExecKeys.join(', '))}`,
+                        description: 'Auto execute if commands match.' },
+                    { value: 'allowGeneralPrompts', name: `Allow general prompts: ${colors.blue(settings.allowGeneralPrompts ? colors.green('yes') : colors.red('no'))}`,
+                        description: 'Allow to answer general questions, this will also allow to loose the ultimate focus on creating commands' },
+                    { value: 'saveSettings', name: `Automatically use the same settings next time: ${colors.blue(settings.saveSettings ? colors.green('yes') : colors.red('no'))}`,
+                        description: 'Save the settings and automatically use the same settings next time.' },
 
                     ...(!DEBUG_SYSTEMPROMPT ? [] : [
                         new Separator(),
@@ -1400,10 +1437,10 @@ async function config(options: string[]|undefined, prompt: Prompt): Promise<void
                     new Separator(),
 
                     // for each file, there is a prompt about the filename => length / 2  //! TODO do not just devide by 2, but check content
-                    { value: 'addFile', name: `Add a file ${colors.italic(colors.dim(`(currently: ${(prompt?.additions?.length ? prompt.additions.length / 2 : 0)})`))}` },
+                    { value: 'addFile', name: `Add a file ${colors.italic(colors.dim(`(currently: ${(prompt?.additions?.length ? prompt.additions.length / 2 : 0)})`))}`, description: 'Add a text or image file to the prompt.' },
 
-                    { value: 'importAgent', name: `Select agents${!settings.agentNames.length ? '' : ': ' + colors.blue(settings.agentNames?.join(', ') ?? '')}` },
-                    { value: 'importHistory', name: 'Import context from history files' },
+                    { value: 'importAgent', name: `Select agents${!settings.agentNames.length ? '' : ': ' + colors.blue(settings.agentNames?.join(', ') ?? '')}`, description: 'Select agents to use for the prompt.' },
+                    { value: 'importHistory', name: 'Import context from history files', description: 'Import a context from a history file. Good to continue a conversation.' },
                     
                 ], default: lastSelection }, OPTS)
             ];
@@ -1564,8 +1601,14 @@ async function config(options: string[]|undefined, prompt: Prompt): Promise<void
         if (options.includes('autoExecKeys'))
             settings.autoExecKeys = await checkboxWithActions({ message: 'Auto execute, if commands match:', choices: AUTOEXEC_KEYS.map(key => ({ name: key, value: key, checked: settings.autoExecKeys.includes(key) }))}, OPTS);
         
+        //allowGeneralPrompts
+        if (options.includes('allowGeneralPrompts'))
+            settings.allowGeneralPrompts = await toggle({ message: 'Allow general prompts:', default: settings.allowGeneralPrompts,  }, OPTS);
+
         if (options.includes('saveSettings'))
             settings.saveSettings = await toggle({ message: `Automatically use the same settings next time:`, default: settings.saveSettings }, OPTS);
+
+
 
 
         if (options.includes('updateSystemPrompt')) updateSystemPrompt = true; // persist for multiple loops. using options allows it to be set from outside config()
@@ -1649,6 +1692,9 @@ async function makeSystemPromptReady(): Promise<void> {
         settings.systemPromptReady = settings.systemPrompt;
 
         [
+        // general prompt additions
+            ['{{generalPrompt}}', settings.allowGeneralPrompts ? settings.generalPrompt : ''],
+
         // always apply consts here, otherwise they would be saved and this be hard coded
             ['{{process_env_USERNAME}}', process.env.USERNAME!],
             ['{{process_env_OS}}', process.env.OS!],
@@ -1660,6 +1706,10 @@ async function makeSystemPromptReady(): Promise<void> {
             ['{{process_env_POSH_SHELL_VERSION}}', process.env.POSH_SHELL_VERSION!],
             ['{{process_env_HOME}}', process.env.HOME ?? process.env.USERPROFILE!],
             ['{{process_cwd}}', process.cwd()],
+
+        // AI info
+            ['{{currentDriver}}', (drivers[settings.driver]?.name ?? settings.driver) || 'unknown'],
+            ['{{currentModel}}', settings.modelName || (settings.model ?? drivers[settings.model]?.defaultModel) || 'unknown'],
 
         // apply invoking shell to system prompt
             ['{{invokingShell}}', getInvokingShell() ?? 'unknown'],

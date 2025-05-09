@@ -25,6 +25,10 @@ declare global {
         type: 'dir.change';
         userModified?: boolean; // is a "tainted" flag: if user modifies the content after ai response and before saving
         dir: string;
+    } | {
+        type: 'models.getcurrent';
+        userModified?: boolean;
+        filter: string;
     }
     /* | {
         type: 'agent';
@@ -78,12 +82,14 @@ declare global {
         cmdMaxLengthDisplay: number;
         historySaveThinking: boolean;
 
+        allowGeneralPrompts: boolean;
+
         defaultPrompt: string;
         fixitPrompt: string;
         agentPrompt: string;
         fileAddPrompt: string;
+        generalPrompt: string;
         systemPrompt: string;
-        
     };
     
     type SettingsChached = {
