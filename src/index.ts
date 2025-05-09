@@ -373,7 +373,7 @@ let settingsDefault: Settings = {
 let resetPrompts = false;
 if (settingsSaved !== undefined && !settingsArgs['version'] && !settingsArgs['help'] && !settingsArgs['reset-prompts'] && !settingsArgs['reset'] && !settingsArgs['open'] && (settingsSaved.version !== settingsDefault.version)) {
     //* really check if the prompts have changed
-    if ( (settingsSaved.defaultPrompt && settingsDefault.defaultPrompt !== settingsSaved.defaultPrompt) || (settingsSaved.fixitPrompt && settingsDefault.fixitPrompt !== settingsSaved.fixitPrompt) || (settingsSaved.systemPrompt && settingsDefault.systemPrompt !== settingsSaved.systemPrompt) ) {
+    if ( (settingsSaved.defaultPrompt && settingsDefault.defaultPrompt !== settingsSaved.defaultPrompt) || (settingsSaved.fixitPrompt && settingsDefault.fixitPrompt !== settingsSaved.fixitPrompt) || (settingsSaved.generalPrompt && settingsDefault.generalPrompt !== settingsSaved.generalPrompt) || (settingsSaved.systemPrompt && settingsDefault.systemPrompt !== settingsSaved.systemPrompt) ) {
         const isNonInteractive = !process.stdin.isTTY || process.env.npm_lifecycle_event === 'updatecheck' || settingsArgs['config'];
         if (isNonInteractive)
             console.info('The system prompts have been updated. To update saved system prompts from your previous version to the current version, use: `baio --reset-prompts`' );
@@ -1409,7 +1409,7 @@ async function config(options: string[]|undefined, prompt: Prompt): Promise<void
             : [
                 await select({ message: `Settings:`, choices: [
                     new Separator(),
-                    { value: 'done', name: colors.bold('done') },
+                    { value: 'done', name: colors.bold('done'), description: 'Close the settings menu' },
                     new Separator(),
 
                     { value: 'driver', name: `AI Driver: ${colors.blue(drivers[settings.driver]?.name ?? 'unknown')}  ${ settings.driver !== 'ollama' ? (colors.italic(drivers[settings.driver]?.apiKey() ? colors.green('(API key found)') : colors.red('(no API key found)'))) : ''}`,
@@ -1425,7 +1425,7 @@ async function config(options: string[]|undefined, prompt: Prompt): Promise<void
                     { value: 'autoExecKeys', name: `Auto execute if commands match: ${colors.blue(settings.autoExecKeys.join(', '))}`,
                         description: 'Auto execute if commands match.' },
                     { value: 'allowGeneralPrompts', name: `Allow general prompts: ${colors.blue(settings.allowGeneralPrompts ? colors.green('yes') : colors.red('no'))}`,
-                        description: 'Allow to answer general questions, this will also allow to loose the ultimate focus on creating commands' },
+                        description: 'Allow to answer general questions, this will also allow to loose the ultimate focus on creating commands.' },
                     { value: 'saveSettings', name: `Automatically use the same settings next time: ${colors.blue(settings.saveSettings ? colors.green('yes') : colors.red('no'))}`,
                         description: 'Save the settings and automatically use the same settings next time.' },
 
@@ -1602,25 +1602,26 @@ async function config(options: string[]|undefined, prompt: Prompt): Promise<void
             settings.autoExecKeys = await checkboxWithActions({ message: 'Auto execute, if commands match:', choices: AUTOEXEC_KEYS.map(key => ({ name: key, value: key, checked: settings.autoExecKeys.includes(key) }))}, OPTS);
         
         //allowGeneralPrompts
-        if (options.includes('allowGeneralPrompts'))
+        if (options.includes('allowGeneralPrompts')) {
             settings.allowGeneralPrompts = await toggle({ message: 'Allow general prompts:', default: settings.allowGeneralPrompts,  }, OPTS);
+            options.push('updateSystemPrompt');
+        }
 
         if (options.includes('saveSettings'))
             settings.saveSettings = await toggle({ message: `Automatically use the same settings next time:`, default: settings.saveSettings }, OPTS);
 
 
-
-
-        if (options.includes('updateSystemPrompt')) updateSystemPrompt = true; // persist for multiple loops. using options allows it to be set from outside config()
-        done = options.includes('done'); // done is done.
-        lastSelection = options?.filter(option => option !== 'updateSystemPrompt').pop() ?? ''; // last selection if returned to menu from sub item
-        // -----
-        options = undefined; // all options have been processed
-    
+        {//* The final steps are handled at the end of the loop
+            if (options.includes('updateSystemPrompt')) updateSystemPrompt = true; // persist for multiple loops. using options allows it to be set from outside config()
+            done = options.includes('done'); // done is done.
+            lastSelection = options?.filter(option => option !== 'updateSystemPrompt').pop() ?? ''; // last selection if returned to menu from sub item
+            //* very last step ---
+            options = undefined; // all options have been processed
+        }
     } while (!done);
 
     if (updateSystemPrompt) await makeSystemPromptReady(); // redo the system prompt
-    await saveSettings();
+    await saveSettings(); // has a check inside, if it really is allowed to save the settings
 }
 
 

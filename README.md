@@ -202,7 +202,7 @@ or
 **Note:** More details are below in the section about Prompt Triggers
 
 
-### If you want specific commands to be automatically to be executed
+### If you want specific commands to be automatically executed
 
 It checks if the command in the config's list is in the beginning of the line or one of the inbuild commands (or a tool name => an MCP function).
 
@@ -210,13 +210,16 @@ A predefined set is in the settings "Auto execute if commands match".
 
 #### To extend the list with more identifiers
 
-Edit the config:
+To add more identifiers (keys), for now, you need to edit the config:
 
 ```bash
 baio --open config
 ```
 
 and change the key: `autoExecKeys`
+
+see: [Manual config](#manual-config)
+
 
 #### Special use
 
@@ -451,26 +454,33 @@ Setting these in Powershell, here is an example: `$env:DEBUG_OUTPUT = $true ; ba
 They can also be set in `.baioenvrc` to active on each start of Baio.
 
 
-## Faster startup
+## Manual config
+
+### Faster startup
 
 These options can be turned off to reduce start time:
 
 in settings: `baio --open config`
+```JSON
+"precheckUpdate": true,
+"precheckDriverApi": true,
+"precheckLinksInstalled": true,
 ```
-  "precheckUpdate": true,
-  "precheckDriverApi": true,
-  "precheckLinksInstalled": true,
-```
 
-
-## Manual config
-
-These extra options can be tuned:
+### These extra options can be tuned
 
 in settings: `baio --open config`
+```JSON
+"cmdMaxLengthDisplay": 100,
+"autoExecKeys": [],
+"allowGeneralPrompts": false,
 ```
-  "cmdMaxLengthDisplay": 100,
-```
+
+`cmdMaxLengthDisplay`: How long a command can be in the command selection. To see the fill command, you can press <kbd>e</kbd> to inspect and edit it in the command selection.
+
+`autoExecKeys`: see above "[If you want specific commands to be automatically executed](#if-you-want-specific-commands-to-be-automatically-executed)" (Not in arguments, in settings menu only to disable and enable for now)
+
+`allowGeneralPrompts`: Allow to answer general questions, this will also allow to loose the ultimate focus on creating commands. (Not in arguments, but in settings menu.)
 
 
 ## Development
@@ -628,9 +638,9 @@ Note: The Git page for the change logs folds the commits with multiple messages.
 | v1.0.25 | Added prompt trigger (`/history:clear`, `/:clear`), corrected help to show correct `/debug:result` trigger, better display of multiline commands and with backticks, command selection items are cropped, added `settings.cmdMaxLengthDisplay` | [1.0.24...1.0.25](https://github.com/BananaAcid/ai-operator/compare/1.0.24...1.0.25) |
 | v1.0.27 | Argument added: `--file <image/text/...>` and support for adding files (text and image, ...), added fixes for possible bugs, added `precheckLinksInstalled`, fixed multiline commands in selection and progress to be single line and shortened | [1.0.25...1.0.27](https://github.com/BananaAcid/ai-operator/compare/1.0.25...1.0.27) |
 | v1.0.28 | Allow `--driver *` and `--model *` only get a selection for these, api errors are recoverable and can be retried (mind QUOTA errors), reduced duplicate output (showing the command and the command itself) | [1.0.27...1.0.28](https://github.com/BananaAcid/ai-operator/compare/1.0.27...1.0.28) |
-| v1.0.29 | Removed thinking blocks from history to massively reduce token consumption (`settings.historySaveThinking = false`), allow multiple agents by `--agent agent1 --agent agent2`, changed trigger `/debug:get` to output possible keys if no key was given, changed trigger `/debug:settings` to not show prompts by default, but `/debug:settings all` will, allowed prompt trigger `/history:clear <number>` to clear up to the provided amount in case of quota / token max, added prompt trigger `/file:add` to add a file or show a file picker | [1.0.28...1.0.29](https://github.com/BananaAcid/ai-operator/compare/1.0.28...1.0.29) |
-| v1.0.30 | Settings in a menu, added prompt trigger `/:settings` to open settings any time and argument `--settings`, allowed `{{ENVNAME}}` in custom system prompts, deprecated `--ask`, fixed argument `--files` to `--file` (to match the help), added `settings.autoExecKeys` to allow baio auto execute commands that begin with one of the defined keywords | [1.0.29...1.0.30](https://github.com/BananaAcid/ai-operator/compare/1.0.29...1.0.30) |
+| v1.0.29 | Removed thinking blocks from history to **massively reduce token consumption** (`settings.historySaveThinking = false`), allow multiple agents by `--agent agent1 --agent agent2`, changed trigger `/debug:get` to output possible keys if no key was given, changed trigger `/debug:settings` to not show prompts by default, but `/debug:settings all` will, allowed prompt trigger `/history:clear <number>` to clear up to the provided amount in case of quota / token max, added prompt trigger `/file:add` to add a file or show a file picker | [1.0.28...1.0.29](https://github.com/BananaAcid/ai-operator/compare/1.0.28...1.0.29) |
+| v1.0.30 | **Settings in a menu**, added prompt trigger `/:settings` to open settings any time and argument `--settings`, allowed `{{ENVNAME}}` in custom system prompts, deprecated `--ask`, fixed argument `--files` to `--file` (to match the help), added `settings.autoExecKeys` to allow baio auto execute commands that begin with one of the defined keywords | [1.0.29...1.0.30](https://github.com/BananaAcid/ai-operator/compare/1.0.29...1.0.30) |
 | v1.0.31 | Added saving when opening menu by trigger, enabled agent selection when opening menu by trigger (not just start), menu related cleanup and fixes, fixed send files list was never cleared and always send again | [1.0.30...1.0.31](https://github.com/BananaAcid/ai-operator/compare/1.0.30...1.0.31) |
-| v1.0.32 | Added addFile to menu on start, fix commandline `*` options to work with new settings | [1.0.31...1.0.32](https://github.com/BananaAcid/ai-operator/compare/1.0.31...1.0.32) |
+| v1.0.32 | Added **addFile** to menu on start, fix commandline `*` options to work with new settings | [1.0.31...1.0.32](https://github.com/BananaAcid/ai-operator/compare/1.0.31...1.0.32) |
 | v1.0.33 | **Added direct writing of files**, this will massivly reduce tokens used due to not including the file content twice (not in the response from the system anymore needed, unless the content was edited in the selection), added a workaround for a Node23 bug | [1.0.32...1.0.33](https://github.com/BananaAcid/ai-operator/compare/1.0.32...1.0.33) |
-| v1.0.34 | Added trigger `::` to return to command selection, added **switching back and forth between commands/input** with pressing <kbd>ESC</kbd>, added trigger `/history:open` to edit the current context in an editor, added trigger `/history:open:md` to view the context, added `:` or `/` to input when closing commands selection with it,added switching model list to raw JSON when pressing <kbd>space</kbd> to view all detail, added change current working directory command (`go user folder` and alike), added the posibility to talk with Baio about the currently available models of the currently used provider, added a setting to enable general prompts, added descriptions to all settings in the settings menu | [1.0.33...1.0.34](https://github.com/BananaAcid/ai-operator/compare/1.0.33...1.0.34) |
+| v1.0.34 | **Usability, Navigation, Bugfix** <br> Added trigger `::` to return to command selection, added **switching back and forth between commands/input** with pressing <kbd>ESC</kbd>, added trigger `/history:open` to edit the current context in an editor, added trigger `/history:open:md` to view the context, added `:` or `/` to input when closing commands selection with it, added switching model list to raw JSON when pressing <kbd>space</kbd> to view all detail, added **change current working directory command** (`go user folder` and alike), added the posibility to **talk with Baio about the currently available models** of the currently used provider, added a setting to **enable general prompts** (but might not always create commands), added descriptions to all settings in the settings menu | [1.0.33...1.0.34](https://github.com/BananaAcid/ai-operator/compare/1.0.33...1.0.34) |
