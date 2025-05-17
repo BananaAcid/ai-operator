@@ -1402,9 +1402,24 @@ async function promptTrigger(/*inout*/ prompt: Prompt, /*inout*/ resultPrompt?: 
 
 
 /**
+ * Calculates the number of lines a choice list should have based on the terminal size.
+ * @param metaLines how many lines of metadata should be shown above and below the choice list
+ * @param defaultLines the default number of lines to use if no output is available
+ * @param minimumLines the minimum number of lines to use, no matter how large the terminal is
+ * @returns the number of lines to use for the choice list
+ */
+function choiceAmount(metaLines:number, defaultLines: number = 10, minimumLines: number = 1): number {
+    let output = TTY_INTERFACE.output || process.stdout;
+
+    let lines = output?.rows ? Math.max(minimumLines, output.rows - metaLines) : defaultLines;
+    return lines;
+}
+
+
+/**
  * Allows the user to configure some settings in an interactive way.
  * @param options array of strings, each one a setting name to change
- * @returns Promise<void>
+ * @returns nothing, the menu is closed
  */
 async function config(options: string[]|undefined, prompt: Prompt): Promise<void> {
     const OPTS =  {clearPromptOnDone: true, ...TTY_INTERFACE};
@@ -1451,7 +1466,7 @@ async function config(options: string[]|undefined, prompt: Prompt): Promise<void
                     { value: 'importAgent', name: `Select agents${!settings.agentNames.length ? '' : ': ' + colors.blue(settings.agentNames?.join(', ') ?? '')}`, description: 'Select agents to use for the prompt.' },
                     { value: 'importHistory', name: 'Import context from history files', description: 'Import a context from a history file. Good to continue a conversation.' },
                     
-                ], default: lastSelection }, OPTS)
+                ], default: lastSelection, pageSize: choiceAmount(6) }, OPTS)
             ];
 
         
