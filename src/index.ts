@@ -410,7 +410,6 @@ let history: MessageItem[] = [];
  */
 function createAbortSignalForEsc(): {signal: AbortSignal, cleanup: () => Promise<void>} {
     const stdin = process.stdin;
-    const originalRawMode = stdin.isRaw;
     stdin.setRawMode(true); stdin.setEncoding('utf-8'); stdin.resume();
     
     let abortController = new AbortController();
@@ -422,10 +421,11 @@ function createAbortSignalForEsc(): {signal: AbortSignal, cleanup: () => Promise
         signal: abortController.signal,
         cleanup: async () => {
             stdin.removeListener('data', handleKeyPress);
-            stdin.setRawMode(originalRawMode);
             stdin.pause();
+            // NEVER SET RAWMODE BACK! It will lead to an ghost line in the terminal (needs enter to pass characters to inquirer but does not rerender)
+            // stdin.setRawMode(originalRawMode);
 
-            await new Promise((resolve) => process.nextTick(resolve));
+            await new Promise((resolve) => setTimeout(resolve, 1000));  //process.nextTick(resolve));
         }
     }
 }
