@@ -1636,7 +1636,7 @@ async function config(options: string[]|undefined, prompt: Prompt): Promise<void
                                     needRefresh: true,
                                 }
                             }
-                        }}, OPTS);
+                        }, pageSize: choiceAmount(3) }, OPTS);
                 settings.modelName = models.find(({value}) => value === modelSelected)?.name || '';
             }
             // if it was used from select, we do not need to check
