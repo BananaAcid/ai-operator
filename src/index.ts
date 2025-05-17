@@ -1625,8 +1625,8 @@ async function config(options: string[]|undefined, prompt: Prompt): Promise<void
                 settings.temperature = 0;
             }
 
-            if (!settingsArgs['temperature'])
-                settings.temperature = await input({ message: 'Enter the AI temperature:', default: settings.temperature.toString(), validate: x => !isNaN(Number(x)), theme: {style: {defaultAnswer: (text:string) => text + ' ' + colors.dim(`(0 for model\'s default. Typically: 0.1 (factual), to 1.0 (creative) or 2.0)`) }} }, OPTS).then(answer => parseFloat(answer)) ?? settings.temperature;
+            if (!settingsArgs['temperature']) //? Number('') === Number(' ') === 0 ... WTF.
+                settings.temperature = (await input({ message: 'Enter the AI temperature:', default: settings.temperature.toString(), validate: x => !isNaN(Number(x)), theme: {style: {defaultAnswer: (text:string) => text + ' ' + colors.dim(`(0 for model\'s default. Typically: 0.1 (factual), to 1.0 (creative) or 2.0)`) }} }, OPTS).then(answer => parseFloat(answer)) ?? settings.temperature) || 0;
             else
                 delete settingsArgs['temperature']; // processed
         }
