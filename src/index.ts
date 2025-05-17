@@ -92,7 +92,6 @@ import './types/driver.Ollama.d.ts';
 import './types/driver.OpenAi.d.ts';
 import './types/driver.GoogleAi.d.ts';
 import './types/json.d.ts';
-import { abort } from 'node:process';
 type Driver = typeof drivers[keyof typeof drivers];
 
 
