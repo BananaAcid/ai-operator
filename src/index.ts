@@ -1426,12 +1426,14 @@ async function config(options: string[]|undefined, prompt: Prompt): Promise<void
     let done = false;
     let lastSelection = '';
     let updateSystemPrompt = false;
+    let settingsBak = {...settings};
+    let canceled = false;
 
     do {
         options = options && options.length 
             ? options 
             : [
-                await select({ message: `Settings:`, choices: [
+                await selectWithActions({ message: `Settings:`, choices: [
                     new Separator(),
                     { value: 'done', name: colors.bold('done'), description: 'Close the settings menu' },
                     new Separator(),
@@ -1466,9 +1468,24 @@ async function config(options: string[]|undefined, prompt: Prompt): Promise<void
                     { value: 'importAgent', name: `Select agents${!settings.agentNames.length ? '' : ': ' + colors.blue(settings.agentNames?.join(', ') ?? '')}`, description: 'Select agents to use for the prompt.' },
                     { value: 'importHistory', name: 'Import context from history files', description: 'Import a context from a history file. Good to continue a conversation.' },
                     
-                ], default: lastSelection, pageSize: choiceAmount(6) }, OPTS)
+                ],
+                keypressHandler: async function({key, rl}) {
+                    if (key.name == 'escape') {
+                        canceled = true;   // let us know, that we should not care about the values
+                        return {
+                            isDone: true,
+                            isConsumed: true,
+                        }
+                    }
+                },
+                default: lastSelection, pageSize: choiceAmount(6) }, OPTS)
             ];
-
+        
+        if (canceled) {
+            settings = settingsBak;
+            options = undefined;
+            return; // prevent triggering save at the end
+        }
         
         if (options.includes('driver')) {
             const hasArg = !!settingsArgs['driver'],
