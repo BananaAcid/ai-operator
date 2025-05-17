@@ -167,18 +167,14 @@ const spinner = function Spinner(config: SpinnerConfig, context?: Context): Spin
     // we use a factory here to make sure the prompt can be re-created if start() is called while there is an active instance on the same spinner (making the spinner resurectable)
     const promptFactory = async () => createPrompt<ResultStatus/*type of return in done() */, SpinnerConfig>((config, done) => {
         const [status, setStatus] = useState<Status>('loading');
-
         const theme = makeTheme<SpinnerTheme>(spinnerTheme, config.theme);
-
-        const text = status === 'done' ? config.messageDone ?? config.message : config.message;
-        const message = theme.style.message(text, status);
-
-        const output = status === 'done' ? message : status === 'error' ? theme.style.error(config.messageError ?? text) : message;
-
-        const hint = (!config.hint || status === 'done' || status === 'error') ? '' : theme.style.hint('(' + config.hint + ')');
 
         const prefix = usePrefix({ status, theme });
 
+        const text = status === 'done' ? config.messageDone ?? config.message : config.message;
+        const message = theme.style.message(text, status);
+        const output = status === 'done' ? message : status === 'error' ? theme.style.error(config.messageError ?? text) : message;
+        const hint = (!config.hint || status === 'done' || status === 'error') ? '' : theme.style.hint('(' + config.hint + ')');
 
         useKeypress(async (key, rl) => {
             if (config.keypressHandler) {
@@ -215,7 +211,9 @@ const spinner = function Spinner(config: SpinnerConfig, context?: Context): Spin
         },
         
         async wait() {
-            let reason = await instance.catch((e:Error) => { 
+            if (!instance) return;
+
+            let reason = (await instance)?.catch((e:Error) => { 
                 if (e instanceof CancelPromptError) return 'cancelled';
                 if (e instanceof AbortController) return 'aborted';
                 //? if (e instanceof ExitPromptError) return 'exited';  --->  this is CTRL+C ... we do not want to catch it
@@ -294,6 +292,7 @@ export {
     type SpinnerConfig,
     type SpinnerControl,
     type KeypressHandler,
+    type ResultStatus,
 
     spinner,
 };

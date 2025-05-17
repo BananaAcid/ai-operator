@@ -24,6 +24,7 @@ import {
     type Theme,
     type Status,
   } from '@inquirer/core';
+  export { isUpKey, isDownKey, isBackspaceKey, isNumberKey, isEnterKey } from '@inquirer/core';
   import type { PartialDeep } from '@inquirer/type';
 
   import { type InquirerReadline } from '@inquirer/type';

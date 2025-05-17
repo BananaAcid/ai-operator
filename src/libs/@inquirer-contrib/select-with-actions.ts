@@ -32,6 +32,7 @@ import {
     type Theme,
     type Status,
   } from '@inquirer/core';
+  export { isUpKey, isDownKey, isBackspaceKey, isNumberKey, isEnterKey } from '@inquirer/core';
   import type { PartialDeep } from '@inquirer/type';
   import { type InquirerReadline } from '@inquirer/type';
   import type { KeypressEvent } from '@inquirer/core';
@@ -78,12 +79,10 @@ import {
 
   export type KeypressHandler = ({
     key, rl,
-    config, theme, firstRender, status, setStatus, prefix, items, active, setActive,
-    isUpKey, isDownKey, isBackspaceKey, isNumberKey, isEnterKey
+    config, theme, firstRender, status, setStatus, prefix, items, active, setActive
   }:{
     key: KeypressEvent & {meta?:boolean, sequence?:string, shift?:boolean}, rl: InquirerReadline
-    config: SelectConfig<any>, theme: any, firstRender: any, status: any, setStatus: any, prefix: any, items: any, active: any, setActive: any,
-    isUpKey: (key:KeypressEvent) => Boolean, isDownKey: (key:KeypressEvent) => Boolean, isBackspaceKey: (key:KeypressEvent) => Boolean, isNumberKey: (key:KeypressEvent) => Boolean, isEnterKey: (key:KeypressEvent) => Boolean,
+    config: SelectConfig<any>, theme: any, firstRender: any, status: any, setStatus: any, prefix: any, items: any, active: any, setActive: any
   }) => Promise<{isDone?:boolean, isConsumed?:boolean, needRefresh?:boolean}|void>;
   
   type SelectConfig<
@@ -189,9 +188,7 @@ import {
         if (config.keypressHandler) {
             let act = await config.keypressHandler({
                 key, rl,
-                config, theme, firstRender, status, setStatus, prefix, items, active, setActive,
-                isUpKey, isDownKey, isBackspaceKey, isNumberKey, isEnterKey
-                          
+                config, theme, firstRender, status, setStatus, prefix, items, active, setActive
             });
             if (act && act?.needRefresh) {
                 selectedChoice = items[active] as NormalizedChoice<Value>; // since there is no setItems, ref needs refresh
