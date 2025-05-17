@@ -2,8 +2,15 @@
 
 BananaAcid's Artificial Intelligence Operator - made in Germany.
 
+![image](https://github.com/user-attachments/assets/585ffd30-1642-48c3-accd-d19eec019733)
 
-![428772928-5f398dfe-5e7e-4eca-b4aa-6ea003db961f](https://github.com/user-attachments/assets/105324b0-5961-4c1e-9923-00838be0eb43)
+![image](https://github.com/user-attachments/assets/67b4c1fa-e00b-4ed8-aa9e-bf0679fca094)
+
+<details>
+<summary>Screenshots of older versions</summary>
+<img src="https://github.com/user-attachments/assets/105324b0-5961-4c1e-9923-00838be0eb43" />
+</details>
+
 
 ## How this works
 
