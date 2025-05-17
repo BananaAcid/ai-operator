@@ -67,9 +67,9 @@ const drivers = {
         },
 
         // same as openai
-        async getChatResponse(settings: ChatResponseSettings, history: any[], promptText: PromptText, promptAdditions?: PromptAdditions): Promise<ChatResponse|ChatResponseError> {
+        async getChatResponse(settings: ChatResponseSettings, history: any[], promptText: PromptText, promptAdditions?: PromptAdditions, abortSignal?: AbortSignal): Promise<ChatResponse|ChatResponseError> {
             // just reuse the openai driver in the Ollama driver's context
-            return drivers.openai.getChatResponse.call(this, settings, history, promptText, promptAdditions);
+            return drivers.openai.getChatResponse.call(this, settings, history, promptText, promptAdditions, abortSignal);
         },
     },
 
@@ -124,7 +124,7 @@ const drivers = {
             return result;
         },
 
-        async getChatResponse(settings: ChatResponseSettings, history: any[], promptText: PromptText, promptAdditions?: PromptAdditions): Promise<ChatResponse|ChatResponseError> {
+        async getChatResponse(settings: ChatResponseSettings, history: any[], promptText: PromptText, promptAdditions?: PromptAdditions, abortSignal?: AbortSignal): Promise<ChatResponse|ChatResponseError> {
             let resultOrig:any;
 
             // https://cdn.openai.com/spec/model-spec-2024-05-08.html#definitions
@@ -155,7 +155,8 @@ const drivers = {
 
                     stream: false,
                 }),
-            }).then(response => (resultOrig = response).json()).catch(error => console.error(error, { resultOrig })) as OpenAiChatCompletionResult;
+                signal: abortSignal
+            }).then(response => (resultOrig = response).json()).catch(error => (error.name !== 'AbortError') && console.error(error, { resultOrig })) as OpenAiChatCompletionResult;
 
             if (!response) return new Error('No response from AI service') as ChatResponseError;
 
@@ -242,7 +243,7 @@ const drivers = {
             return result;
         },
 
-        async getChatResponse(settings: ChatResponseSettings, history: any[], promptText: PromptText, promptAdditions?: PromptAdditions): Promise<ChatResponse|ChatResponseError> {
+        async getChatResponse(settings: ChatResponseSettings, history: any[], promptText: PromptText, promptAdditions?: PromptAdditions, abortSignal?: AbortSignal): Promise<ChatResponse|ChatResponseError> {
             let resultOrig:any;
 
             const response = await fetch(this.getUrl(this.urlChat, settings.model || this.defaultModel), {
@@ -271,7 +272,8 @@ const drivers = {
                         },
                     ],
                 }),
-            }).then(response => (resultOrig = response).json()).catch(error => console.error(error, { resultOrig })) as GoogleAiChatCompletionResult;
+                signal: abortSignal
+            }).then(response => (resultOrig = response).json()).catch(error => (error.name !== 'AbortError') && console.error(error, { resultOrig })) as GoogleAiChatCompletionResult;
 
             if (!response) return new Error('No response from AI service') as ChatResponseError;
 

@@ -30,6 +30,7 @@ import { isSpaceKey } from '@inquirer/core';
 import checkboxWithActions from './libs/@inquirer-contrib/checkbox-with-actions.ts';
 import inputWithActions from './libs/@inquirer-contrib/input-with-actions.ts';
 import selectWithActions from './libs/@inquirer-contrib/select-with-actions.ts';
+//! import {spinner as spinnerX, type ResultStatus as SpinnerXResultStatus} from './libs/@inquirer-contrib/spinner-with-actions.ts';
 import { default as tgl } from 'inquirer-toggle';
 //@ts-ignore
 const toggle = tgl.default;
@@ -91,6 +92,7 @@ import './types/driver.Ollama.d.ts';
 import './types/driver.OpenAi.d.ts';
 import './types/driver.GoogleAi.d.ts';
 import './types/json.d.ts';
+import { abort } from 'node:process';
 type Driver = typeof drivers[keyof typeof drivers];
 
 
@@ -398,6 +400,69 @@ let settings: Settings = {
 let history: MessageItem[] = [];
 
 
+
+/**
+ * Creates an AbortSignal that is aborted when the escape key is pressed in the TTY.
+ * @returns - An object with a signal and a cleanup function.
+ * The signal can be used as an AbortSignal to cancel any async operation.
+ * The cleanup function should be called when the signal is no longer needed.
+ * It will restore the original raw mode of the stdin stream.
+ */
+function createAbortSignalForEsc(): {signal: AbortSignal, cleanup: () => Promise<void>} {
+    const stdin = process.stdin;
+    const originalRawMode = stdin.isRaw;
+    stdin.setRawMode(true); stdin.setEncoding('utf-8'); stdin.resume();
+    
+    let abortController = new AbortController();
+
+    let handleKeyPress = (key:any) => (key.charCodeAt(0) == 27 /* ESC */) && abortController.abort();
+    stdin.on('data', handleKeyPress);
+
+    return {
+        signal: abortController.signal,
+        cleanup: async () => {
+            stdin.removeListener('data', handleKeyPress);
+            stdin.setRawMode(originalRawMode);
+            stdin.pause();
+
+            await new Promise((resolve) => process.nextTick(resolve));
+        }
+    }
+}
+
+/**
+ * Creates an abort signal that is linked to a spinner and is aborted when the escape key is pressed.
+ * 
+ * This function utilizes a spinner to indicate an ongoing process and returns an object containing
+ * an abort signal and a cleanup function. The abort signal can be used to cancel asynchronous operations 
+ * when the escape key is pressed. The cleanup function should be called to restore the original state 
+ * and will return 'aborted' or 'success' based on whether the operation was aborted.
+ * 
+ * @param message - The message to display while the spinner is active.
+ * @param messageAbort - The message to display if the operation is aborted.
+ * @param messageSuccess - The message to display if the operation is successful.
+ * @returns An object with:
+ * - signal: An AbortSignal used to cancel async operations.
+ * - cleanup: A function to restore the original state and indicate whether the operation was 'aborted' or 'success'.
+ */
+
+function createAbortSignalForEscWithSpinner(message: string, messageAbort: string, messageSuccess?: string): {signal: AbortSignal, cleanup: () => Promise<'aborted' | 'success'>} {
+    spinner.start(message);
+    let {signal, cleanup} = createAbortSignalForEsc();
+
+    return {
+        signal,
+        cleanup: async () => {
+            if (!signal.aborted) spinner.success(messageSuccess || message);
+                else spinner.error(colors.red(messageAbort));
+            await cleanup();
+            return signal.aborted ? 'aborted' : 'success';
+        }
+    }
+}
+
+
+
 /**
  * Calls the ollama AI with the given prompt and history and returns the answer including any commands.
  * @param prompt The prompt to ask the AI.
@@ -413,16 +478,22 @@ let history: MessageItem[] = [];
 async function api(prompt: Prompt): Promise<PromptResult> {
     const driver: Driver = drivers[settings.driver]!;
 
-    let result;
+    let result: ChatResponse | Error = new Error('Unknown error');
     let retry = false;
     do {
-        spinner.start(`Waiting for ${driver.name}\'s response ...`);
-        result = await driver.getChatResponse(settings, history, prompt.text, prompt.additions);
+        let {signal, cleanup} = createAbortSignalForEscWithSpinner(`Waiting for ${driver.name}\'s response ... ${colors.reset(colors.dim('(press <esc> to abort)'))}`, `Aborted ${driver.name}\'s response`, `Waiting for ${driver.name}\'s response ...`);
+
+        result = await driver.getChatResponse(settings, history, prompt.text, prompt.additions, signal);
+        
+        if (await cleanup() === 'aborted') result = new Error('aborted');
+        
         prompt.additions = undefined; // clear them after having used them
-        spinner.success();
-    
+
         // error, ask to retry
         if (result instanceof Error) {
+            if (result.message === 'aborted')
+                return {answer: '', answerFull: '', commands: [], needMoreInfo: true, isEnd: false};
+
             console.error(colors.red(colors.bold(figures.cross)), colors.red(`API Error (${driver.name}): ${result.message}`));
             retry = await toggle({ message: `Do you want to try again?`, default: true }, TTY_INTERFACE);
             if (!retry)
@@ -431,7 +502,7 @@ async function api(prompt: Prompt): Promise<PromptResult> {
 
     } while(retry);
 
-    let {contentRaw, history: historyNew} = result as ChatResponse;
+    let {contentRaw, history: historyNew} = result as unknown as ChatResponse;
     
     history = historyNew;
 
@@ -701,8 +772,16 @@ async function doCommands(commands: PromptCommand[]): Promise<string> {
     let results: string[] = [];
     let updateSystemPrompt = false;
 
+    let { signal, cleanup } = createAbortSignalForEsc();
+
     for (const command of commands) {
-        spinner.start(`Executing command: ${displayCommand(command)}`);
+
+        if (signal.aborted) {
+            console.log(colors.red(colors.bold(figures.cross)), `Aborted! Not executing: ${displayCommand(command)}`);
+            break;
+        }
+    
+        spinner.start(`Executing command ${colors.reset(colors.dim('(press <esc> to abort)'))}: ${displayCommand(command)}`);
 
         let result = '';
         let commandStr = '';
@@ -711,7 +790,7 @@ async function doCommands(commands: PromptCommand[]): Promise<string> {
 
             // execute command mith node and a promise and wait
             result = await new Promise((resolve, reject) => {
-                const child = exec(command.line, {shell: getInvokingShell() }, (error, stdout, stderr) => {
+                const child = exec(command.line, {shell: getInvokingShell(), signal }, (error, stdout, stderr) => {
                     if (error)
                         reject(error);
                     else
@@ -721,6 +800,8 @@ async function doCommands(commands: PromptCommand[]): Promise<string> {
             .then(stdout => '<CMD-OUTPUT>' + stdout + '</CMD-OUTPUT>')
             .catch(error => '<CMD-ERROR>' + error + '</CMD-ERROR>');
         }
+
+        
 
         if (command.type === 'file.write') {
             commandStr = displayCommand(command);
@@ -749,8 +830,10 @@ async function doCommands(commands: PromptCommand[]): Promise<string> {
     
         results.push('<CMD-INPUT>' + commandStr + '</CMD-INPUT>\n' + result);
 
-        spinner.success();
+        spinner.success(`Executing command: ${displayCommand(command)}`);
     }
+
+    await cleanup();
 
     if (updateSystemPrompt)
         await makeSystemPromptReady();
@@ -1534,7 +1617,7 @@ async function config(options: string[]|undefined, prompt: Prompt): Promise<void
                     ? settings.model 
                     : await selectWithActions(options={ message: 'Select your model:', choices: models, default: settings.model || driver.defaultModel, instructions: {navigation: 'Use arrow keys or space to switch details', pager: 'Use arrow keys to reveal more choicesor space to switch details'},
                         //@ts-expect-error
-                        keypressHandler: async function({key, rl}) {
+                        keypressHandler: async function({key}) {
                             // only allow switching to commands selection, if there are commands
                             if (isSpaceKey(key)) {
                                 modelListSimple = !modelListSimple;
