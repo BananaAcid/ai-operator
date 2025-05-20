@@ -654,3 +654,4 @@ Note: The Git page for the change logs folds the commits with multiple messages.
 | v1.0.35 | **Navigation** <br> Added pressing <kbd>.</kbd> to close commands selection and switch to prompt | [1.0.34...1.0.35](https://github.com/BananaAcid/ai-operator/compare/1.0.34...1.0.35) |
 | v1.0.36 | **Usability** <br> Added <kbd>esc</kbd> to abort command execution and AI response and return to "enter more info", added setting menu to size to terminal height | [1.0.35...1.0.36](https://github.com/BananaAcid/ai-operator/compare/1.0.35...1.0.36) |
 | v1.0.37 | **Usability** <br> Added using terminal height for model selection (Goole has 47 Models, my Ollama around 30) | [1.0.36...1.0.37](https://github.com/BananaAcid/ai-operator/compare/1.0.36...1.0.37) |
+| v1.0.38 | **Usability** <br> Fixed `--open ...` to work also when there is no editor already open | [1.0.37...1.0.38](https://github.com/BananaAcid/ai-operator/compare/1.0.37...1.0.38) |
