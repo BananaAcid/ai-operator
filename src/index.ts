@@ -18,7 +18,7 @@ import fs from 'node:fs';
 import util from 'node:util';
 
 import cliMd from 'cli-markdown';
-import launchEditor from 'launch-editor';
+import launchEditorX from 'launch-editor';
 import open from 'open';
 import clipboard from 'copy-paste/promises.js';
 import mime from 'mime';
@@ -398,6 +398,36 @@ let settings: Settings = {
 //* initialize AI history
 let history: MessageItem[] = [];
 
+
+/**
+ * Opens a file in the default text editor for the platform. If the default
+ * editor can't be found, it will fall back to "notepad" on Windows and "vim"
+ * otherwise.
+ * @param file The name of the file to open.
+ * @param errCb An optional callback that will be called with an error message
+ * if the file can't be opened. If the callback is not provided, the error will
+ * be logged to the console.
+ */
+function launchEditor(file: string, errCb?:(file:string, errorMessage:string | null) => void): void {
+
+    function reject(file:string, errorMessage:string | null) {
+        // log that the user needs to select an editor himself
+        console.error(colors.red(figures.warning), 'Please select an editor yourself.');
+        
+        // just throw the file at the OS and try to let it handle it
+        // (in this project, these will be text files, so we do not care)
+        open(file, { wait: false });
+    }
+
+    // set the VISUAL env as default if none is available, looking at you windows
+    if (!process.env.VISUAL && !process.env.EDITOR)
+        process.env.VISUAL = 
+            /^win/.test(process.platform) ? "notepad" : // this is required!
+            "vim"; // VISUAL | EDITOR should not require this
+
+    // try already opened editors, fall back to env VISUAL | EDITOR
+    launchEditorX(file, errCb ?? reject);
+}
 
 
 /**
@@ -1899,10 +1929,8 @@ async function init(): Promise<Prompt> {
 
             case 'env':
                 if (!fs.existsSync(RC_ENVFILE)) writeFile(RC_ENVFILE, '# To enable the Google API (GEMINI) key, remove the "#" and enter a correct key\n#GEMINI_API_KEY=abcdefg1234567890', 'utf-8');
-                console.info(colors.green(figures.tick), `Opening ${RC_ENVFILE}`);
-                launchEditor(RC_ENVFILE, (f,e) => console.error(e, f));
-                await new Promise(resolve => setTimeout(resolve, 5000)); // windows explorer needs some time to start up ...
-
+                console.info(colors.green(figures.info), `Opening ${RC_ENVFILE}`);
+                launchEditor(RC_ENVFILE);
                 break;
 
             case 'config':
@@ -1910,27 +1938,27 @@ async function init(): Promise<Prompt> {
                     console.error(colors.red(figures.cross), `You have to run at least once and choose to 'Automatically use same settings next time' or use --update, for ${RC_FILE} to exist`);
                     process.exit(1);
                 }
-                console.info(colors.green(figures.tick), `Opening ${RC_FILE}`);
+                console.info(colors.green(figures.info), `Opening ${RC_FILE}`);
                 launchEditor(RC_FILE);
                 break;
 
             //? special hidden case, will only work if an editor is open that supports opening folders, like vscode / sublime / textwrangler
             case 'pathfiles': 
                 mkdir(RC_PATH, { recursive: true }).catch(_ => {});
-                console.info(colors.green(figures.tick), `Opening ${RC_PATH}`);
+                console.info(colors.green(figures.info), `Opening ${RC_PATH}`);
                 launchEditor(RC_PATH);
                 break;
 
             case 'agents':
                 mkdir(RC_AGENTS_PATH, { recursive: true }).catch(_ => {});
-                console.info(colors.green(figures.tick), `Opening ${RC_AGENTS_PATH}`);
+                console.info(colors.green(figures.info), `Opening ${RC_AGENTS_PATH}`);
                 await open(RC_AGENTS_PATH); // await does not wait for subprocess to finish spawning
                 await new Promise(resolve => setTimeout(resolve, 1000)); // windows explorer needs some time to start up ...
                 break;
 
             case 'history':
                 mkdir(RC_HISTORY_PATH, { recursive: true }).catch(_ => {});
-                console.info(colors.green(figures.tick), `Opening ${RC_HISTORY_PATH}`);
+                console.info(colors.green(figures.info), `Opening ${RC_HISTORY_PATH}`);
                 await open(RC_HISTORY_PATH); // await does not wait for subprocess to finish spawning
                 await new Promise(resolve => setTimeout(resolve, 1000)); // windows explorer needs some time to start up ...
                 break;
