@@ -36,17 +36,17 @@ import { default as tgl } from 'inquirer-toggle';
 const toggle = tgl.default;
 import fileSelector from 'inquirer-file-selector';
 
-import isUnicodeSupported from 'is-unicode-supported';  //  as long as yoctoSpinner has a hardcoded check
+import isUnicodeSupported from 'is-unicode-supported';  // as long as yoctoSpinner has a hardcoded check
 import cliSpinners from 'cli-spinners'; // imported by @inquirer/core
 import yoctoSpinner from 'yocto-spinner';
 const spinner = yoctoSpinner({text: '', ...(isUnicodeSupported() ? {spinner: cliSpinners.dots} : {})}); // do not care about non-unicode terminals, always force dots
 
 
 //* (try to) handle errors
-// catch ctrl+c and show no error on exit, fix it for the toggle prompt
-process.on('uncaughtException', (error) => { if (error instanceof Error && (error.name === 'ExitPromptError' || error.message.indexOf('User force closed the prompt') >= 0)) { /*console.log('👋 until next time!');*/ } else { console.error(colors.red(figures.cross), error.name + ':', error.message); /* Rethrow unknown errors */ if (!!process.env.DEBUG_ERROR) throw error; } });
-//process.on('warning', (warning) => { if (warning.message.indexOf('unsettled top-level await') == -1) console.warn(warning.name, warning.message); });
-//process.removeAllListeners('warning');
+//* catch ctrl+c and show no error on exit, fix it for the toggle prompt
+process.on('uncaughtException', (error) => { if (error instanceof Error && (error.name === 'ExitPromptError' || error.message.indexOf('User force closed the prompt') >= 0)) { process.exit(0); } else { console.error(colors.red(figures.cross), error.name + ':', error.message); /* Rethrow unknown errors */ if (!!process.env.DEBUG_ERROR) throw error; } });
+//? process.on('warning', (warning) => { if (warning.message.indexOf('unsettled top-level await') == -1) console.warn(warning.name, warning.message); });
+//? process.removeAllListeners('warning');
 
 
 //* File + Paths
