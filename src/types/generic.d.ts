@@ -29,6 +29,10 @@ declare global {
         type: 'models.getcurrent';
         userModified?: boolean;
         filter: string;
+    } | {
+        type: 'web.read';
+        userModified?: boolean;
+        url: string;
     }
     /* | {
         type: 'agent';

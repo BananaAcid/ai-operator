@@ -22,6 +22,7 @@ import launchEditorX from 'launch-editor';
 import open from 'open';
 import clipboard from 'copy-paste/promises.js';
 import mime from 'mime';
+import { NodeHtmlMarkdown } from 'node-html-markdown';
 
 import colors from 'yoctocolors-cjs'; // installed by @inquirer/prompts
 import figures from '@inquirer/figures'; // installed by @inquirer/prompts
@@ -106,7 +107,7 @@ String.prototype.trimBlock = function (left = 0): string {
 };
 
 //* defs
-const AUTOEXEC_KEYS = ['links', 'curl', 'wget', 'Invoke-WebRequest', 'iwr']; // dir, ls, gci, Get-ChildItem ?
+const AUTOEXEC_KEYS = ['links', 'curl', 'wget', 'Invoke-WebRequest', 'iwr', 'web.read']; // dir, ls, gci, Get-ChildItem ?
 const SETTINGS_BLACKLIST: Array<keyof SettingsBlacklisted> = ['addedFiles', 'agentFiles', 'agentNames', 'systemPromptReady']; // keys not to save
 
 
@@ -265,6 +266,7 @@ let settingsDefault: Settings = {
             - Do this if you are asked to change or go to a specific directory, or there are multiple commands to be executed there.
             - After changing to this path, any commands after will execute in this directory (this is will be your new Current Working Directory).
         - To get a list of available models for the current AI, use \`<MODELS-GETCURRENT />\`.
+        - To read or browse a website, and Links2 is not installed, use the command \`<WEB-READ>url</WEB-READ>\`.
         - **DO NOT** use fenced code blocks (\`\`\`) for executable commands. Instead, always use:  
             \`<CMD>command_here</CMD>\`
         - **If multiple commands need to be executed in sequence, combine them into one <CMD>** to maintain the shell context.  
@@ -325,10 +327,12 @@ let settingsDefault: Settings = {
             - Ensure correct shell syntax and parameter usage.
             - Always post-process \`<CMD-OUTPUT>\` for relevance.
         - **Asked to install \`links2\`**:
-            - **Windows**:  
-                - Download page: http://links.twibright.com/download/binaries/win32/
-                - Download the newest version from the windows download page with default means provided by the shell (if links2 is not installed)
-                - Extract the archive and ensure the binary (\`links\`) is in the system \`PATH\` or directly executable.
+            - **Windows**:
+                - If \`winget\` is installed: \`winget.exe update --id "TwibrightLabs.Links" --exact --source winget --accept-source-agreements --disable-interactivity --silent  --include-unknown --accept-package-agreements --force\`
+                - OR:
+                    - Download page: http://links.twibright.com/download/binaries/win32/
+                    - Download the newest version from the windows download page with default means provided by the shell (if links2 is not installed)
+                    - Extract the archive and ensure the binary (\`links\`) is in the system \`PATH\` or directly executable.
             - **Linux**:  
                 - Install via system package manager, for example: \`sudo apt install links2\`
                 - alternatives can be found here: http://links.twibright.com/download.php
@@ -338,7 +342,7 @@ let settingsDefault: Settings = {
             - Always run: \`links -html-numbered-links 1 -dump <url>\`
             - The command name for links2 is: \`links\`
         - **Asked to search the Web, or suggesting to search the web**:
-            - Use DuckDuckGo for queries: \`https://duckduckgo.com/?q=<search_term>\`
+            - Use DuckDuckGo for queries: \`https://duckduckgo.com/html/?q=<search_term>\`
             - Prefer \`links2\` to read the content if available, or parse the HTML output directly.
         - **Asked to create an \`@agent\`**:
             - @agents are markdown files with text prompts for this AI for a later use, and do not contain any programming.
@@ -544,7 +548,7 @@ async function api(prompt: Prompt): Promise<PromptResult> {
 
     //                                  /\`?\ *<CMD>(.*?)<\/CMD>\ *\`?
     //                                  /\`*\ *<CMD>(.*?)<\/CMD>\ *\`*
-    const combinedRegexNamed = /(?<isCmd>\`*\ *<CMD>(?<cmdContent>.*?)<\/CMD>\ *\`*)|(?<isFileWrite>\`?\ *<WRITE-FILE FILEPATH="(?<filePath>.*?)">(?<fileContent>.*?)<\/WRITE-FILE>\ *\`?)|(?<isDirChange>\`*\ *<DIR-CHANGE>(?<dirContent>.*?)<\/DIR-CHANGE>\ *\`*)|(?<isModelsGetCurrent>\`*\ *<MODELS-GETCURRENT \/>\ *\`*)/gs;
+    const combinedRegexNamed = /(?<isCmd>\`*\ *<CMD>(?<cmdContent>.*?)<\/CMD>\ *\`*)|(?<isFileWrite>\`?\ *<WRITE-FILE FILEPATH="(?<filePath>.*?)">(?<fileContent>.*?)<\/WRITE-FILE>\ *\`?)|(?<isDirChange>\`*\ *<DIR-CHANGE>(?<dirContent>.*?)<\/DIR-CHANGE>\ *\`*)|(?<isModelsGetCurrent>\`*\ *<MODELS-GETCURRENT \/>\ *\`*)|(?<isWebRead>\`*\ *<WEB-READ>(?<urlContent>.*?)<\/WEB-READ>\ *\`*)/gs;
     const matches = content.matchAll(combinedRegexNamed);
 
     // Iterate over all matches found by the combined regex to preserve the order
@@ -576,9 +580,15 @@ async function api(prompt: Prompt): Promise<PromptResult> {
             replacementString = '\n' + colors.bgBlack(' ▶️  Change dir: ') + '`' + groups.dirContent +'`\n';
         }
         else if (groups?.isModelsGetCurrent) {
-            DEBUG_OUTPUT && console.log('get current models');
+            DEBUG_OUTPUT && console.log('models.getcurrent');
             commands.push({type: 'models.getcurrent', filter: '/.*/'});
             replacementString = '\n' + colors.bgBlack(' ▶️  Get current models') + '\n';
+        }
+        //web.read
+        else if (groups?.isWebRead) {
+            DEBUG_OUTPUT && console.log('web.read', groups.urlContent!);
+            commands.push({type: 'web.read', url: groups.urlContent!});
+            replacementString = '\n' + colors.bgBlack(' ▶️  Read web page: ') + '`' + groups.urlContent +'`\n';
         }
 
         if (replacementString) content = content.replaceAll(fullMatch, replacementString);
@@ -856,6 +866,15 @@ async function doCommands(commands: PromptCommand[]): Promise<string> {
             .then(stdout => '<CMD-OUTPUT>' + JSON.stringify(stdout, null, 2) + '</CMD-OUTPUT>')
             .catch(error => '<CMD-ERROR>Error getting current models:\n' + error + '</CMD-ERROR>');
         }
+
+        // for NodeHtmlMarkdown, if links2 is not used
+        if (command.type === 'web.read') {
+            commandStr = displayCommand(command);
+            result = await fetch(command.url).then(response => response.text())
+            .then(text => NodeHtmlMarkdown.translate(text))
+            .then(stdout => '<CMD-OUTPUT>' + stdout + '</CMD-OUTPUT>')
+            .catch(error => '<CMD-ERROR>Error reading web page:\n' + error + '</CMD-ERROR>');
+        }
     
         results.push('<CMD-INPUT>' + commandStr + '</CMD-INPUT>\n' + result);
 
@@ -916,6 +935,10 @@ function commandContent(command: PromptCommand, content?: string): string {
         if (content !== undefined) { command.userModified = true; command.filter = content; }
         result = command.filter;
     }
+    if (command.type === 'web.read') {
+        if (content !== undefined) { command.userModified = true; command.url = content; }
+        result = command.url;
+    }
     return result;
 }
 
@@ -934,6 +957,7 @@ function commandCaption(command: PromptCommand): string {
     if (command.type === 'file.write') result = `Write file: ${colors.italic(command.file.path)}`;
     if (command.type === 'dir.change') result = `Change directory to: ${colors.italic(command.dir)}`;
     if (command.type === 'models.getcurrent') result = `Get current models` + (command.filter !== '/.*/' ? ` with RegEx filter: ${colors.italic(command.filter)}` : '');
+    if (command.type === 'web.read') result = `Read web page: ${colors.italic(command.url)}`;
 
     if (command.userModified) result = colors.blue(figures.star) + ' ' + result;
     return result;
@@ -1893,7 +1917,7 @@ async function makeSystemPromptReady(): Promise<void> {
             }
         }
         else
-            settings.systemPromptReady = settings.systemPromptReady.replaceAll('{{linksIsInstalled}}', '- you need to check if links2 is installed');
+            settings.systemPromptReady = settings.systemPromptReady.replaceAll('{{linksIsInstalled}}', '- links2 is not available.');  //? '- you need to check if links2 is installed');
 
         DEBUG_OUTPUT_SYSTEMPROMPT && console.log('DEBUG\n', 'systemPrompt:', settings.systemPromptReady);
     }

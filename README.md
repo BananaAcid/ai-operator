@@ -230,12 +230,14 @@ see: [Manual config](#manual-config)
 
 #### Special use
 
-Adding a an item "" will allow everything = auto accept commands.
+Adding an item "" will allow everything = auto accept commands.
 
 For the inbuild commands:
 - `command`
 - `file.write`
 - `dir.change`
+- `models.getcurrent`
+- `web.read` (if Links2 is missing)
 
 
 ### Wrong shell for suggested commands
@@ -251,15 +253,14 @@ To get data from a **REST API** (json from an url), tell it to get a property fr
 #### Website:
 To get website text content in a meaningful way (and with a little amount of tokens), install Links2 and let it call the website.
 
-- Links2, windows download: http://links.twibright.com/download/binaries/win32/ (`links -html-numbered-links 1 -dump https://...`)
-  - PowerShell: add `function links2-dump($url) { . "C:\Program Files\Links\links.exe" "-html-numbered-links" 1 -dump $url }` to your `$PROFILE` file and let it be called from the operator: `links2-dump("https://...")`
-  - other OSs do have them at their default package managers
+**In case it is not installed, an internal mechanism will be used as fallback, it will not be as efficient as Links2:**
+- ⚠️ producing 1/3 more tokens
+- ⚠️ has problems with websites that create their content with javascript.
 
-Alternative tools to install:
-- elinks, download: https://github.com/rkd77/elinks/releases (`elinks -dump 1 https://...`)
-- lynx,  (`lynx -width=200 -dump "https://..."`)
-- readability-cli, project: https://gitlab.com/gardenappl/readability-cli (`npx readability-cli -l force --properties text-content https://...`) (has problems with stylesheets and generates errors in the output)
-- browsh, project: https://www.brow.sh/docs/introduction/ (connects to a running firefox instance)
+You can ask Baio to install it, or download it manually:
+- Links2, windows download: http://links.twibright.com/download/binaries/win32/
+  - (ussage: `links -html-numbered-links 1 -dump https://...`)
+  - **other OSs do have them at their default package managers**
 
 ### It doesn't know how to do something
 
@@ -654,4 +655,5 @@ Note: The Git page for the change logs folds the commits with multiple messages.
 | v1.0.35 | **Navigation** <br> Added pressing <kbd>.</kbd> to close commands selection and switch to prompt | [1.0.34...1.0.35](https://github.com/BananaAcid/ai-operator/compare/1.0.34...1.0.35) |
 | v1.0.36 | **Usability** <br> Added <kbd>esc</kbd> to abort command execution and AI response and return to "enter more info", added setting menu to size to terminal height | [1.0.35...1.0.36](https://github.com/BananaAcid/ai-operator/compare/1.0.35...1.0.36) |
 | v1.0.37 | **Usability** <br> Added using terminal height for model selection (Goole has 47 Models, my Ollama around 30) | [1.0.36...1.0.37](https://github.com/BananaAcid/ai-operator/compare/1.0.36...1.0.37) |
-| v1.0.38 | **Usability** <br> Fixed `--open ...` to work also when there is no editor already open | [1.0.37...1.0.38](https://github.com/BananaAcid/ai-operator/compare/1.0.37...1.0.38) |
+| v1.0.38 | **Bugfix** <br> Fixed `--open ...` to work also when there is no editor already open | [1.0.37...1.0.38](https://github.com/BananaAcid/ai-operator/compare/1.0.37...1.0.38) |
+| v1.0.39 | **Usability** <br> Added integrated mechanism to read urls in case Links2 is not installed | [1.0.38...1.0.39](https://github.com/BananaAcid/ai-operator/compare/1.0.38...1.0.39) |
