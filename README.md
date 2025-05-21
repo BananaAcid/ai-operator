@@ -391,7 +391,7 @@ baio [-vhdmtaseifucr] ["prompt string"]
   -r, --reset                    Reset (remove) config
   --reset-prompts                Reset prompts only (use this after an update)
 
-  --open <config>                Open the file in the default editor or the agents path (env, config, agents, history)
+  --open <type>                  Open a file in the default editor or path, type: env, config, agents, history
 
 
 Settings config path: ................../.baiorc

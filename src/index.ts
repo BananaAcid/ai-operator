@@ -1269,7 +1269,7 @@ async function promptTrigger(/*inout*/ prompt: Prompt, /*inout*/ resultPrompt?: 
     if (trigger === '/debug:settings') {
         const key = prompt.text.split(/(?<!\\)\s+/)[1];
         // if all or *, return all. if no key, return all settings where the key does not start with prompt
-        const settingsOutput = key == 'all' || key == '*' ? settings : Object.fromEntries(Object.entries(settings).filter(([key]) => !key.endsWith('Prompt')));
+        const settingsOutput = key == 'all' || key == '*' ? settings : Object.fromEntries(Object.entries(settings).filter(([key]) => !key.endsWith('Prompt') && !key.endsWith('systemPromptReady')));
         console.log(colors.green(figures.info), `settings =`, settingsOutput);
         return true;
     }
@@ -1300,6 +1300,8 @@ async function promptTrigger(/*inout*/ prompt: Prompt, /*inout*/ resultPrompt?: 
         catch (e) {
             console.error(colors.red(figures.cross), `Failed to parse value: ${val}`, '\n  ', (e as SyntaxError).message);
         }
+        // update systemPrompt
+        await makeSystemPromptReady();
         return true;
     }
     if (trigger === '/:end') { // ==> /debug:set endIfDone <boolean>
@@ -1933,6 +1935,7 @@ async function init(): Promise<Prompt> {
                 launchEditor(RC_ENVFILE);
                 break;
 
+            case 'settings':
             case 'config':
                 if (!fs.existsSync(RC_FILE)) {
                     console.error(colors.red(figures.cross), `You have to run at least once and choose to 'Automatically use same settings next time' or use --update, for ${RC_FILE} to exist`);
@@ -2016,7 +2019,7 @@ async function init(): Promise<Prompt> {
             -r, --reset                    Reset (remove) config
             --reset-prompts                Reset prompts only (use this after an update)
 
-            --open <config>                Open the file in the default editor or the agents path (env, config, agents, history)
+            --open <type>                  Open a file in the default editor or path, type: env, config, agents, history
         `.trimBlock(2);
         // You can pipe in text (like from a file) to be send to the API before your prompt.
 
