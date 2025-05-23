@@ -657,3 +657,4 @@ Note: The Git page for the change logs folds the commits with multiple messages.
 | v1.0.37 | **Usability** <br> Added using terminal height for model selection (Goole has 47 Models, my Ollama around 30) | [1.0.36...1.0.37](https://github.com/BananaAcid/ai-operator/compare/1.0.36...1.0.37) |
 | v1.0.38 | **Bugfix** <br> Fixed `--open ...` to work also when there is no editor already open | [1.0.37...1.0.38](https://github.com/BananaAcid/ai-operator/compare/1.0.37...1.0.38) |
 | v1.0.39 | **Usability** <br> Added integrated mechanism to read urls in case Links2 is not installed | [1.0.38...1.0.39](https://github.com/BananaAcid/ai-operator/compare/1.0.38...1.0.39) |
+| v1.0.40 | **Bugfix** <br> Fixed selecting agents did not work, changed only really edited commands getting marked, added <kbd>esc</kbd> to abort file browsing | [1.0.39...1.0.40](https://github.com/BananaAcid/ai-operator/compare/1.0.39...1.0.40) |

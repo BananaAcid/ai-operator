@@ -1191,9 +1191,8 @@ async function addFile(promptAdditions: PromptAdditions, filename: string): Prom
     let mimeType = mime.getType(filePath);
 
     if (!mimeType) {
-        console.warn(colors.yellow(figures.warning), 'Could get not mimeType for file', filePath, '→ Using text/plain.');
+        DEBUG_OUTPUT && console.warn(colors.yellow(figures.warning), 'Could get not mimeType for file', filePath, '→ Using text/plain.');
         mimeType = 'text/plain';
-        //return null;
     }
 
     let type = mimeType.split('/')[0] || 'text' as PromptAdditionsTypes;
@@ -1514,7 +1513,8 @@ async function promptTrigger(/*inout*/ prompt: Prompt, /*inout*/ resultPrompt?: 
     }
     if (trigger === '/file:add' || trigger === ':f') {
         const key = prompt.text.split(/(?<!\\)\s+/).filter(arg => arg.length > 0).slice(1).join(' ').trim();
-        let filename = key || await fileSelector( { message: 'Select a file to add:'}, TTY_INTERFACE);
+        let filename = key || (await fileSelector( { message: 'Select a file to add:', allowCancel: true }, TTY_INTERFACE) ?? '');
+        if (filename === 'canceled') filename = '';
         if (!filename) { console.error(colors.red(figures.cross), 'No file selected'); return true; }        
         if (filename.startsWith('"') && filename.endsWith('"')) filename = filename.slice(1, -1); // "file name" is possible
 
@@ -1720,7 +1720,8 @@ async function config(options: string[]|undefined, prompt: Prompt): Promise<void
         }
 
         if (options.includes('addFile') && prompt) {
-            let filename = await fileSelector( { message: 'Select a file to add:'}, TTY_INTERFACE);
+            let filename = await fileSelector( { message: 'Select a file to add:', allowCancel: true}, OPTS) ?? '';
+            if (filename === 'canceled') filename = '';
             if (filename) {
                 if (filename.startsWith('"') && filename.endsWith('"')) filename = filename.slice(1, -1); // "file name" is possible
         
