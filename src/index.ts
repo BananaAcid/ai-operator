@@ -1736,7 +1736,7 @@ async function config(options: string[]|undefined, prompt: Prompt): Promise<void
     
             const agents = await getAgents();
     
-            if (!getAgents.length)
+            if (!agents.length)
                 await input({ message: 'No agents found. Press enter to continue', default: '', theme: {prefix: colors.bold(colors.red(figures.cross))} }, OPTS);
             else 
                 settings.agentFiles = hasArgs && !forceSelection
