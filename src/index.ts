@@ -1154,7 +1154,7 @@ async function importHistory(filename: string, isAsk: boolean = false): Promise<
             isAsk && await input({ message: 'No history files found. Press enter to continue', default: '', theme: {prefix: colors.bold(colors.red(figures.cross))} }, {clearPromptOnDone: true, ...TTY_INTERFACE});
             return;
         }
-        filename = await select({ message: 'Select a history file to load:', choices: [{ name: colors.red('- none -'), value: '' }, ...historyFilesChoices] }, TTY_INTERFACE);
+        filename = await select({ message: 'Select a history file to load:', choices: [{ name: colors.red('- none -'), value: '' }, ...historyFilesChoices] }, {clearPromptOnDone: true, ...TTY_INTERFACE});
     }
     if (filename === '') return;
 
