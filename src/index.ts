@@ -920,23 +920,23 @@ async function doPrompt(prompt: Prompt): Promise<PromptResult> {
 function commandContent(command: PromptCommand, content?: string): string {
     let result = '';
     if (command.type === 'command') {
-        if (content !== undefined) { command.userModified = true; command.line = content; }
+        if (content !== undefined && command.line !== content) { command.userModified = true; command.line = content; }
         result = command.line;
     }
     if (command.type === 'file.write') {
-        if (content !== undefined) { command.userModified = true; command.file.content = content; }
+        if (content !== undefined && command.file.content !== content) { command.userModified = true; command.file.content = content; }
         result = command.file.content;
     }
     if (command.type === 'dir.change') {
-        if (content !== undefined) { command.userModified = true; command.dir = content; }
+        if (content !== undefined && command.dir !== content) { command.userModified = true; command.dir = content; }
         result = command.dir;
     }
     if (command.type === 'models.getcurrent') {
-        if (content !== undefined) { command.userModified = true; command.filter = content; }
+        if (content !== undefined && command.filter !== content) { command.userModified = true; command.filter = content; }
         result = command.filter;
     }
     if (command.type === 'web.read') {
-        if (content !== undefined) { command.userModified = true; command.url = content; }
+        if (content !== undefined && command.url !== content) { command.userModified = true; command.url = content; }
         result = command.url;
     }
     return result;
