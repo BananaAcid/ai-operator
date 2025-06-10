@@ -541,7 +541,8 @@ async function api(prompt: Prompt): Promise<PromptResult> {
 
 
     // remove the <think>...</think> block from the visible output
-    let content = contentRaw.replaceAll(/<think>.*?<\/think>/gis, '');
+    // think, thinking, thinks, ... reason, reasons, reasoning
+    let content = contentRaw.replaceAll(/<(think.*|reason.*)>.*?<\/\1>/gis, '');
 
 
     let commands: PromptCommand[] = [];
