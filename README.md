@@ -259,7 +259,7 @@ To get website text content in a meaningful way (and with a little amount of tok
 
 You can ask Baio to install it, or download it manually:
 - Links2, windows download: http://links.twibright.com/download/binaries/win32/
-  - (ussage: `links -html-numbered-links 1 -dump https://...`)
+  - (usage: `links -html-numbered-links 1 -dump https://...`)
   - **other OSs do have them at their default package managers**
 
 ### It doesn't know how to do something
