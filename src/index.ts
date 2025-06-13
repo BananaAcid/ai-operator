@@ -16,6 +16,7 @@ import { execSync } from 'node:child_process';
 import { parseArgs } from 'node:util';
 import fs from 'node:fs';
 import util from 'node:util';
+import { setTimeout } from 'node:timers/promises';
 
 import cliMd from 'cli-markdown';
 import launchEditorX from 'launch-editor';
@@ -458,7 +459,7 @@ function createAbortSignalForEsc(): {signal: AbortSignal, cleanup: () => Promise
             // NEVER SET RAWMODE BACK! It will lead to an ghost line in the terminal (needs enter to pass characters to inquirer but does not rerender)
             // stdin.setRawMode(originalRawMode);
 
-            await new Promise((resolve) => setTimeout(resolve, 1000));  //process.nextTick(resolve));
+            await setTimeout(1000);  //process.nextTick(resolve));
         }
     }
 }
@@ -1982,14 +1983,14 @@ async function init(): Promise<Prompt> {
                 mkdir(RC_AGENTS_PATH, { recursive: true }).catch(_ => {});
                 console.info(colors.green(figures.info), `Opening ${RC_AGENTS_PATH}`);
                 await open(RC_AGENTS_PATH); // await does not wait for subprocess to finish spawning
-                await new Promise(resolve => setTimeout(resolve, 1000)); // windows explorer needs some time to start up ...
+                await setTimeout(1000); // windows explorer needs some time to start up ...
                 break;
 
             case 'history':
                 mkdir(RC_HISTORY_PATH, { recursive: true }).catch(_ => {});
                 console.info(colors.green(figures.info), `Opening ${RC_HISTORY_PATH}`);
                 await open(RC_HISTORY_PATH); // await does not wait for subprocess to finish spawning
-                await new Promise(resolve => setTimeout(resolve, 1000)); // windows explorer needs some time to start up ...
+                await setTimeout(1000); // windows explorer needs some time to start up ...
                 break;
 
             default:
@@ -1997,7 +1998,7 @@ async function init(): Promise<Prompt> {
         }
 
         // give launchEditor a chance to spawn the editor proccess
-        await new Promise(resolve => setTimeout(resolve, 100));
+        await setTimeout(100);
         process.exit(0);
     }
 
@@ -2195,7 +2196,7 @@ async function init(): Promise<Prompt> {
     }
 
     {//* check if prompt is actually required
-        if (settingsArgs['config']) { await new Promise(resolve => setTimeout(resolve, 100)); process.exit(0); }  //! THIS NEEDS TO CONTAIN A TIMEOUT TO FIX A NODEJS ISSUE: https://github.com/nodejs/node/issues/56645
+        if (settingsArgs['config']) { await setTimeout(100); process.exit(0); }  //! THIS NEEDS TO CONTAIN A TIMEOUT TO FIX A NODEJS ISSUE: https://github.com/nodejs/node/issues/56645
     }
 
     
