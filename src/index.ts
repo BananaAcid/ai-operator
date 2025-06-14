@@ -468,6 +468,7 @@ function createAbortSignalForEsc(): {signal: AbortSignal, cleanup: () => Promise
     }
 }
 
+
 /**
  * Creates an abort signal that is linked to a spinner and is aborted when the escape key is pressed.
  * 
@@ -614,7 +615,7 @@ async function api(prompt: Prompt): Promise<PromptResult> {
 
 
     try {
-        content = cliMd(content); // crashes sometimes : Cannot read properties of undefined (reading 'at') -- /node_modules/cli-html/lib/tags/code.js:12:25
+        content = cliMd(content); //? crashes sometimes : Cannot read properties of undefined (reading 'at') -- /node_modules/cli-html/lib/tags/code.js:12:25
     } catch (error) {}
 
     return {
