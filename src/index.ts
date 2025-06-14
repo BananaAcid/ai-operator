@@ -17,9 +17,9 @@ import fs from 'node:fs';
 import util from 'node:util';
 import { setTimeout } from 'node:timers/promises';
 
-import { exec } from 'node:child_process'; // yes, it is async, but common error-first callback style and a promise
+import child_process from 'node:child_process';
 import { promisify } from 'node:util';
-const execAsync = promisify(exec);
+const execAsync = promisify(child_process.exec); // yes, it is async, but common error-first callback style and a promise
 
 import cliMd from 'cli-markdown';
 import launchEditorX from 'launch-editor';
