@@ -572,12 +572,6 @@ async function api(prompt: Prompt): Promise<PromptResult> {
 
     }
 
-    
-    // go for agents, that are created by the ai
-    // const matchesHelpers = content.matchAll(/\`?\ *<AGENT-DEFINITION NAME="(.*?)">(.*?)<\/AGENT-DEFINITION>\ *\`?/g);
-    // for (const match of matchesHelpers)
-    //     helpers.push({type: 'agent', name: match[1], definition: match[2]});
-
     // clean <END/> tags, because sometimes they are within strange places
     content = content.replaceAll(/<END\/>/g, '');
 
