@@ -8,7 +8,6 @@
 
 //* node imports
 import packageJSON from '../package.json' with { type: 'json' };
-import { exec } from 'node:child_process';
 import path from 'node:path';
 import { writeFile, readFile, unlink, glob, mkdir, open as fsOpen, rm } from 'node:fs/promises';
 import os from 'node:os';
@@ -17,6 +16,10 @@ import { parseArgs } from 'node:util';
 import fs from 'node:fs';
 import util from 'node:util';
 import { setTimeout } from 'node:timers/promises';
+
+import { exec } from 'node:child_process'; // yes, it is async, but common error-first callback style and a promise
+import { promisify } from 'node:util';
+const execAsync = promisify(exec);
 
 import cliMd from 'cli-markdown';
 import launchEditorX from 'launch-editor';
@@ -408,6 +411,7 @@ let history: MessageItem[] = [];
  * Opens a file in the default text editor for the platform. If the default
  * editor can't be found, it will fall back to "notepad" on Windows and "vim"
  * otherwise.
+ * Patches the default launchEditor.
  * @param file The name of the file to open.
  * @param errCb An optional callback that will be called with an error message
  * if the file can't be opened. If the callback is not provided, the error will
@@ -830,13 +834,10 @@ async function doCommands(commands: PromptCommand[]): Promise<string> {
             commandStr = command.line;
 
             // execute command mith node and a promise and wait
-            result = await new Promise((resolve, reject) => {
-                const child = exec(command.line, {shell: getInvokingShell(), signal }, (error, stdout, stderr) => {
-                    if (error)
-                        reject(error);
-                    else
-                        resolve(stdout);
-                });
+            result = await execAsync(command.line, {shell: getInvokingShell(), signal })
+            .then(({stdout, stderr}) => {
+                if (stderr) throw stderr;
+                return stdout;
             })
             .then(stdout => '<CMD-OUTPUT>' + stdout + '</CMD-OUTPUT>')
             .catch(error => '<CMD-ERROR>' + error + '</CMD-ERROR>');
@@ -1408,7 +1409,7 @@ async function promptTrigger(/*inout*/ prompt: Prompt, /*inout*/ resultPrompt?: 
                     //   text becomes header by having --- directly below it, no need for extra hashes
                     .map(item => ['user',   'library', 'model', 'assistant'].includes(item) ? '\n'.repeat(1) + `**${item}:**\n` : '\n'.repeat(3) + item + '\n'.repeat(3))
                     // remove ansi escape codes (cli output colors and alike)
-                    .map(item => item.replace(/[\u001b\u009b][[()#;?]*(?:[0-9]{1,4}(?:;[0-9]{0,4})*)?[0-9A-ORZcf-nqry=><]/g,""))
+                    .map(item => item.replace(/[\u001b\u009b][[()#;?]*(?:[0-9]{1,4}(?:;[0-9]{0,4})*)?[0-9A-ORZcf-nqry=><]/g, ''))
             ];
 
             // add separators
