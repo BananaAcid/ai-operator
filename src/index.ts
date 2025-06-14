@@ -265,12 +265,7 @@ let settingsDefault: Settings = {
         ### Output Rules:
         - Explain **briefly** what you are doing and what each command does.
         - Never explain, what Tags you are using to execute commands.
-        - To **directly create or overwrite a file**, you need to use \`<WRITE-FILE FILEPATH="filepath/filename">content</WRITE-FILE>\`. This is the **preferred** way of writing files.
-        - To persistently change the current working directory, you need to use \`<DIR-CHANGE>dirpath</DIR-CHANGE>\` command. This is the **preferred** way of changing the current working directory.
-            - Do this if you are asked to change or go to a specific directory, or there are multiple commands to be executed there.
-            - After changing to this path, any commands after will execute in this directory (this is will be your new Current Working Directory).
-        - To get a list of available models for the current AI, use \`<MODELS-GETCURRENT />\`.
-        - To read or browse a website, and Links2 is not installed, use the command \`<WEB-READ>url</WEB-READ>\`.
+        {{promptCommands}}
         - **DO NOT** use fenced code blocks (\`\`\`) for executable commands. Instead, always use:  
             \`<CMD>command_here</CMD>\`
         - **If multiple commands need to be executed in sequence, combine them into one <CMD>** to maintain the shell context.  
@@ -553,9 +548,7 @@ async function api(prompt: Prompt): Promise<PromptResult> {
 
     let commands: PromptCommand[] = [];
 
-    //                                  /\`?\ *<CMD>(.*?)<\/CMD>\ *\`?
-    //                                  /\`*\ *<CMD>(.*?)<\/CMD>\ *\`*
-    const combinedRegexNamed = /(?<isCmd>\`*\ *<CMD>(?<cmdContent>.*?)<\/CMD>\ *\`*)|(?<isFileWrite>\`?\ *<WRITE-FILE FILEPATH="(?<filePath>.*?)">(?<fileContent>.*?)<\/WRITE-FILE>\ *\`?)|(?<isDirChange>\`*\ *<DIR-CHANGE>(?<dirContent>.*?)<\/DIR-CHANGE>\ *\`*)|(?<isModelsGetCurrent>\`*\ *<MODELS-GETCURRENT \/>\ *\`*)|(?<isWebRead>\`*\ *<WEB-READ>(?<urlContent>.*?)<\/WEB-READ>\ *\`*)/gs;
+    const combinedRegexNamed = commandsBuildRegEx();
     const matches = content.matchAll(combinedRegexNamed);
 
     // Iterate over all matches found by the combined regex to preserve the order
@@ -563,42 +556,20 @@ async function api(prompt: Prompt): Promise<PromptResult> {
         const fullMatch = match[0];
         const groups = match.groups;
         let replacementString = '';
+        
+        if (groups) {
 
-        if (groups?.isCmd) {
-            commands.push({type: 'command', line: groups.cmdContent!});
+            Object.keys(promptCommands).forEach(commandName => {
+                let ret = commandHandleMd(commandName, groups);
+                if (ret === undefined) return;
 
-            // Use fenced code block for commands with backticks or newlines
-            if (groups.cmdContent?.includes('`') || groups.cmdContent?.trim().includes('\n'))
-                replacementString = '\n' + colors.bgBlack(' ▶️  Command:') + '\n```'+getShellName()+'\n' + groups.cmdContent?.trim() + '\n```\n';
-            // Use inline code block for simple commands
-            else
-                replacementString = '\n ▶️ `' + groups.cmdContent?.trim() + '`';
+                commands.push(ret.command);
+                if (ret.replacementString) replacementString = ret.replacementString;
+            });
             
-        }
-        else if (groups?.isFileWrite) {
-            DEBUG_OUTPUT && console.log('file.write', groups.filePath!, 'mime:', mime.getType(groups.filePath!) ?? 'text', 'content length:', groups.fileContent!.length);
-
-            commands.push({type: 'file.write', file: {path: groups.filePath!, mimeType: mime.getType(groups.filePath!) ?? 'text', content: groups.fileContent!}});
-            replacementString = '\n' + colors.bgBlack(' ▶️  Write file: ') + '`' + groups.filePath +'`\n```'+'\n' + groups.fileContent + '\n```\n';
-        }
-        else if (groups?.isDirChange) {
-            DEBUG_OUTPUT && console.log('dir.change', groups.dirContent!);
-            commands.push({type: 'dir.change', dir: groups.dirContent!});
-            replacementString = '\n' + colors.bgBlack(' ▶️  Change dir: ') + '`' + groups.dirContent +'`\n';
-        }
-        else if (groups?.isModelsGetCurrent) {
-            DEBUG_OUTPUT && console.log('models.getcurrent');
-            commands.push({type: 'models.getcurrent', filter: '/.*/'});
-            replacementString = '\n' + colors.bgBlack(' ▶️  Get current models') + '\n';
-        }
-        //web.read
-        else if (groups?.isWebRead) {
-            DEBUG_OUTPUT && console.log('web.read', groups.urlContent!);
-            commands.push({type: 'web.read', url: groups.urlContent!});
-            replacementString = '\n' + colors.bgBlack(' ▶️  Read web page: ') + '`' + groups.urlContent +'`\n';
+            if (replacementString) content = content.replaceAll(fullMatch, replacementString);
         }
 
-        if (replacementString) content = content.replaceAll(fullMatch, replacementString);
     }
 
     
@@ -828,59 +799,12 @@ async function doCommands(commands: PromptCommand[]): Promise<string> {
         }
     
         spinner.start(`Executing command ${colors.reset(colors.dim('(press <esc> to abort)'))}: ${displayCommand(command)}`);
-
-        let result = '';
-        let commandStr = '';
-        if (command.type === 'command') {
-            commandStr = command.line;
-
-            // execute command mith node and a promise and wait
-            result = await execAsync(command.line, {shell: getInvokingShell(), signal })
-            .then(({stdout, stderr}) => {
-                if (stderr) throw stderr;
-                return stdout;
-            })
-            .then(stdout => '<CMD-OUTPUT>' + stdout + '</CMD-OUTPUT>')
-            .catch(error => '<CMD-ERROR>' + error + '</CMD-ERROR>');
-        }
-
         
 
-        if (command.type === 'file.write') {
-            commandStr = displayCommand(command);
-            result = await writeFile(command.file.path, command.file.content, 'utf-8')
-            .then(stdout => '<CMD-OUTPUT>File written' + (command.userModified ? ' (user modified the content):\n' + command.file.content : '') + '</CMD-OUTPUT>')
-            .catch(error => '<CMD-ERROR>Error writing file:\n' + error + '</CMD-ERROR>');
-        }
+        let ret = await promptCommands[command.type].exec(command as PromptCommandByType<typeof command.type> as any, signal);  //! <---- cleanup / fix `any`
+        results.push(ret.result);
+        updateSystemPrompt = ret.updateSystemPrompt;
 
-        if (command.type === 'dir.change') {
-            commandStr = displayCommand(command);
-            result = await new Promise(resolve => resolve(process.chdir(command.dir)))
-            .then(stdout => '<CMD-OUTPUT>Current directory changed to ' + command.dir + '</CMD-OUTPUT>')
-            .catch(error => '<CMD-ERROR>Error changing directory:\n' + error + '</CMD-ERROR>');
-
-            updateSystemPrompt = true;
-        }
-
-        if (command.type === 'models.getcurrent') {
-            let driver = drivers[settings.driver]!;
-            commandStr = displayCommand(command);
-            result = await driver.getModels(settings, false) // false => get JSON string
-            .then(models => models.map(model => (RegExp(command.filter).test(model.name)) ? JSON.parse(model.name) : false).filter(Boolean)) // change to array of raw model data
-            .then(stdout => '<CMD-OUTPUT>' + JSON.stringify(stdout, null, 2) + '</CMD-OUTPUT>')
-            .catch(error => '<CMD-ERROR>Error getting current models:\n' + error + '</CMD-ERROR>');
-        }
-
-        // for NodeHtmlMarkdown, if links2 is not used
-        if (command.type === 'web.read') {
-            commandStr = displayCommand(command);
-            result = await fetch(command.url).then(response => response.text())
-            .then(text => NodeHtmlMarkdown.translate(text))
-            .then(stdout => '<CMD-OUTPUT>' + stdout + '</CMD-OUTPUT>')
-            .catch(error => '<CMD-ERROR>Error reading web page:\n' + error + '</CMD-ERROR>');
-        }
-    
-        results.push('<CMD-INPUT>' + commandStr + '</CMD-INPUT>\n' + result);
 
         spinner.success(`Executing command: ${displayCommand(command)}`);
     }
@@ -913,59 +837,273 @@ async function doPrompt(prompt: Prompt): Promise<PromptResult> {
 
 
 /**
- * Retrieves or updates the content of a command based on its type.
- * 
- * * commandCaption must have the same commands as commandContent, as defined in PromptCommand
- * 
- * @param command - The command object to process.
- * @param content - Optional new content to update the command with.
- * @returns The current or updated content of the command.
- */
-function commandContent(command: PromptCommand, content?: string): string {
-    let result = '';
-    if (command.type === 'command') {
-        if (content !== undefined && command.line !== content) { command.userModified = true; command.line = content; }
-        result = command.line;
-    }
-    if (command.type === 'file.write') {
-        if (content !== undefined && command.file.content !== content) { command.userModified = true; command.file.content = content; }
-        result = command.file.content;
-    }
-    if (command.type === 'dir.change') {
-        if (content !== undefined && command.dir !== content) { command.userModified = true; command.dir = content; }
-        result = command.dir;
-    }
-    if (command.type === 'models.getcurrent') {
-        if (content !== undefined && command.filter !== content) { command.userModified = true; command.filter = content; }
-        result = command.filter;
-    }
-    if (command.type === 'web.read') {
-        if (content !== undefined && command.url !== content) { command.userModified = true; command.url = content; }
-        result = command.url;
-    }
-    return result;
-}
-
-
-/**
  * Generates a caption for a given command based on its type and modification status.
- * 
- * * commandCaption must have the same commands as commandContent, as defined in PromptCommand
  * 
  * @param command - The `PromptCommand` object containing information about the command.
  * @returns A string caption describing the command.
  */
-function commandCaption(command: PromptCommand): string {
-    let result = '';
-    if (command.type === 'command') result = command.line;
-    if (command.type === 'file.write') result = `Write file: ${colors.italic(command.file.path)}`;
-    if (command.type === 'dir.change') result = `Change directory to: ${colors.italic(command.dir)}`;
-    if (command.type === 'models.getcurrent') result = `Get current models` + (command.filter !== '/.*/' ? ` with RegEx filter: ${colors.italic(command.filter)}` : '');
-    if (command.type === 'web.read') result = `Read web page: ${colors.italic(command.url)}`;
-
-    if (command.userModified) result = colors.blue(figures.star) + ' ' + result;
-    return result;
+function commandContent(command: PromptCommand, content?: string): string {
+    return promptCommands[command.type].content(command as PromptCommandByType<typeof command.type> as any, content);  //! <---- cleanup / fix `any`
 }
+
+
+/**
+ * Generates a regular expression with named groups for each command.
+ * Each group name is in the form of `is_<commandName>`.
+ * The regular expression is case-insensitive and matches globally.
+ * @returns The generated regular expression.
+ */
+function commandsBuildRegEx(): RegExp {
+    let groups = Object.keys(promptCommands).map(commandName => {
+        let key = commandName.replace(/[^a-zA-Z0-9]/g, '_');
+        let command = promptCommands[commandName as keyof typeof promptCommands];
+        let str = command.regex.toString().slice(1,-1);
+        return `(?<is_${key}>${str})`;
+    });
+
+    return new RegExp(`${groups.join('|')}`, 'gs');
+}
+
+
+/**
+ * Processes a markdown command based on its name and groups.
+ * 
+ * This function checks if the command specified by `commandName` is the correct
+ * one to handle based on the provided `groups`. If the command matches, it 
+ * delegates the handling to the corresponding command's `handleMd` method.
+ * 
+ * @param commandName - The name of the command to handle.
+ * @param groups - The regular expression groups containing information about the command.
+ * @returns The result of the command's `handleMd` method, or `undefined` if the command doesn't match.
+ */
+function commandHandleMd(commandName: string, groups: RegExpGroups) {
+    let key = commandName.replace(/[^a-zA-Z0-9]/g, '_');
+    // check if this is the correct command to handle
+    if ( !groups?.['is_' + key] ) return undefined;
+    let command = promptCommands[commandName as keyof typeof promptCommands];
+    return command.handleMd(groups);
+}
+
+
+/**
+ * The `promptCommands` object contains information about different types of commands.
+ * Each command is associated with a description, syntax, caption, content, regex, and handleMd function.
+ */
+const promptCommands = {
+
+    'command': {
+        description: 'Execute a shell command',
+        syntax: '<CMD>command</CMD>',
+        prompt: undefined,
+        
+        caption: (command: PromptCommandByType<'command'>) => command.line,
+
+        content(command: PromptCommandByType<'command'>, content?: string): string {
+            if (content !== undefined && command.line !== content) { command.userModified = true; command.line = content; }
+            return command.line;
+        },
+
+        regex: /\`*\ *<CMD>(?<cmdContent>.*?)<\/CMD>\ *\`*/,
+
+        handleMd(groups: RegExpGroups): {command: PromptCommand, replacementString: string} {
+            let replacementString = '';
+
+            // Use fenced code block for commands with backticks or newlines
+            if (groups.cmdContent?.includes('`') || groups.cmdContent?.trim().includes('\n'))
+                replacementString = '\n' + colors.bgBlack(' ▶️  Command:') + '\n```'+getShellName()+'\n' + groups.cmdContent?.trim() + '\n```\n';
+            // Use inline code block for simple commands
+            else
+                replacementString = '\n ▶️ `' + groups.cmdContent?.trim() + '`';
+
+            return {
+                command: {type: 'command', line: groups.cmdContent!, userModified: false},
+                replacementString
+            };
+        },
+
+
+        async exec(command: PromptCommandByType<'command'>, signal?: AbortSignal): Promise<{result: string, updateSystemPrompt: boolean}> {
+            let commandStr = command.line;
+
+            // execute command mith node and a promise and wait
+            let result = await execAsync(command.line, {shell: getInvokingShell(), signal })
+                .then(({stdout, stderr}) => {
+                    if (stderr) throw Error(stderr);
+                    return stdout;
+                })
+                .then(stdout => '<CMD-OUTPUT>' + stdout + '</CMD-OUTPUT>')
+                .catch(error => '<CMD-ERROR>' + error.message + '</CMD-ERROR>')
+                .then(result => '<CMD-INPUT>' + commandStr + '</CMD-INPUT>\n' + result);
+
+            return {
+                result,
+                updateSystemPrompt: false,
+            };
+        },
+    },
+
+
+    'file.write': {
+        description: 'Write content to a file',
+        syntax: '<WRITE-FILE FILEPATH="path/to/file">content</WRITE-FILE>',
+        prompt: `
+        - To **directly create or overwrite a file**, you need to use \`<WRITE-FILE FILEPATH="filepath/filename">content</WRITE-FILE>\`. This is the **preferred** way of writing files.
+        `,
+
+        caption: (command: PromptCommandByType<'file.write'>) => `Write file: ${colors.italic(command.file.path)}`,
+
+        content(command: PromptCommandByType<'file.write'>, content?: string): string {
+            if (content !== undefined && command.file.content !== content) { command.userModified = true; command.file.content = content; }
+            return command.file.content;
+        },
+
+        regex: /\`?\ *<WRITE-FILE FILEPATH="(?<filePath>.*?)">(?<fileContent>.*?)<\/WRITE-FILE>\ *\`?/,
+
+        handleMd(groups: RegExpGroups): {command: PromptCommand, replacementString: string} {
+            DEBUG_OUTPUT && console.log('file.write', groups.filePath!, 'mime:', mime.getType(groups.filePath!) ?? 'text', 'content length:', groups.fileContent!.length);
+
+            return {
+                command: {type: 'file.write', file: {path: groups.filePath!, mimeType: mime.getType(groups.filePath!) ?? 'text', content: groups.fileContent!}},
+                replacementString: '\n' + colors.bgBlack(' ▶️  Write file: ') + '`' + groups.filePath +'`\n```'+'\n' + groups.fileContent + '\n```\n',
+            };
+        },
+
+        async exec(command: PromptCommandByType<'file.write'>, signal?: AbortSignal): Promise<{result: string, updateSystemPrompt: boolean}> {
+            let result = await writeFile(command.file.path, command.file.content, 'utf-8')
+                .then(stdout => '<CMD-OUTPUT>File written' + (command.userModified ? ' (user modified the content):\n' + command.file.content : '') + '</CMD-OUTPUT>')
+                .catch(error => '<CMD-ERROR>Error writing file:\n' + error + '</CMD-ERROR>')
+                .then(result => '<CMD-INPUT>' + displayCommand(command) + '</CMD-INPUT>\n' + result);
+
+            return {
+                result,
+                updateSystemPrompt: false,
+            };
+        }
+    },
+
+
+    'dir.change': {
+        description: 'Change process directory',
+        syntax: '<DIR-CHANGE>path/to/dir</DIR-CHANGE>',
+        prompt: `
+        - To persistently change the current working directory, you need to use \`<DIR-CHANGE>dirpath</DIR-CHANGE>\` command. This is the **preferred** way of changing the current working directory.
+            - Do this if you are asked to change or go to a specific directory, or there are multiple commands to be executed there.
+            - After changing to this path, any commands after will execute in this directory (this is will be your new Current Working Directory).
+        `,
+
+        caption: (command: PromptCommandByType<'dir.change'>) => `Change directory to: ${colors.italic(command.dir)}`,
+
+        content(command: PromptCommandByType<'dir.change'>, content?: string): string {
+            if (content !== undefined && command.dir !== content) { command.userModified = true; command.dir = content; }
+            return command.dir;
+        },
+
+        regex: /\`*\ *<DIR-CHANGE>(?<dirContent>.*?)<\/DIR-CHANGE>\ *\`*/,
+
+        handleMd(groups: RegExpGroups): {command: PromptCommand, replacementString: string} {
+            DEBUG_OUTPUT && console.log('dir.change', groups.dirContent!);
+
+            return {
+                command: {type: 'dir.change', dir: groups.dirContent!},
+                replacementString: '\n' + colors.bgBlack(' ▶️  Change dir: ') + '`' + groups.dirContent +'`\n',
+            };
+        },
+
+        async exec(command: PromptCommandByType<'dir.change'>, signal?: AbortSignal): Promise<{result: string, updateSystemPrompt: boolean}> {
+            let result = await new Promise(resolve => resolve(process.chdir(command.dir)))
+                .then(stdout => '<CMD-OUTPUT>Current directory changed to ' + command.dir + '</CMD-OUTPUT>')
+                .catch(error => '<CMD-ERROR>Error changing directory:\n' + error + '</CMD-ERROR>')
+                .then(result => '<CMD-INPUT>' + displayCommand(command) + '</CMD-INPUT>\n' + result);
+
+            return {
+                result,
+                updateSystemPrompt: true,
+            };
+        }
+    },
+
+
+    'models.getcurrent': {
+        description: 'Get current models',               //! TODO: Add missing filter handling
+        syntax: '<MODELS-GETCURRENT />',
+        prompt: `
+        - To get a list of available models for the current AI, use \`<MODELS-GETCURRENT />\`.
+        `,
+
+        caption: (command: PromptCommandByType<'models.getcurrent'>) => `Get current models` + (command.filter !== '.*' ? ` with RegEx filter: ${colors.italic(command.filter)}` : ''),
+
+        content(command: PromptCommandByType<'models.getcurrent'>, content?: string): string {
+            if (content !== undefined && command.filter !== content) { command.userModified = true; command.filter = content; }
+            return command.filter;
+        },
+
+        regex: /\`*\ *<MODELS-GETCURRENT \/>\ *\`*/,
+
+        handleMd(groups: RegExpGroups): {command: PromptCommand, replacementString: string} {
+            DEBUG_OUTPUT && console.log('models.getcurrent');
+
+            return {
+                command: {type: 'models.getcurrent', filter: '.*'},
+                replacementString: '\n' + colors.bgBlack(' ▶️  Get current models') + '\n',
+            };
+        },
+
+        async exec(command: PromptCommandByType<'models.getcurrent'>, signal?: AbortSignal): Promise<{result: string, updateSystemPrompt: boolean}> {
+            let driver = drivers[settings.driver]!;
+            let result = await driver.getModels(settings, false) // false => get JSON string
+                .then(models => models.map(model => (new RegExp(command.filter, 'g').test(model.name)) ? JSON.parse(model.name) : false).filter(Boolean)) // change to array of raw model data
+                .then(stdout => '<CMD-OUTPUT>' + JSON.stringify(stdout, null, 2) + '</CMD-OUTPUT>')
+                .catch(error => '<CMD-ERROR>Error getting current models:\n' + error + '</CMD-ERROR>')
+                .then(result => '<CMD-INPUT>' + displayCommand(command) + '</CMD-INPUT>\n' + result);
+
+            return {
+                result,
+                updateSystemPrompt: false,
+            };
+        }
+    },
+
+
+    'web.read': {
+        description: 'Read a web page',
+        syntax: '<WEB-READ>url</WEB-READ>',
+        prompt: `
+        - To read or browse a website, and Links2 is not installed, use the command \`<WEB-READ>url</WEB-READ>\`.
+        `,
+
+        caption: (command: PromptCommandByType<'web.read'>) => `Read web page: ${colors.italic(command.url)}`,
+
+        content(command: PromptCommandByType<'web.read'>, content?: string): string {
+            if (content !== undefined && command.url !== content) { command.userModified = true; command.url = content; }
+            return command.url;
+        },
+
+        regex: /\`*\ *<WEB-READ>(?<urlContent>.*?)<\/WEB-READ>\ *\`*/,
+
+        handleMd(groups: RegExpGroups): {command: PromptCommand, replacementString: string} {
+            DEBUG_OUTPUT && console.log('web.read', groups.urlContent!);
+            
+            return {
+                command: {type: 'web.read', url: groups.urlContent!},
+                replacementString: '\n' + colors.bgBlack(' ▶️  Read web page: ') + '`' + groups.urlContent +'`\n',
+            };
+        },
+
+        async exec(command: PromptCommandByType<'web.read'>, signal?: AbortSignal): Promise<{result: string, updateSystemPrompt: boolean}> {
+            let result = await fetch(command.url).then(response => response.text())
+                .then(text => NodeHtmlMarkdown.translate(text))
+                .then(stdout => '<CMD-OUTPUT>' + stdout + '</CMD-OUTPUT>')
+                .catch(error => '<CMD-ERROR>Error reading web page:\n' + error + '</CMD-ERROR>')
+                .then(result => '<CMD-INPUT>' + displayCommand(command) + '</CMD-INPUT>\n' + result);
+
+            return {
+                result,
+                updateSystemPrompt: false,
+            };
+        }
+    },
+
+};
 
 
 /**
@@ -975,7 +1113,11 @@ function commandCaption(command: PromptCommand): string {
  */
 function displayCommand(command: PromptCommand): string {
 
-    let commandStr = commandCaption(command);
+    let commandStr = promptCommands[command.type].caption(command as PromptCommandByType<typeof command.type> as any);  //! <---- cleanup / fix `any`
+
+    // mark as modified
+    if (command.userModified) commandStr = colors.blue(figures.star) + ' ' + commandStr;
+
 
     return (commandStr.length > settings.cmdMaxLengthDisplay 
         ? commandStr.substring(0, settings.cmdMaxLengthDisplay - 4) + ' ...' 
@@ -1901,6 +2043,8 @@ async function makeSystemPromptReady(): Promise<void> {
 
         // apply system env to system prompt or clean up the placeholder
             ['{{useAllSysEnv}}', settings.useAllSysEnv ? `- You are running on (system environment): ${JSON.stringify(process.env)}` : ''],
+
+            ['{{promptCommands}}', Object.values(promptCommands).map(cmd => cmd.prompt).join('\n').split('\n').filter(line => line?.trim() !== '').join('\n').replace(/\n+/g, '\n').trim() ],
 
             ['{{useAgent}}', agentContent ? `---\n${agentContent}\n---\n` : ''],
         ].forEach(([placeholder, value]) =>

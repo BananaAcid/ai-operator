@@ -43,6 +43,9 @@ declare global {
         };
     }*/;
 
+    // utility type to extract a union member based on a property value
+    type PromptCommandByType<K extends PromptCommand['type']> = Extract<PromptCommand, { type: K }>;
+
     type PromptResult = {
         answerFull: string; // for thinking models debugging
         answer: string;
@@ -128,6 +131,9 @@ declare global {
         disabled?: boolean | string; // string would be disbaled and the help string
         description?: string; // under the list when the cursor highlight a given choice
     }>;
+
+
+    type RegExpGroups = Exclude<RegExpExecArray['groups'], undefined>;
 }
 
 
