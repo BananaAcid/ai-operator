@@ -128,7 +128,6 @@ import {
     ) => boolean | string | Promise<string | boolean>;
     theme?: PartialDeep<Theme<CheckboxTheme>>;
     shortcuts?: CheckboxShortcuts;
-    // key is the same as param 1 of useKeyPress
     keypressHandler?: KeypressHandler;
   };
   
@@ -205,7 +204,6 @@ import {
   
       const bounds = useMemo(() => {
         const first = items.findIndex(isSelectable);
-        //@ts-ignore This is available, just not typed with the default TS settings
         const last = items.findLastIndex(isSelectable);
   
         if (first === -1) {
