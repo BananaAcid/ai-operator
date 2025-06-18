@@ -82,6 +82,7 @@ declare global {
         endIfDone: boolean;
         saveSettings: boolean;
         autoExecKeys: string[];
+        promptCommandsDisabled: string[];
 
         precheckUpdate: boolean;
         precheckDriverApi: boolean;

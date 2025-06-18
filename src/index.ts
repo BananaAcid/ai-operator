@@ -196,6 +196,8 @@ let settingsDefault: Settings = {
 
     autoExecKeys: AUTOEXEC_KEYS, // allow execution if command is in here
 
+    promptCommandsDisabled: [], // disable native prompts commands (for mixing with MCP commands later on)
+
     /** Optimizations **/
     precheckUpdate: true,       // (speedup if false) try to reach the npm registry to check for an update
     precheckDriverApi: true,    // (speedup if false) try to reach the driver api to check if it is available
@@ -559,7 +561,9 @@ async function api(prompt: Prompt): Promise<PromptResult> {
         
         if (groups) {
 
-            Object.keys(promptCommands).forEach(commandName => {
+            Object.keys(promptCommands)
+            .filter(key => !settings.promptCommandsDisabled.includes(key))
+            .forEach(commandName => {
                 let ret = commandHandleMd(commandName, groups);
                 if (ret === undefined) return;
 
@@ -848,7 +852,9 @@ function commandContent(command: PromptCommand, content?: string): string {
  * @returns The generated regular expression.
  */
 function commandsBuildRegEx(): RegExp {
-    let groups = Object.keys(promptCommands).map(commandName => {
+    let groups = Object.keys(promptCommands)
+    .filter(key => !settings.promptCommandsDisabled.includes(key))
+    .map(commandName => {
         let key = commandName.replace(/[^a-zA-Z0-9]/g, '_');
         let command = promptCommands[commandName as keyof typeof promptCommands];
         let str = command.regex.toString().slice(1,-1);
@@ -886,9 +892,9 @@ function commandHandleMd(commandName: string, groups: RegExpGroups) {
 const promptCommands = {
 
     'command': {
-        description: 'Execute a shell command',
+        description: 'Execute a shell command (the primary functionality of Baio)',
         syntax: '<CMD>command</CMD>',
-        prompt: undefined,
+        prompt: undefined, // based on multiple rows in the system prompt - can not be disabled. 
         
         caption: (command: PromptCommandByType<'command'>) => command.line,
 
@@ -1018,7 +1024,7 @@ const promptCommands = {
 
 
     'models.getcurrent': {
-        description: 'Get current models',               //! TODO: Add missing filter handling
+        description: 'Get current models of active AI provider',               //! TODO: Add missing filter handling
         syntax: '<MODELS-GETCURRENT />',
         prompt: `
         - To get a list of available models for the current AI, use \`<MODELS-GETCURRENT />\`.
@@ -1059,7 +1065,7 @@ const promptCommands = {
 
 
     'web.read': {
-        description: 'Read a web page',
+        description: 'Read a web page with internal helper',
         syntax: '<WEB-READ>url</WEB-READ>',
         prompt: `
         - To read or browse a website, and Links2 is not installed, use the command \`<WEB-READ>url</WEB-READ>\`.
@@ -1727,7 +1733,9 @@ async function config(options: string[]|undefined, prompt: Prompt): Promise<void
                     { value: 'endIfDone', name: `End if assumed done: ${colors.blue(settings.endIfDone ? colors.green('yes') : colors.red('no'))}`,
                         description: 'End the prompt if the answer is assumed done. Good if you have single tasks to be done.' },
                     { value: 'autoExecKeys', name: `Auto execute if commands match: ${colors.blue(settings.autoExecKeys.join(', '))}`,
-                        description: 'Auto execute if commands match.' },
+                        description: 'Automatically execute the command, if the line begins with one of these, or a prompt command matches.' },
+                    { value: 'promptCommandsDisabled', name: `Disabled prompt commands: ${settings.promptCommandsDisabled.length ? colors.blue(settings.promptCommandsDisabled.join(', ')) : colors.italic(colors.dim('(none)'))}`,
+                        description: 'Disabled prompt commands to disable functions in the answers.' },
                     { value: 'allowGeneralPrompts', name: `Allow general prompts: ${colors.blue(settings.allowGeneralPrompts ? colors.green('yes') : colors.red('no'))}`,
                         description: 'Allow to answer general questions, this will also allow Baio to loose the ultimate focus on creating commands.' },
                     { value: 'saveSettings', name: `Automatically use the same settings next time: ${colors.blue(settings.saveSettings ? colors.green('yes') : colors.red('no'))}`,
@@ -1950,7 +1958,10 @@ async function config(options: string[]|undefined, prompt: Prompt): Promise<void
     
         if (options.includes('autoExecKeys'))
             settings.autoExecKeys = await checkboxWithActions({ message: 'Auto execute, if commands match:', choices: AUTOEXEC_KEYS.map(key => ({ name: key, value: key, checked: settings.autoExecKeys.includes(key) }))}, OPTS);
-        
+
+        if (options.includes('promptCommandsDisabled'))
+            settings.promptCommandsDisabled = await checkboxWithActions({ message: 'Disabled prompt commands:', choices: Object.keys(promptCommands).filter(key => key !== 'command').map(key => ({ name: key, value: key, checked: settings.promptCommandsDisabled.includes(key), description: promptCommands[key as keyof typeof promptCommands].description }))}, OPTS);
+
         //allowGeneralPrompts
         if (options.includes('allowGeneralPrompts')) {
             settings.allowGeneralPrompts = await toggle({ message: 'Allow general prompts:', default: settings.allowGeneralPrompts,  }, OPTS);
@@ -2068,7 +2079,7 @@ async function makeSystemPromptReady(): Promise<void> {
         // apply system env to system prompt or clean up the placeholder
             ['{{useAllSysEnv}}', settings.useAllSysEnv ? `- You are running on (system environment): ${JSON.stringify(process.env)}` : ''],
 
-            ['{{promptCommands}}', Object.values(promptCommands).map(cmd => cmd.prompt).join('\n').split('\n').filter(line => line?.trim() !== '').join('\n').replace(/\n+/g, '\n').trim() ],
+            ['{{promptCommands}}', Object.entries(promptCommands).filter(([key]) => !settings.promptCommandsDisabled.includes(key)).map(([_, cmd]) => cmd.prompt).join('\n').split('\n').filter(line => line?.trim() !== '').join('\n').replace(/\n+/g, '\n').trim() ],
 
             ['{{useAgent}}', agentContent ? `---\n${agentContent}\n---\n` : ''],
         ].forEach(([placeholder, value]) =>
