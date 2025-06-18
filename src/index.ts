@@ -1200,7 +1200,7 @@ async function doPromptWithCommands(result: PromptResult|undefined): Promise<str
                         canceled = true;   // let us know, that we should not care about the values
                         options.clearPromptOnDone = true; // clear the line after exit by this
                         return {
-                            isDone: true, // tell the elment to exit and return selected values
+                            isDone: true, // tell the element to exit and return selected values
                             isConsumed: true, // prevent original handler to process this key         ... ignores any validation error (we did not setup validations for this prompt)
                         }
                     }
@@ -1254,7 +1254,7 @@ async function doPromptWithCommands(result: PromptResult|undefined): Promise<str
                             TTY_INTERFACE_OPTS.clearPromptOnDone = true; // clear the line after exit by this
                             
                             return {
-                                isDone: true, // tell the elment to exit and return selected values
+                                isDone: true, // tell the element to exit and return selected values
                                 isConsumed: true, // prevent original handler to process this key
                             }
                         }
@@ -1773,9 +1773,24 @@ async function config(options: string[]|undefined, prompt: Prompt): Promise<void
 
             let driverChoices = Object.keys(drivers).map(key => ({ name: drivers[key]?.name, value: key }));
             if (!hasArg || forceSelection) {
-                settings.driver = await select({ message: 'Select your AI provider API driver:', choices: driverChoices, default: settings.driver || 'ollama' }, OPTS);
+                let canceled = false;
+                settings.driver = await selectWithActions({ message: 'Select your AI provider API driver:', choices: driverChoices, default: settings.driver || 'ollama',
+                    instructions: {
+                        navigation: `Press ${colors.bold(colors.cyan('<enter>'))} to select, or ${colors.bold(colors.cyan('<esc>'))} to cancel`, 
+                        pager: `Use arrow keys to reveal more choices, press ${colors.bold(colors.cyan('<enter>'))} to select, or ${colors.bold(colors.cyan('<esc>'))} to cancel)`
+                    },
+                    keypressHandler: async function({key}) {
+                        if (key.name == 'escape') {
+                            canceled = true;
+                            return {
+                                isDone: true, // tell the element to exit and return selected values
+                                isConsumed: true, // prevent original handler to process this key
+                            }
+                        }
+                    }, }, OPTS);
+                if (canceled) settings.driver = settings.driver || 'ollama';
                 
-                if (!settingsArgs['model']) {
+                if (!settingsArgs['model'] && !canceled) {
                     // force to choose a new one
                     settings.model = ''; 
                     settings.modelName = '';
@@ -1808,9 +1823,14 @@ async function config(options: string[]|undefined, prompt: Prompt): Promise<void
                 models = styleModels(models);
                 let modelListSimple = false;
                 let options: any;
+                let canceled = false;
                 modelSelected = hasArg && !forceSelection 
                     ? settings.model 
-                    : await selectWithActions(options={ message: 'Select your model:', choices: models, default: settings.model || driver.defaultModel, instructions: {navigation: 'Use arrow keys or space to switch details', pager: 'Use arrow keys to reveal more choicesor space to switch details'},
+                    : await selectWithActions(options={ message: 'Select your model:', choices: models, default: settings.model || driver.defaultModel,
+                        instructions: {
+                            navigation: `Press ${colors.bold(colors.cyan('<enter>'))} to select, or ${colors.bold(colors.cyan('<space>'))} to switch details, or ${colors.bold(colors.cyan('<esc>'))} to cancel`, 
+                            pager: `Use arrow keys to reveal more choices, press ${colors.bold(colors.cyan('<enter>'))} to select, or ${colors.bold(colors.cyan('<space>'))} to switch details, or ${colors.bold(colors.cyan('<esc>'))} to cancel)`
+                        },
                         //@ts-expect-error
                         keypressHandler: async function({key}) {
                             // only allow switching to commands selection, if there are commands
@@ -1832,7 +1852,17 @@ async function config(options: string[]|undefined, prompt: Prompt): Promise<void
                                     needRefresh: true,
                                 }
                             }
+
+                            if (key.name == 'escape') {
+                                canceled = true;
+                                return {
+                                    isDone: true, // tell the element to exit and return selected values
+                                    isConsumed: true, // prevent original handler to process this key
+                                }
+                            }
+
                         }, pageSize: choiceAmount(3) }, OPTS);
+                if (canceled) modelSelected = settings.model || driver.defaultModel;
                 settings.modelName = models.find(({value}) => value === modelSelected)?.name || '';
             }
             // if it was used from select, we do not need to check
