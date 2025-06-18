@@ -1782,7 +1782,7 @@ async function config(options: string[]|undefined, prompt: Prompt): Promise<void
             let driverChoices = Object.keys(drivers).map(key => ({ name: drivers[key]?.name, value: key }));
             if (!hasArg || forceSelection) {
                 let canceled = false;
-                settings.driver = await selectWithActions({ message: 'Select your AI provider API driver:', choices: driverChoices, default: settings.driver || 'ollama',
+                let driver = await selectWithActions({ message: 'Select your AI provider API driver:', choices: driverChoices, default: settings.driver || 'ollama',
                     instructions: {
                         navigation: `Press ${colors.bold(colors.cyan('<enter>'))} to select, or ${colors.bold(colors.cyan('<esc>'))} to cancel`, 
                         pager: `Use arrow keys to reveal more choices, press ${colors.bold(colors.cyan('<enter>'))} to select, or ${colors.bold(colors.cyan('<esc>'))} to cancel)`
@@ -1796,7 +1796,10 @@ async function config(options: string[]|undefined, prompt: Prompt): Promise<void
                             }
                         }
                     }, }, OPTS);
-                if (canceled) settings.driver = settings.driver || 'ollama';
+                if (canceled)
+                    settings.driver = settings.driver || 'ollama';
+                else
+                    settings.driver = driver;
                 
                 if (!settingsArgs['model'] && !canceled) {
                     // force to choose a new one
