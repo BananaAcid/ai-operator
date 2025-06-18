@@ -35,6 +35,7 @@ import { isSpaceKey } from '@inquirer/core';
 import checkboxWithActions from './libs/@inquirer-contrib/checkbox-with-actions.ts';
 import inputWithActions from './libs/@inquirer-contrib/input-with-actions.ts';
 import selectWithActions from './libs/@inquirer-contrib/select-with-actions.ts';
+import searchWithActions from './libs/@inquirer-contrib/search-with-actions.ts';
 //! import {spinner as spinnerX, type ResultStatus as SpinnerXResultStatus} from './libs/@inquirer-contrib/spinner-with-actions.ts';
 import { default as tgl } from 'inquirer-toggle';
 //@ts-ignore
@@ -1782,20 +1783,50 @@ async function config(options: string[]|undefined, prompt: Prompt): Promise<void
             let driverChoices = Object.keys(drivers).map(key => ({ name: drivers[key]?.name, value: key }));
             if (!hasArg || forceSelection) {
                 let canceled = false;
-                let driver = await selectWithActions({ message: 'Select your AI provider API driver:', choices: driverChoices, default: settings.driver || 'ollama',
-                    instructions: {
-                        navigation: `Press ${colors.bold(colors.cyan('<enter>'))} to select, or ${colors.bold(colors.cyan('<esc>'))} to cancel`, 
-                        pager: `Use arrow keys to reveal more choices, press ${colors.bold(colors.cyan('<enter>'))} to select, or ${colors.bold(colors.cyan('<esc>'))} to cancel)`
-                    },
-                    keypressHandler: async function({key}) {
-                        if (key.name == 'escape') {
-                            canceled = true;
-                            return {
-                                isDone: true, // tell the element to exit and return selected values
-                                isConsumed: true, // prevent original handler to process this key
+                let driver;
+                let defaultDriver = settings.driver || 'ollama';
+                do {
+                    let doSearch = false;
+                    driver = await selectWithActions({ message: 'Select your AI provider API driver:', choices: driverChoices, default: defaultDriver,
+                        instructions: {
+                            navigation: `Press ${colors.bold(colors.cyan('<enter>'))} to select, ${colors.bold(colors.cyan('<s>'))} to search, or ${colors.bold(colors.cyan('<esc>'))} to cancel`, 
+                            pager: `Use arrow keys to reveal more choices, press ${colors.bold(colors.cyan('<enter>'))} to select, ${colors.bold(colors.cyan('<s>'))} to search, or ${colors.bold(colors.cyan('<esc>'))} to cancel)`
+                        },
+                        keypressHandler: async function({key}) {
+                            if (key.name == 'escape') {
+                                canceled = true;
+                                return { isDone: true, isConsumed: true, }
                             }
-                        }
-                    }, }, OPTS);
+
+                            if (key.sequence?.toLowerCase() === 's') {
+                                doSearch = true;
+                                return { isDone: true, isConsumed: true, }
+                            }
+
+                        }, pageSize: choiceAmount(3) }, OPTS);                    
+                    if (doSearch || canceled) driver = '';
+
+                    //* we can not use search only, since it does not have a default option to set the previously selected driver
+                    if (doSearch) {
+                        let canceled = false;
+                        let searchDriver = await searchWithActions({ message: 'Search for your AI provider API driver:',
+                            source: async (input, { signal }) => {
+                                if (!input || !drivers) return driverChoices;
+                                return driverChoices.filter(driver => driver.value.toLowerCase().includes(input.toLowerCase()));
+                            },
+                            
+                            keypressHandler: async function({key}) {
+                                if (key.name == 'escape') {
+                                    canceled = true;
+                                    return { isDone: true, isConsumed: true, }
+                                }
+                            }, pageSize: choiceAmount(3) }, OPTS);
+
+                        if (!canceled)
+                            driver = searchDriver;
+                    }
+                } while (!canceled && !drivers[driver]);
+
                 if (canceled)
                     settings.driver = settings.driver || 'ollama';
                 else
@@ -1834,46 +1865,79 @@ async function config(options: string[]|undefined, prompt: Prompt): Promise<void
                 models = styleModels(models);
                 let modelListSimple = false;
                 let options: any;
-                let canceled = false;
-                modelSelected = hasArg && !forceSelection 
-                    ? settings.model 
-                    : await selectWithActions(options={ message: 'Select your model:', choices: models, default: settings.model || driver.defaultModel,
-                        instructions: {
-                            navigation: `Press ${colors.bold(colors.cyan('<enter>'))} to select, or ${colors.bold(colors.cyan('<space>'))} to switch details, or ${colors.bold(colors.cyan('<esc>'))} to cancel`, 
-                            pager: `Use arrow keys to reveal more choices, press ${colors.bold(colors.cyan('<enter>'))} to select, or ${colors.bold(colors.cyan('<space>'))} to switch details, or ${colors.bold(colors.cyan('<esc>'))} to cancel)`
-                        },
-                        //@ts-expect-error
-                        keypressHandler: async function({key}) {
-                            // only allow switching to commands selection, if there are commands
-                            if (isSpaceKey(key)) {
-                                modelListSimple = !modelListSimple;
 
-                                if (!modelListSimple) {
-                                    options.choices = models;
-                                }
-                                else {
-                                    let driver:Driver = drivers[settings.driver]!;
-                                    let modelsSimple = await driver.getModels(settings, false);
-                                    if (modelsSimple.length)
-                                        options.choices = modelsSimple
-                                            .map(({name, value}) => ({name: util.inspect(JSON.parse(name), { compact: true, showHidden: false, depth: null, colors: true }).replaceAll('\n', '') +'\n', value}));
-                                    
-                                }
-                                return {
-                                    needRefresh: true,
-                                }
-                            }
+                if (hasArg && !forceSelection)
+                    modelSelected =  settings.model;
+                //if (!hasArg || forceSelection) {
+                else {
+                    let canceled = false;
+                    let model = undefined;
+                    let defaultModel = settings.model || driver.defaultModel;
+                    do {
+                        let doSearch = false;
 
-                            if (key.name == 'escape') {
-                                canceled = true;
-                                return {
-                                    isDone: true, // tell the element to exit and return selected values
-                                    isConsumed: true, // prevent original handler to process this key
-                                }
-                            }
+                        model = await selectWithActions(options={ message: 'Select a model:', choices: models, default: defaultModel,
+                            instructions: {
+                                navigation: `Press ${colors.bold(colors.cyan('<enter>'))} to select, ${colors.bold(colors.cyan('<s>'))} to search, or ${colors.bold(colors.cyan('<space>'))} to switch details, or ${colors.bold(colors.cyan('<esc>'))} to cancel`, 
+                                pager: `Use arrow keys to reveal more choices, press ${colors.bold(colors.cyan('<enter>'))} to select, ${colors.bold(colors.cyan('<s>'))} to search, or ${colors.bold(colors.cyan('<space>'))} to switch details, or ${colors.bold(colors.cyan('<esc>'))} to cancel)`
+                            },
+                            //@ts-expect-error
+                            keypressHandler: async function({key}) {
+                                // only allow switching to commands selection, if there are commands
+                                if (isSpaceKey(key)) {
+                                    modelListSimple = !modelListSimple;
 
-                        }, pageSize: choiceAmount(3) }, OPTS);
-                if (canceled) modelSelected = settings.model || driver.defaultModel;
+                                    if (!modelListSimple) {
+                                        options.choices = models;
+                                    }
+                                    else {
+                                        let driver:Driver = drivers[settings.driver]!;
+                                        let modelsSimple = await driver.getModels(settings, false);
+                                        if (modelsSimple.length)
+                                            options.choices = modelsSimple
+                                                .map(({name, value}) => ({name: util.inspect(JSON.parse(name), { compact: true, showHidden: false, depth: null, colors: true }).replaceAll('\n', '') +'\n', value}));
+                                    }
+                                    return {
+                                        needRefresh: true,
+                                    }
+                                }
+
+                                if (key.sequence?.toLowerCase() === 's') {
+                                    doSearch = true;
+                                    return { isDone: true, isConsumed: true, }
+                                }
+
+                                if (key.name == 'escape') {
+                                    canceled = true;
+                                    return { isDone: true, isConsumed: true, }
+                                }
+                            }, pageSize: choiceAmount(3) }, OPTS);
+                        if (canceled || doSearch) model = undefined;
+
+                        if (doSearch) {
+                            let canceled = false;
+                            let searchModel = await searchWithActions({ message: 'Search for a model:',
+                                source: async (input, { signal }) => {
+                                    if (!input || !models) return models;
+                                    return models.filter(model => model.value.toLowerCase().includes(input.toLowerCase()) || model.name.toLowerCase().includes(input.toLowerCase()));
+                                },
+                                
+                                keypressHandler: async function({key}) {
+                                    if (key.name == 'escape') {
+                                        canceled = true;
+                                        return { isDone: true, isConsumed: true, }
+                                    }
+                                }, pageSize: choiceAmount(3) }, OPTS);
+
+                            if (!canceled)
+                                model = searchModel;
+                        }
+                    } while (!canceled && model === undefined);
+
+                    if (canceled) modelSelected = settings.model || driver.defaultModel;
+                    else
+                        modelSelected = model!;
+                }
                 settings.modelName = models.find(({value}) => value === modelSelected)?.name || '';
             }
             // if it was used from select, we do not need to check
@@ -1882,7 +1946,7 @@ async function config(options: string[]|undefined, prompt: Prompt): Promise<void
             // model has no name but driver is ollama => it is a manual input und lead to downloading when used
             if (!isModelSelectedInModels && settings.driver === 'ollama') {
                 // do no logic
-                console.log('⚠️ The model will be downloaded when used and this process might really take a while. No progress will be shown.');
+                console.log(`⚠️ The model (${colors.italic(modelSelected)}) will be downloaded when used and this process might really take a while. No progress will be shown here (check Ollama).`);
             }
             // arg was used and model was not found
             else if (hasArg && !forceSelection && !isModelSelectedInModels) {
@@ -1893,7 +1957,7 @@ async function config(options: string[]|undefined, prompt: Prompt): Promise<void
             // no models in list or no model was selected
             if (!models.length || !modelSelected) {
                 let msg = (settings.driver == 'ollama') ?
-                    '⚠️ The model you enter, will be downloaded when used and this process might really take a while. No progress will be shown.\n  ' : '';
+                    `⚠️ The model (${colors.italic(modelSelected)}) will be downloaded when used and this process might really take a while. No progress will be shown here (check Ollama).\n  ` : '';
                 modelSelected = await input({ message: msg + 'Enter your model to use:', default: settings.model || driver.defaultModel,  }, OPTS);
                 settings.modelName = '';
             }
