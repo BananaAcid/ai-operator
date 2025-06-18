@@ -203,7 +203,7 @@ let settingsDefault: Settings = {
     cmdMaxLengthDisplay: 100,   // set the maximum length of a command to display
     historySaveThinking: false, // save the thinking block to the history
 
-    allowGeneralPrompts: false, // Allow to answer general questions, this will also allow to loose the ultimate focus on creating commands
+    allowGeneralPrompts: false, // Allow to answer general questions, this will also allow Baio to loose the ultimate focus on creating commands
 
     /** Prompts **/
     defaultPrompt: 'show me a table of all files in the current directory',
@@ -1729,7 +1729,7 @@ async function config(options: string[]|undefined, prompt: Prompt): Promise<void
                     { value: 'autoExecKeys', name: `Auto execute if commands match: ${colors.blue(settings.autoExecKeys.join(', '))}`,
                         description: 'Auto execute if commands match.' },
                     { value: 'allowGeneralPrompts', name: `Allow general prompts: ${colors.blue(settings.allowGeneralPrompts ? colors.green('yes') : colors.red('no'))}`,
-                        description: 'Allow to answer general questions, this will also allow to loose the ultimate focus on creating commands.' },
+                        description: 'Allow to answer general questions, this will also allow Baio to loose the ultimate focus on creating commands.' },
                     { value: 'saveSettings', name: `Automatically use the same settings next time: ${colors.blue(settings.saveSettings ? colors.green('yes') : colors.red('no'))}`,
                         description: 'Save the settings and automatically use the same settings next time.' },
 
