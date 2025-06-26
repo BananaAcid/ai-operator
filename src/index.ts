@@ -107,10 +107,15 @@ declare global { interface String { trimBlock(left?: number): string; } }
 String.prototype.trimBlock = function (left = 0): string {
     return this.split('\n').map(line => ' '.repeat(left) + line.trim()).join('\n');
 };
+declare global { interface String { rePadBlock(removeLeft: number, left?: number): string; } }
+String.prototype.rePadBlock = function (removeLeft = 0, left = 0): string {
+    return this.split('\n').map(line => ' '.repeat(left) + line.replace( new RegExp(`^ {0,${removeLeft}}`), '' )).join('\n');
+};
 
 //* defs
 const AUTOEXEC_KEYS = ['links', 'curl', 'wget', 'Invoke-WebRequest', 'iwr', 'web.read']; // dir, ls, gci, Get-ChildItem ?
 const SETTINGS_BLACKLIST: Array<keyof SettingsBlacklisted> = ['addedFiles', 'agentFiles', 'agentNames', 'systemPromptReady']; // keys not to save
+const PROMPT_INDENT = 8;
 
 
 //* TTY input overwrite
@@ -228,12 +233,12 @@ let settingsDefault: Settings = {
         Ensure all steps are followed, results are validated, and commands are properly executed.
         Reevaluate the goal after each action and make sure to append <END/> only when the task is fully completed.
         Try again with a different approach, and if more information is needed, request it.
-    `,
+    `.rePadBlock(PROMPT_INDENT),
 
     generalPrompt: `
         You are also proficient in coding for the commandline and software in general.
         If you are asked for non commandline or coding tasks, you act as a general assistant.
-    `,
+    `.rePadBlock(PROMPT_INDENT),
 
     systemPrompt: `
         Your name is Baio.
@@ -337,6 +342,7 @@ let settingsDefault: Settings = {
                 - alternatives can be found here: http://links.twibright.com/download.php
             - **MacOS**:
                 - Install via Homebrew: \`brew install links2\`
+                - Or install via MacPorts: \`sudo port install links\`
         - **Asked or needed to use \`links2\`**:
             - Always run: \`links -html-numbered-links 1 -dump <url>\`
             - The command name for links2 is: \`links\`
@@ -357,9 +363,9 @@ let settingsDefault: Settings = {
                 2. Create a new file in the previously mentioned "User's Home Directory" in \`./.baio/agents/<agent_name>.md\` that contains the users prompt (elaborate on the action) and will be phrased like "You will do something"
 
         {{useAgent}}
-
+        
         Follow these rules strictly to ensure accurate command execution and validation.
-    `,
+    `.rePadBlock(PROMPT_INDENT),
     
     //* Cached
     version: packageJSON.version,
@@ -941,8 +947,8 @@ const promptCommands = {
         description: 'Write content to a file',
         syntax: '<WRITE-FILE FILEPATH="path/to/file">content</WRITE-FILE>',
         prompt: `
-        - To **directly create or overwrite a file**, you need to use \`<WRITE-FILE FILEPATH="filepath/filename">content</WRITE-FILE>\`. This is the **preferred** way of writing files.
-        `,
+            - To **directly create or overwrite a file**, you need to use \`<WRITE-FILE FILEPATH="filepath/filename">content</WRITE-FILE>\`. This is the **preferred** way of writing files.
+        `.rePadBlock(4*3),
 
         caption: (command: PromptCommandByType<'file.write'>) => `Write file: ${colors.italic(command.file.path)}`,
 
@@ -980,10 +986,10 @@ const promptCommands = {
         description: 'Change process directory',
         syntax: '<DIR-CHANGE>path/to/dir</DIR-CHANGE>',
         prompt: `
-        - To persistently change the current working directory, you need to use \`<DIR-CHANGE>dirpath</DIR-CHANGE>\` command. This is the **preferred** way of changing the current working directory.
-            - Do this if you are **asked to change** or **go to** a specific directory or drive, or there are multiple commands to be executed in that directory from then on.
-            - After changing to this path, any commands after will execute in this directory (this is will be your new Current Working Directory).
-        `,
+            - To persistently change the current working directory, you need to use \`<DIR-CHANGE>dirpath</DIR-CHANGE>\` command. This is the **preferred** way of changing the current working directory.
+                - Do this if you are **asked to change** or **go to** a specific directory or drive, or there are multiple commands to be executed in that directory from then on.
+                - After changing to this path, any commands after will execute in this directory (this is will be your new Current Working Directory).
+        `.rePadBlock(4*3),
 
         caption: (command: PromptCommandByType<'dir.change'>) => `Change directory to: ${colors.italic(command.dir)}`,
 
@@ -1021,8 +1027,8 @@ const promptCommands = {
         description: 'Get current models of active AI provider',               // TODO: Add missing filter handling
         syntax: '<MODELS-GETCURRENT />',
         prompt: `
-        - To get a list of available models for the current AI, use \`<MODELS-GETCURRENT />\`.
-        `,
+            - To get a list of available models for the current AI, use \`<MODELS-GETCURRENT />\`.
+        `.rePadBlock(4*3),
 
         caption: (command: PromptCommandByType<'models.getcurrent'>) => `Get current models` + (command.filter !== '.*' ? ` with RegEx filter: ${colors.italic(command.filter)}` : ''),
 
@@ -1062,8 +1068,8 @@ const promptCommands = {
         description: 'Read a web page with internal helper',
         syntax: '<WEB-READ>url</WEB-READ>',
         prompt: `
-        - To read or browse a website, and Links2 is not installed, use the command \`<WEB-READ>url</WEB-READ>\`.
-        `,
+            - To read or browse a website, and Links2 is not installed, use the command \`<WEB-READ>url</WEB-READ>\`.
+        `.rePadBlock(4*3),
 
         caption: (command: PromptCommandByType<'web.read'>) => `Read web page: ${colors.italic(command.url)}`,
 
