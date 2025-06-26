@@ -11,7 +11,6 @@ import packageJSON from '../package.json' with { type: 'json' };
 import path from 'node:path';
 import { writeFile, readFile, unlink, glob, mkdir, open as fsOpen, rm } from 'node:fs/promises';
 import os from 'node:os';
-import { execSync } from 'node:child_process';
 import { parseArgs } from 'node:util';
 import fs from 'node:fs';
 import util from 'node:util';
@@ -51,8 +50,6 @@ const spinner = yoctoSpinner({text: '', ...(isUnicodeSupported() ? {spinner: cli
 //* (try to) handle errors
 //* catch ctrl+c and show no error on exit, fix it for the toggle prompt
 process.on('uncaughtException', (error) => { if (error instanceof Error && (error.name === 'ExitPromptError' || error.message.indexOf('User force closed the prompt') >= 0)) { process.exit(0); } else { console.error(colors.red(figures.cross), error.name + ':', error.message); /* Rethrow unknown errors */ if (!!process.env.DEBUG_ERROR) throw error; } });
-//? process.on('warning', (warning) => { if (warning.message.indexOf('unsettled top-level await') == -1) console.warn(warning.name, warning.message); });
-//? process.removeAllListeners('warning');
 
 
 //* File + Paths
@@ -134,7 +131,7 @@ const args = await new Promise<ReturnType<typeof parseArgs>>(resolve => resolve(
 
         agent:   { short: 'a', type: 'string',  multiple: true },
 
-        ask:     { short: 'q', type: 'boolean' },  //! TODO --- deprecated
+        ask:     { short: 'q', type: 'boolean' },  //! deprecated
         sysenv:  { short: 's', type: 'boolean' },
         end:     { short: 'e', type: 'boolean' },
 
@@ -554,7 +551,7 @@ async function api(prompt: Prompt): Promise<PromptResult> {
     const combinedRegexNamed = commandsBuildRegEx();
     const matches = content.matchAll(combinedRegexNamed);
 
-    // Iterate over all matches found by the combined regex to preserve the order
+    //* Iterate over all matches found by the combined regex to preserve the order - DO NOT Run the commandHandleMd in parallel to avoid order mix up
     for (const match of matches) {
         const fullMatch = match[0];
         const groups = match.groups;
@@ -562,15 +559,15 @@ async function api(prompt: Prompt): Promise<PromptResult> {
         
         if (groups) {
 
-            Object.keys(promptCommands)
-            .filter(key => !settings.promptCommandsDisabled.includes(key))
-            .forEach(commandName => {
-                let ret = commandHandleMd(commandName, groups);
-                if (ret === undefined) return;
+            for ( const commandName of Object.keys(promptCommands).filter(key => !settings.promptCommandsDisabled.includes(key)) )
+            {
+                let ret = await commandHandleMd(commandName, groups);
+                if (ret === undefined) continue;
 
                 commands.push(ret.command);
                 if (ret.replacementString) replacementString = ret.replacementString;
-            });
+            }
+            
             
             if (replacementString) content = content.replaceAll(fullMatch, replacementString);
         }
@@ -585,7 +582,7 @@ async function api(prompt: Prompt): Promise<PromptResult> {
 
 
     try {
-        content = cliMd(content); //? crashes sometimes : Cannot read properties of undefined (reading 'at') -- /node_modules/cli-html/lib/tags/code.js:12:25
+        content = cliMd(content); //! crashes sometimes : Cannot read properties of undefined (reading 'at') -- /node_modules/cli-html/lib/tags/code.js:12:25
     } catch (error) {}
 
     return {
@@ -652,7 +649,7 @@ let invokingShell: string | undefined = null as unknown as undefined;
  * If the detection succeeds, it caches the result and returns it.
  * @returns The name of the invoking shell if it could be detected, undefined otherwise
  */
-function getInvokingShell(overwriteInvokingShell = process.env.INVOKING_SHELL): string | undefined {
+async function getInvokingShell(overwriteInvokingShell = process.env.INVOKING_SHELL): Promise<string | undefined> {
     if (overwriteInvokingShell) invokingShell = overwriteInvokingShell;
     if (invokingShell !== null) return invokingShell;
     const isWindows = process.platform === 'win32';
@@ -663,10 +660,10 @@ function getInvokingShell(overwriteInvokingShell = process.env.INVOKING_SHELL): 
 
         if (isWindows) {
             const command = `wmic process where ProcessId=${parentPID} get Name /value`;
-            const output = execSync(command).toString().trim();
+            const output = (await execAsync(command)).stdout.toString().trim();
             parentProcess = output.split("=")[1]; // Extract the process name
         } else {
-            parentProcess = execSync(`ps -o comm= -p ${parentPID}`).toString().trim();
+            parentProcess = (await execAsync(`ps -o comm= -p ${parentPID}`)).stdout.toString().trim();
         }
         
         DEBUG_OUTPUT && console.log('DEBUG\n', 'Invoking shell:', parentProcess);
@@ -685,8 +682,8 @@ function getInvokingShell(overwriteInvokingShell = process.env.INVOKING_SHELL): 
  * If the detection fails, or the shell is not supported, it returns '.txt'.
  * @returns The file extension to be used for generated files.
  */
-function getShellExt(): string {
-    const shell = getInvokingShell();
+async function getShellExt(): Promise<string> {
+    const shell = await getInvokingShell();
 
     if (!shell) return '.txt';
 
@@ -705,8 +702,8 @@ function getShellExt(): string {
 
     return '.txt';
 }
-function getShellName(): string {
-    return getShellExt().substring(1);
+async function getShellName(): Promise<string> {
+    return (await getShellExt()).substring(1);
 }
 
 /**
@@ -800,7 +797,7 @@ async function doCommands(commands: PromptCommand[]): Promise<string> {
         spinner.start(`Executing command ${colors.reset(colors.dim('(press <esc> to abort)'))}: ${displayCommand(command)}`);
         
 
-        let ret = await promptCommands[command.type].exec(command as PromptCommandByType<typeof command.type> as any, signal);  //! <---- cleanup / fix `any`
+        let ret = await promptCommands[command.type].exec(command as PromptCommandByType<typeof command.type> as any, signal);  // TODO <---- cleanup / fix `any`
         results.push(ret.result);
         updateSystemPrompt = ret.updateSystemPrompt;
 
@@ -842,7 +839,7 @@ async function doPrompt(prompt: Prompt): Promise<PromptResult> {
  * @returns A string caption describing the command.
  */
 function commandContent(command: PromptCommand, content?: string): string {
-    return promptCommands[command.type].content(command as PromptCommandByType<typeof command.type> as any, content);  //! <---- cleanup / fix `any`
+    return promptCommands[command.type].content(command as PromptCommandByType<typeof command.type> as any, content);  // TODO <---- cleanup / fix `any`
 }
 
 
@@ -877,14 +874,13 @@ function commandsBuildRegEx(): RegExp {
  * @param groups - The regular expression groups containing information about the command.
  * @returns The result of the command's `handleMd` method, or `undefined` if the command doesn't match.
  */
-function commandHandleMd(commandName: string, groups: RegExpGroups) {
+async function commandHandleMd(commandName: string, groups: RegExpGroups) {
     let key = commandName.replace(/[^a-zA-Z0-9]/g, '_');
     // check if this is the correct command to handle
     if ( !groups?.['is_' + key] ) return undefined;
     let command = promptCommands[commandName as keyof typeof promptCommands];
-    return command.handleMd(groups);
+    return await command.handleMd(groups);
 }
-
 
 /**
  * The `promptCommands` object contains information about different types of commands.
@@ -906,12 +902,12 @@ const promptCommands = {
 
         regex: /\`*\ *<CMD>(?<cmdContent>.*?)<\/CMD>\ *\`*/,
 
-        handleMd(groups: RegExpGroups): {command: PromptCommand, replacementString: string} {
+        async handleMd(groups: RegExpGroups): Promise<{command: PromptCommand, replacementString: string}> {
             let replacementString = '';
 
             // Use fenced code block for commands with backticks or newlines
             if (groups.cmdContent?.includes('`') || groups.cmdContent?.trim().includes('\n'))
-                replacementString = '\n' + colors.bgBlack(' ▶️  Command:') + '\n```'+getShellName()+'\n' + groups.cmdContent?.trim() + '\n```\n';
+                replacementString = '\n' + colors.bgBlack(' ▶️  Command:') + '\n```'+(await getShellName())+'\n' + groups.cmdContent?.trim() + '\n```\n';
             // Use inline code block for simple commands
             else
                 replacementString = '\n ▶️ `' + groups.cmdContent?.trim() + '`';
@@ -927,11 +923,8 @@ const promptCommands = {
             let commandStr = command.line;
 
             // execute command mith node and a promise and wait
-            let result = await execAsync(command.line, {shell: getInvokingShell(), signal })
-                .then(({stdout, stderr}) => {
-                    if (stderr) throw Error(stderr);
-                    return stdout;
-                })
+            let result = await execAsync(command.line, {shell: await getInvokingShell(), signal })
+                .then(({stdout, stderr}) => { if (stderr) throw Error(stderr); return stdout; })
                 .then(stdout => '<CMD-OUTPUT>' + stdout + '</CMD-OUTPUT>')
                 .catch(error => '<CMD-ERROR>' + error.message + '</CMD-ERROR>')
                 .then(result => '<CMD-INPUT>' + commandStr + '</CMD-INPUT>\n' + result);
@@ -960,7 +953,7 @@ const promptCommands = {
 
         regex: /\`?\ *<WRITE-FILE FILEPATH="(?<filePath>.*?)">(?<fileContent>.*?)<\/WRITE-FILE>\ *\`?/,
 
-        handleMd(groups: RegExpGroups): {command: PromptCommand, replacementString: string} {
+        async handleMd(groups: RegExpGroups): Promise<{command: PromptCommand, replacementString: string}> {
             DEBUG_OUTPUT && console.log('file.write', groups.filePath!, 'mime:', mime.getType(groups.filePath!) ?? 'text', 'content length:', groups.fileContent!.length);
 
             return {
@@ -988,7 +981,7 @@ const promptCommands = {
         syntax: '<DIR-CHANGE>path/to/dir</DIR-CHANGE>',
         prompt: `
         - To persistently change the current working directory, you need to use \`<DIR-CHANGE>dirpath</DIR-CHANGE>\` command. This is the **preferred** way of changing the current working directory.
-            - Do this if you are asked to change or go to a specific directory, or there are multiple commands to be executed there.
+            - Do this if you are **asked to change** or **go to** a specific directory or drive, or there are multiple commands to be executed in that directory from then on.
             - After changing to this path, any commands after will execute in this directory (this is will be your new Current Working Directory).
         `,
 
@@ -1001,12 +994,12 @@ const promptCommands = {
 
         regex: /\`*\ *<DIR-CHANGE>(?<dirContent>.*?)<\/DIR-CHANGE>\ *\`*/,
 
-        handleMd(groups: RegExpGroups): {command: PromptCommand, replacementString: string} {
+        async handleMd(groups: RegExpGroups): Promise<{command: PromptCommand, replacementString: string}> {
             DEBUG_OUTPUT && console.log('dir.change', groups.dirContent!);
 
             return {
                 command: {type: 'dir.change', dir: groups.dirContent!},
-                replacementString: '\n' + colors.bgBlack(' ▶️  Change dir: ') + '`' + groups.dirContent +'`\n',
+                replacementString: '\n' + colors.bgBlack(' ▶️  Change directory to: ') + '`' + groups.dirContent +'`\n',
             };
         },
 
@@ -1025,7 +1018,7 @@ const promptCommands = {
 
 
     'models.getcurrent': {
-        description: 'Get current models of active AI provider',               //! TODO: Add missing filter handling
+        description: 'Get current models of active AI provider',               // TODO: Add missing filter handling
         syntax: '<MODELS-GETCURRENT />',
         prompt: `
         - To get a list of available models for the current AI, use \`<MODELS-GETCURRENT />\`.
@@ -1040,7 +1033,7 @@ const promptCommands = {
 
         regex: /\`*\ *<MODELS-GETCURRENT \/>\ *\`*/,
 
-        handleMd(groups: RegExpGroups): {command: PromptCommand, replacementString: string} {
+        async handleMd(groups: RegExpGroups): Promise<{command: PromptCommand, replacementString: string}> {
             DEBUG_OUTPUT && console.log('models.getcurrent');
 
             return {
@@ -1081,7 +1074,7 @@ const promptCommands = {
 
         regex: /\`*\ *<WEB-READ>(?<urlContent>.*?)<\/WEB-READ>\ *\`*/,
 
-        handleMd(groups: RegExpGroups): {command: PromptCommand, replacementString: string} {
+        async handleMd(groups: RegExpGroups): Promise<{command: PromptCommand, replacementString: string}> {
             DEBUG_OUTPUT && console.log('web.read', groups.urlContent!);
             
             return {
@@ -1114,7 +1107,7 @@ const promptCommands = {
  */
 function displayCommand(command: PromptCommand): string {
 
-    let commandStr = promptCommands[command.type].caption(command as PromptCommandByType<typeof command.type> as any);  //! <---- cleanup / fix `any`
+    let commandStr = promptCommands[command.type].caption(command as PromptCommandByType<typeof command.type> as any);  // TODO <---- cleanup / fix `any`
 
     // mark as modified
     if (command.userModified) commandStr = colors.blue(figures.star) + ' ' + commandStr;
@@ -1243,7 +1236,7 @@ async function doPromptWithCommands(result: PromptResult|undefined): Promise<str
                     waitForUseInput: false,
                     theme: { style: { help: () => ``, } },
                     default: commandContent(activeItem.value),
-                    postfix: getShellExt(),
+                    postfix: await getShellExt(),
                 }, {...TTY_INTERFACE, clearPromptOnDone: true})
                 .catch(_ => undefined);
 
@@ -1751,7 +1744,7 @@ async function config(options: string[]|undefined, prompt: Prompt): Promise<void
                     
                     new Separator(),
 
-                    // for each file, there is a prompt about the filename => length / 2  //! TODO do not just devide by 2, but check content
+                    // for each file, there is a prompt about the filename => length / 2  // TODO do not just devide by 2, but check content
                     { value: 'addFile', name: `Add a file ${colors.italic(colors.dim(`(currently: ${(prompt?.additions?.length ? prompt.additions.length / 2 : 0)})`))}`, description: 'Add a text or image file to the prompt.' },
 
                     { value: 'importAgent', name: `Select agents${!settings.agentNames.length ? '' : ': ' + colors.blue(settings.agentNames?.join(', ') ?? '')}`, description: 'Select agents to use for the prompt.' },
@@ -2143,7 +2136,7 @@ async function makeSystemPromptReady(): Promise<void> {
             ['{{currentModel}}', settings.modelName || (settings.model ?? drivers[settings.model]?.defaultModel) || 'unknown'],
 
         // apply invoking shell to system prompt
-            ['{{invokingShell}}', getInvokingShell() ?? 'unknown'],
+            ['{{invokingShell}}', await getInvokingShell() ?? 'unknown'],
 
         // apply system env to system prompt or clean up the placeholder
             ['{{useAllSysEnv}}', settings.useAllSysEnv ? `- You are running on (system environment): ${JSON.stringify(process.env)}` : ''],
@@ -2160,7 +2153,9 @@ async function makeSystemPromptReady(): Promise<void> {
 
         if (settings.precheckLinksInstalled) {
             try {
-                let output = execSync('links -version', { shell: getInvokingShell() });  //! TODO -> FIX BUG ->  use async and proper params handling !
+                let output = await execAsync('links -version', { shell: await getInvokingShell() })  // TODO -> FIX BUG ->  use proper params handling !
+                .then(({stdout, stderr}) => { if (stderr) throw Error(stderr); return stdout; });
+
                 settings.systemPromptReady = settings.systemPromptReady.replaceAll('{{linksIsInstalled}}', '- links2 is installed and can be used: ' + output);
                 DEBUG_OUTPUT && console.log(colors.green(figures.tick), 'links2 is installed');
             }
@@ -2223,7 +2218,7 @@ async function init(): Promise<Prompt> {
                 launchEditor(RC_FILE);
                 break;
 
-            //? special hidden case, will only work if an editor is open that supports opening folders, like vscode / sublime / textwrangler
+            //* special hidden case, will only work if an editor is open that supports opening folders, like vscode / sublime / textwrangler
             case 'pathfiles': 
                 mkdir(RC_PATH, { recursive: true }).catch(_ => {});
                 console.info(colors.green(figures.info), `Opening ${RC_PATH}`);
@@ -2359,7 +2354,7 @@ async function init(): Promise<Prompt> {
                 prompt.additions = [ ...(prompt.additions ?? []), { type: 'text', content: additionalContentData }];
             }
 
-            //? restore input capability
+            //* restore input capability
             const fd = process.platform === 'win32' ? '\\\\.\\CON' : '/dev/tty';
             let stdinNew = (await fsOpen(fd, 'r')).createReadStream();
             // const readLineNew = createInterface({
