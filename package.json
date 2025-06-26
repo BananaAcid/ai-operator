@@ -18,7 +18,7 @@
     "url": "git+https://github.com/BananaAcid/ai-operator.git"
   },
   "scripts": {
-    "start": "node --no-warnings=ExperimentalWarning --env-file-if-exists=.env index.ts",
+    "start": "node --no-warnings=ExperimentalWarning --env-file-if-exists=.env src/index.ts",
     "test": "node ./bin/baio",
     "config:create": "node ./bin/baio --config --update --no-settings",
     "config:remove": "node ./bin/baio --config --reset --no-settings",
