@@ -26,7 +26,8 @@
     "test:prompts": "node ./bin/index.mjs --no-config --reset-prompts --no-settings --agent ChickenTalk",
     "updatecheck": "node ./bin/index.mjs --config --no-settings",
     "x-postinstall": "npm run updatecheck",
-    "prepare": "npx -y npm-check-updates && npm build"
+    "prepare": "npx -y npm-check-updates",
+    "prepack": "npm run build"
   },
   "main": "bin/index.mjs",
   "bin": {
@@ -64,7 +65,7 @@
     "tsx": "^4.20.3"
   },
   "dependencies": {
-    "cli-markdown": "^3.5.0",
+    "cli-markdown": "^3.5.1",
     "copy-paste": "^2.1.1",
     "inquirer-toggle": "^1.0.1"
   },
