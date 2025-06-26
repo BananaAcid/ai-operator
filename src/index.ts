@@ -2159,7 +2159,7 @@ async function makeSystemPromptReady(): Promise<void> {
 
         if (settings.precheckLinksInstalled) {
             try {
-                let output = await execAsync('links -version', { shell: await getInvokingShell() })  // TODO -> FIX BUG ->  use proper params handling !
+                let output = await execAsync('links -version', { shell: await getInvokingShell() })  // FIX ->  use proper params handling !
                 .then(({stdout, stderr}) => { if (stderr) throw Error(stderr); return stdout; });
 
                 settings.systemPromptReady = settings.systemPromptReady.replaceAll('{{linksIsInstalled}}', '- links2 is installed and can be used: ' + output);
@@ -2171,7 +2171,7 @@ async function makeSystemPromptReady(): Promise<void> {
             }
         }
         else
-            settings.systemPromptReady = settings.systemPromptReady.replaceAll('{{linksIsInstalled}}', '- links2 is not available.');  //? '- you need to check if links2 is installed');
+            settings.systemPromptReady = settings.systemPromptReady.replaceAll('{{linksIsInstalled}}', '- links2 is not available.');
 
         DEBUG_OUTPUT_SYSTEMPROMPT && console.log('DEBUG\n', 'systemPrompt:', settings.systemPromptReady);
     }
