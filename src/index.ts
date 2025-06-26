@@ -1150,6 +1150,8 @@ async function doPromptWithCommands(result: PromptResult|undefined): Promise<str
         }
         else
             prompt = argsPrompt || await input({ message: 'What do you want to get done:', default: settings.defaultPrompt }, TTY_INTERFACE);
+
+        await isMakeSystemPromptReady;
     
         resultCommands = prompt;
     }
@@ -2158,7 +2160,7 @@ async function makeSystemPromptReady(): Promise<void> {
 
         if (settings.precheckLinksInstalled) {
             try {
-                let output = execSync('links -version', { shell: getInvokingShell() });
+                let output = execSync('links -version', { shell: getInvokingShell() });  //! TODO -> FIX BUG ->  use async and proper params handling !
                 settings.systemPromptReady = settings.systemPromptReady.replaceAll('{{linksIsInstalled}}', '- links2 is installed and can be used: ' + output);
                 DEBUG_OUTPUT && console.log(colors.green(figures.tick), 'links2 is installed');
             }
@@ -2175,6 +2177,7 @@ async function makeSystemPromptReady(): Promise<void> {
 }
 
 
+let isMakeSystemPromptReady: Promise<void> = Promise.resolve();
 /**
  * Initializes the prompt by asking the user for settings and returns the prompt
  * @returns the prompt
@@ -2458,7 +2461,7 @@ async function init(): Promise<Prompt> {
     }
     
     {//* import agent and set params in systemprompt
-        await makeSystemPromptReady();
+        isMakeSystemPromptReady = makeSystemPromptReady();
     }
 
     return prompt;
