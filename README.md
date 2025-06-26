@@ -40,6 +40,7 @@ Yes, a more reliable way would be to use AIs that support "tooling" (which are u
 ```bash
 npm -g baio
 ```
+*Note: installing a previous version: `npm uninstall -g baio && npm -g baio@1.0.0` where @1.0.0 is the desired version, see below 'Major Changes' for versions*
 
 Simple setup: set any API key or settings in `.baioenvrc` (see below: Environment Config)
 ```bash
