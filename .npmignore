@@ -8,6 +8,7 @@ baio-*.tgz
 rollup.*
 
 src
+bin/baio-tsx
 
 # Logs
 logs
