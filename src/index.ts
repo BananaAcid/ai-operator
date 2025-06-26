@@ -115,7 +115,7 @@ String.prototype.rePadBlock = function (removeLeft = 0, left = 0): string {
 //* defs
 const AUTOEXEC_KEYS = ['links', 'curl', 'wget', 'Invoke-WebRequest', 'iwr', 'web.read']; // dir, ls, gci, Get-ChildItem ?
 const SETTINGS_BLACKLIST: Array<keyof SettingsBlacklisted> = ['addedFiles', 'agentFiles', 'agentNames', 'systemPromptReady']; // keys not to save
-const PROMPT_INDENT = 8;
+const PROMPT_INDENT = 4*2;
 
 
 //* TTY input overwrite
@@ -913,10 +913,10 @@ const promptCommands = {
 
             // Use fenced code block for commands with backticks or newlines
             if (groups.cmdContent?.includes('`') || groups.cmdContent?.trim().includes('\n'))
-                replacementString = '\n' + colors.bgBlack(' ▶️  Command:') + '\n```'+(await getShellName())+'\n' + groups.cmdContent?.trim() + '\n```\n';
+                replacementString = '\n' + colors.bgBlack(' ▶️&nbsp; Command:') + '\n```'+(await getShellName())+'\n' + groups.cmdContent?.trim() + '\n```\n';
             // Use inline code block for simple commands
             else
-                replacementString = '\n ▶️ `' + groups.cmdContent?.trim() + '`';
+                replacementString = '\n' + colors.bgBlack(' ▶️&nbsp;') + '` ' + groups.cmdContent?.trim() + '`';
 
             return {
                 command: {type: 'command', line: groups.cmdContent!, userModified: false},
@@ -964,7 +964,7 @@ const promptCommands = {
 
             return {
                 command: {type: 'file.write', file: {path: groups.filePath!, mimeType: mime.getType(groups.filePath!) ?? 'text', content: groups.fileContent!}},
-                replacementString: '\n' + colors.bgBlack(' ▶️  Write file: ') + '`' + groups.filePath +'`\n```'+'\n' + groups.fileContent + '\n```\n',
+                replacementString: '\n' + colors.bgBlack(' ▶️&nbsp; Write file: ') + '`' + groups.filePath +'`\n```'+'\n' + groups.fileContent + '\n```\n',
             };
         },
 
@@ -987,7 +987,8 @@ const promptCommands = {
         syntax: '<DIR-CHANGE>path/to/dir</DIR-CHANGE>',
         prompt: `
             - To persistently change the current working directory, you need to use \`<DIR-CHANGE>dirpath</DIR-CHANGE>\` command. This is the **preferred** way of changing the current working directory.
-                - Do this if you are **asked to change** or **go to** a specific directory or drive, or there are multiple commands to be executed in that directory from then on.
+                - Always do this if you are **asked to change** or **go to** a directory or drive.
+                - Do this if there are multiple commands to be executed in that directory.
                 - After changing to this path, any commands after will execute in this directory (this is will be your new Current Working Directory).
         `.rePadBlock(4*3),
 
@@ -1005,7 +1006,7 @@ const promptCommands = {
 
             return {
                 command: {type: 'dir.change', dir: groups.dirContent!},
-                replacementString: '\n' + colors.bgBlack(' ▶️  Change directory to: ') + '`' + groups.dirContent +'`\n',
+                replacementString: '\n' + colors.bgBlack(' ▶️&nbsp; Change directory to: ') + '`' + groups.dirContent +'`\n',
             };
         },
 
@@ -1044,7 +1045,7 @@ const promptCommands = {
 
             return {
                 command: {type: 'models.getcurrent', filter: '.*'},
-                replacementString: '\n' + colors.bgBlack(' ▶️  Get current models') + '\n',
+                replacementString: '\n' + colors.bgBlack(' ▶️&nbsp; Get current models') + '\n',
             };
         },
 
@@ -1085,7 +1086,7 @@ const promptCommands = {
             
             return {
                 command: {type: 'web.read', url: groups.urlContent!},
-                replacementString: '\n' + colors.bgBlack(' ▶️  Read web page: ') + '`' + groups.urlContent +'`\n',
+                replacementString: '\n' + colors.bgBlack(' ▶️&nbsp; Read web page: ') + '`' + groups.urlContent +'`\n',
             };
         },
 
