@@ -41,3 +41,16 @@ go user folder and exlpain files
 ```
 - does a change dir command
 - creates a table with the file names and a description
+
+```
+get all files and folders in current directory. then explain what each file is. result as a table
+```
+// "then" is important: otherwise baio tries to create a command with extention mapping
+- gets all files and folders
+- creates a table with an additional discription row explaining the file/folder
+
+```
+explain the files in the current folder
+```
+- gets all files
+- creates a table with an additional discription row explaining the file
