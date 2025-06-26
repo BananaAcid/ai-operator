@@ -101,7 +101,7 @@ Google AI gemini for free (and unlimited): https://aistudio.google.com/apikey (a
 Ollama is free anyways, just install it (https://ollama.com/download) and within this tool, just accept the default model.
 
 
-## FAQ - Usage Notes
+## FAQ / Usage Notes
 
 **Info:**
 
@@ -109,13 +109,15 @@ Subsequent starts, after `Automatically use same settings next time:` **`yes`** 
 
 ### Enter multiline content
 
-Use the prompt trigger `:w` to get a new editor window where you can enter any content.
+Use the prompt trigger `:r` to get a new editor window where you can enter any content.
 
 see below: Prompt Triggers
 
 ### Save the last AI output
 
-Use the prompt trigger `:r` to get a new editor window with last AI answer.
+Use the prompt trigger `:w` to get a new editor window with last AI answer.
+
+Use this to write a long prompt in an editor window, possibly with multiple lines (using Markdown allows you to structure your prompt text).
 
 see below: Prompt Triggers
 
