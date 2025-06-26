@@ -16,7 +16,7 @@ BananaAcid's Artificial Intelligence Operator - made in Germany.
 
 **It is an AI copilot for any of your terminals, on MacOS, Linux, Windows for Google's AI (Gemini), OpenAI (ChatGPT), Ollama (any LLM) and OpenAI-compatible APIs (like OpenRouter, [example list](#what-providers-can-baio-be-used-with)).**
 
-It connects directly to the REST API endpoints of Ollama, OpenAI, Google's AI and does not use the AI-Tools mechanism so it will work on any AI. The only dependencies are related to the CLI interface. (And tsx for the time being to run the bin.)
+It connects directly to the REST API endpoints of Ollama, OpenAI, Google's AI and does not use the AI-Tools mechanism so it will work on any AI. The included dependencies are related to the CLI interface only.
 
 ### internal process
 1. Telling the AI's API (using its system prompt) to create commands and it will execute them if it writes them as `<CMD>...</CMD>` in its answers
@@ -659,3 +659,4 @@ Note: The Git page for the change logs folds the commits with multiple messages.
 | v1.0.39 | **Usability** <br> Added integrated mechanism to read urls in case Links2 is not installed | [1.0.38...1.0.39](https://github.com/BananaAcid/ai-operator/compare/1.0.38...1.0.39) |
 | v1.0.40 | **Bugfix** <br> Fixed selecting agents did not work, changed only really edited commands getting marked, added <kbd>esc</kbd> to abort file browsing, did some output cleanup | [1.0.39...1.0.40](https://github.com/BananaAcid/ai-operator/compare/1.0.39...1.0.40) |
 | v1.0.41 | **Navigation, Usability, Bugfix** <br> Added <kbd>s</kbd> to be able to search in AI drivers and AI model list, added <kbd>esc</kbd> to cancel driver and model selection, added option to selectively disable prompt commands (internal MCP functions), added matching more reasoning blocks, fixed get-models to now get all available models, code cleanup | [1.0.40...1.0.41](https://github.com/BananaAcid/ai-operator/compare/1.0.40...1.0.41) |
+| v1.0.42 | **Usability** <br> Increased start up speed, code cleanup | [1.0.41...1.0.42](https://github.com/BananaAcid/ai-operator/compare/1.0.41...1.0.42) |

@@ -6,6 +6,8 @@ tsconfig.json
 baio-*.tgz
 rollup.*
 
+bin/index.mjs
+
 # Logs
 logs
 *.log
