@@ -18,12 +18,13 @@ BananaAcid's Artificial Intelligence Operator - made in Germany.
 
 It connects directly to the REST API endpoints of Ollama, OpenAI, Google's AI and does not use the AI-Tools mechanism so it will work on any AI. The included dependencies are related to the CLI interface only.
 
-### internal process
+### Internal process
+
 1. Telling the AI's API (using its system prompt) to create commands and it will execute them if it writes them as `<CMD>...</CMD>` in its answers
 
 2. Get the AI's response:
     - extract the strings within the `<CMD>...</CMD>` tags
-    - extract content of a file to write within the `<WRITE-FILE FILEPATH="">...</WRITE-FILE>` tags
+    - extract content of a file to write within the `<WRITE-FILE FILEPATH="">...</WRITE-FILE>` tags (or other tags)
     - execute the commands locally (for simplicity, each command is spawned in a new shell context)
 
 3. Return the execution results as text to the API
@@ -31,7 +32,7 @@ It connects directly to the REST API endpoints of Ollama, OpenAI, Google's AI an
 
 **Note:**
 
-Yes, a more reliable way would be to use AIs that support "tooling" (which are usually means: large AIs/LLMs)
+Yes, a more reliable way would be to use AIs that support "tooling" (which are usually means: large AIs/LLMs and not any available LLM)
 
 ## Install
 
@@ -42,18 +43,31 @@ npm -g baio
 ```
 *Note: installing a previous version: `npm uninstall -g baio && npm -g baio@1.0.0` where @1.0.0 is the desired version, see below 'Major Changes' for versions*
 
-Simple setup: set any API key or settings in `.baioenvrc` (see below: Environment Config)
+Simple setup: set any API key or settings in `.baioenvrc` (see below: Environment Config), run:
 ```bash
 baio --open env
 ```
 
-**OPTIONAL:** Autoconfigure with Google's Gemini (after you entered the KEY in `baio --open env`), 
+### Change the settings / LLM
+
+Baio is configured to use **Google's Gemini** by default.
+
+Open the settings menu right away before prompting (you get the menu like in the first screenshot above)
+```
+baio --settings
+```
+
+### Optional: save the default configuration
+
+Configure with the default set to **Google's Gemini** (after you entered the KEY in `baio --open env`), 
 **or** just run `baio` and it will guide you through the options.
 ```
 baio --reset --config --update --no-settings
 
 ✔ Updating settings in .../.baiorc ...
 ```
+
+
 
 ## Usage
 
@@ -62,18 +76,18 @@ If env is set, just run it:
 baio
 ```
 
-If it was run once and you selected `Automatically use same settings next time:` **`yes`**, you can also use:
+You can also prompt right from the commandline:
 ```bash
 baio "list all files"
 ```
 
 **Careful:** depending on your shell, you can not use specific characters as they have a special meaning (need escaping if possible). In such cases, just run `baio` and enter your prompt in the text field.
 
-**NOTE:** To not execute the AI provided commands, you can press <kbd>:</kbd> or <kbd>/</kbd> (or unselect any command and press enter) to fall back to a **prompt to enter more info**.
+**NOTE:** To not execute the AI provided commands, you can press <kbd>.</kbd> or <kbd>ESC</kbd> (or unselect any command and press enter) to fall back to a **prompt to enter more info or enter a [Prompt Trigger](#prompt-triggers)**.
 
 ### Test usage
 
-Test with setting an API key only for one time use:
+Test with setting an **API key only for one time** use:
 ```bash
 # MacOS, Linux
 GEMINI_API_KEY=abcdefg1234567890 baio
@@ -82,7 +96,7 @@ GEMINI_API_KEY=abcdefg1234567890 baio
 $env:GEMINI_API_KEY='abcdefg1234567890' ; baio
 ```
 
-without installation:
+Test **without installation**:
 ```bash
 # MacOS, Linux
 GEMINI_API_KEY=abcdefg1234567890 npx -y baio "list all files"
@@ -91,7 +105,7 @@ GEMINI_API_KEY=abcdefg1234567890 npx -y baio "list all files"
 $env:GEMINI_API_KEY='abcdefg1234567890' ; npx -y baio "list all files"
 ```
 
-Setting the api key before running the command, will only work until the terminal is closed again.
+*Setting the api key before running the command, will only work until the terminal is closed again.*
 
 You should add the keys to your Profile (Win, MacOS, Linux), or in the `.baioenvrc` (see below: Env Config). To open the `.baioenvrc` in an editor you can use `baio --open env`
 
@@ -104,15 +118,16 @@ Ollama is free anyways, just install it (https://ollama.com/download) and within
 
 ## FAQ / Usage Notes
 
-**Info:**
+### Exit Baio
 
-Subsequent starts, after `Automatically use same settings next time:` **`yes`** will just prompt and show no extra info.
+At any time, press <kbd>CTRL</kbd> + <kbd>D</kbd> or <kbd>CTRL</kbd> + <kbd>C</kbd> to return to the shell.
+You might need to use <kbd>ESC</kbd> to cancel the API or executing a command first.
 
 ### Enter multiline content
 
 Use the prompt trigger `:r` to get a new editor window where you can enter any content.
 
-see below: Prompt Triggers
+see below: [Prompt Triggers](#prompt-triggers)
 
 ### Save the last AI output
 
@@ -120,7 +135,7 @@ Use the prompt trigger `:w` to get a new editor window with last AI answer.
 
 Use this to write a long prompt in an editor window, possibly with multiple lines (using Markdown allows you to structure your prompt text).
 
-see below: Prompt Triggers
+see below: [Prompt Triggers](#prompt-triggers)
 
 ### You see the commands but something is wrong
 
@@ -128,9 +143,12 @@ Sometimes, the command output is not formatted correctly and the AI does not get
 
 ### You do not want to execute any suggested command, but a prompt
 
-If you unselect the suggested commands (press spacebar or a) so no command is selected anymore and you press enter (or press <kbd>ESC</kbd>), you get a text prompt to be able to provide more info (if the suggestions are crap) or to change what should happen next.
+Press <kbd>.</kbd> or <kbd>ESC</kbd> to not use any of the suggested commands, to get the text prompt to be able to provide more info.
 
-Useful if the AI wants to execute the same command over and over again or just doesn't get it right. (You could tell it to look it up online or tell it what command or file to use.)
+Also, if you unselect the suggested commands (press <kbd>spacebar</kbd> or <kbd>a</kbd>) and no command is selected anymore and you press enter, you get the text prompt as well.
+
+This is useful, if the suggestions are not suited for what you want to get done, or you want to change what should happen next.
+This helps, if the AI wants to execute the same command over and over again or just doesn't get it right. From the prompt you could tell it to look it up online or tell it what command or file to use.
 
 ### I want to edit the settings / env
 
@@ -146,15 +164,20 @@ baio --settings
 baio --help
 ```
 
-will list the paths.
+will list the paths at the end.
 
-These can be opened with
+**These can be opened with**
 ```bash
 baio --open env
 baio --open config
 baio --open agents
 baio --open history
 ```
+
+- **env**: configuration for the AI driver (AI provider, AI model), [see below `ENV Config`](#env-config)
+- **config**: configuration of Baio
+- **agents**: folder with the agents instruction
+- **history**: folder with the exported chat contexts
 
 ### You want to do multiple tasks without losing the context
 
@@ -176,14 +199,16 @@ You can open the folder in your file manager to edit the files using: `baio --op
 
 Saving settings with `Automatically use same settings next time:` **`yes`**  will directly go to the prompt on next launch, and will not ask for any options.
 
-Or use `baio --no-update`
+Or use `baio --no-update` to prevent saving.
 
 ### Edit settings
 
-If you saved the settings, but you want to be able to be asked again, use:
+If you want to be asked again for the settings, right at the start, use:
 ```bash
 baio --settings
 ```
+
+You can also write `:s` into the prompt to open the settings.
 
 ### Add a file while prompting
 
@@ -191,9 +216,9 @@ If you want to add an image before your next prompt,
 1. use the prompt trigger `/file:add <filename>`
 2. prompt about this file
 
-You can always ask Baio to read a text file, but for images you need to start with the `--file <filename>` param or during prompting the `/file:add [<filename>]` (short: `:f [<filename>]`) trigger. If you use the trigger but do not enter a filename, a file picker will show.
+You can always ask Baio to read a text file, but for images you need to start with the `--file <filename>` param or during prompting the `/file:add [<filename>]` (**short: `:f [<filename>]`**) trigger. If you use the trigger but do not enter a filename, a file picker will show.
 
-**Note:** More details are below in the section about Prompt Triggers
+**Note:** More details are below in the section about [Prompt Triggers](#prompt-triggers)
 
 ### Quota exceeded / All tokens used up for current prompt
 
@@ -209,8 +234,7 @@ or
 4. start over, clearing the history (context) and the current prompt: `/:clear`
 
 
-**Note:** More details are below in the section about Prompt Triggers
-
+**Note:** More details are below in the section about [Prompt Triggers](#prompt-triggers)
 
 ### If you want specific commands to be automatically executed
 
@@ -233,7 +257,7 @@ see: [Manual config](#manual-config)
 
 #### Special use
 
-Adding an item "" will allow everything = auto accept commands.
+**NOTE:** Adding an item `""` will allow everything = auto accept all commands.
 
 For the inbuild commands:
 - `command`
@@ -251,9 +275,11 @@ See below: Env Config.
 ### How to get internet data
 
 #### JSON:
+
 To get data from a **REST API** (json from an url), tell it to get a property from the API url (this should trigger a command with `curl`).
 
 #### Website:
+
 To get website text content in a meaningful way (and with a little amount of tokens), install Links2 and let it call the website.
 
 **In case it is not installed, an internal mechanism will be used as fallback, it will not be as efficient as Links2:**
@@ -407,7 +433,7 @@ History config path: ................../.baio/history/
 ### Prompt Triggers
 
 To trigger these, **_if you are not on a prompt_**,
-1. you can press <kbd>:</kbd>, <kbd>/</kbd> or <kbd>ESC</kbd> to fall back to the prompt (e.g. to show the help you could type `:h`)
+1. you can press <kbd>.</kbd> or <kbd>ESC</kbd> (you can start with <kbd>:</kbd> or <kbd>/</kbd> directly) to fall back to the prompt (e.g. to show the help you could type `:h`)
 2. **OR**: you **unselect any command and press enter** to fall back to the prompt
 
 **then enter** one of the following:
@@ -442,6 +468,7 @@ To trigger these, **_if you are not on a prompt_**,
 
 
 ## Debugging
+
 The following environment variables can be used to output debug info. All default to false.
 
 ```env
@@ -527,6 +554,7 @@ I expect it
 
 
 ### This project is developed with the following specifications in mind:
+
 - support ollama, gemini api and openAI api
 - support any OS and any SHELL inherently (do not rely on OS or shell specific stuff, or use modules that support the other OSs and shells)
 - use NodeJS onboard technologies if they are available to some extend (env handling, args and others were really painful)
@@ -578,8 +606,8 @@ Methods for accessing the functionality:
 
 ```typescript
 getModels(settings: ModelSelectionSettings, showSimple = true): Promise<ModelSelection>
-makePromptAddition(type: string, content: string, mimeType: string): GoogleAiPromptAddition|PromptAdditionError
-getChatResponse(settings: ChatResponseSettings, history: any[], promptText: PromptText, promptAdditions?: PromptAdditions): Promise<ChatResponse|ChatResponseError>
+makePromptAddition(type: string, content: string, mimeType: string): OpenAiPromptAddition|GoogleAiPromptAddition|PromptAdditionError
+getChatResponse(settings: ChatResponseSettings, history: any[], promptText: PromptText, promptAdditions?: PromptAdditions, abortSignal?: AbortSignal): Promise<ChatResponse|ChatResponseError>
 ```
 
 ## Helper
