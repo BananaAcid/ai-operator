@@ -32,7 +32,7 @@ It connects directly to the REST API endpoints of Ollama, OpenAI, Google's AI an
 
 **Note:**
 
-Yes, a more reliable way would be to use AIs that support "tooling" (which are usually means: large AIs/LLMs and not any available LLM)
+Yes, a more reliable way would be to use AIs that support "tooling" (which usually means: large AIs/LLMs and not any available LLM)
 
 ## Install
 
