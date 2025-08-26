@@ -36,7 +36,7 @@ Yes, a more reliable way would be to use AIs that support "tooling" (which usual
 
 ## Install
 
-⚠️ Make sure, you have Node JS v23.10 or newer installed. ([download, check version](https://nodejs.org/en/download))
+⚠️ Make sure, you have Node JS v23.10 or newer installed. ([download, check version](https://nodejs.org/en/download/current))
 
 ```bash
 npm -g baio
