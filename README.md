@@ -125,15 +125,15 @@ You might need to use <kbd>ESC</kbd> to cancel the API or executing a command fi
 
 ### Enter multiline content
 
-Use the prompt trigger `:r` to get a new editor window where you can enter any content.
+Use the prompt trigger `:r` to read a prompt from a new editor window where you can enter any content.
+
+Use this to write a long prompt in an editor window, possibly with multiple lines (using Markdown allows you to structure your prompt text).
 
 see below: [Prompt Triggers](#prompt-triggers)
 
 ### Save the last AI output
 
-Use the prompt trigger `:w` to get a new editor window with last AI answer.
-
-Use this to write a long prompt in an editor window, possibly with multiple lines (using Markdown allows you to structure your prompt text).
+Use the prompt trigger `:w` to write the last last AI answer to a new editor window.
 
 see below: [Prompt Triggers](#prompt-triggers)
 
