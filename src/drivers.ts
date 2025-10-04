@@ -22,6 +22,8 @@ import './types/driver.OpenAi.d.ts';
 import './types/driver.GoogleAi.d.ts';
 import './types/json.d.ts';
 
+//* import meta
+import openAIModelsJSON from './openai_models.json' with { type: 'json' };
 
 const drivers = {
 

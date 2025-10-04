@@ -9,7 +9,7 @@
 //* node imports
 import packageJSON from '../package.json' with { type: 'json' };
 import path from 'node:path';
-import { writeFile, readFile, unlink, glob, mkdir, open as fsOpen, rm } from 'node:fs/promises';
+import { writeFile, readFile, unlink, glob, mkdir, open as fsOpen, rm, realpath } from 'node:fs/promises';
 import os from 'node:os';
 import { parseArgs } from 'node:util';
 import fs from 'node:fs';
@@ -95,6 +95,7 @@ import './types/driver.Ollama.d.ts';
 import './types/driver.OpenAi.d.ts';
 import './types/driver.GoogleAi.d.ts';
 import './types/json.d.ts';
+import { describe } from 'node:test';
 type Driver = typeof drivers[keyof typeof drivers];
 
 
@@ -113,7 +114,7 @@ String.prototype.rePadBlock = function (removeLeft = 0, left = 0): string {
 };
 
 //* defs
-const AUTOEXEC_KEYS = ['links', 'curl', 'wget', 'Invoke-WebRequest', 'iwr', 'web.read']; // dir, ls, gci, Get-ChildItem ?
+const AUTOEXEC_KEYS = ['links', 'curl', 'wget', 'Invoke-WebRequest', 'iwr', 'web.read', 'baio.help']; // dir, ls, gci, Get-ChildItem -- do not preset any that would get pc info or modify
 const SETTINGS_BLACKLIST: Array<keyof SettingsBlacklisted> = ['addedFiles', 'agentFiles', 'agentNames', 'systemPromptReady']; // keys not to save
 const PROMPT_INDENT = 4*2;
 
@@ -942,6 +943,48 @@ const promptCommands = {
         },
     },
 
+    'baio.help': {
+        description: 'Proccess help for Baio',
+        syntax: '<BAIO-HELP />',
+        prompt: `
+            - To **proccess help for Baio**, you need to use \`<BAIO-HELP />\`.
+        `.rePadBlock(4*3),
+        
+        caption: (command: PromptCommandByType<'baio.help'>) => `Process Baio help`,
+
+        content(command: PromptCommandByType<'baio.help'>, content?: string): string {
+            //if (content !== undefined && command.topic !== content) { command.userModified = true; command.topic = content; }
+            return ''; //command.topic;
+        },
+
+        regex: /\`*\ *<BAIO-HELP \/>\ *\`*/,
+
+        async handleMd(groups: RegExpGroups): Promise<{command: PromptCommand, replacementString: string}> {
+            DEBUG_OUTPUT && console.log('baio.help');
+
+            return {
+                command: {type: 'baio.help'},
+                replacementString: '\n' + colors.bgBlack(' ▶️&nbsp; Proccess help for Baio') + '\n',
+            };
+        },
+
+        async exec(command: PromptCommandByType<'baio.help'>, signal?: AbortSignal): Promise<{result: string, updateSystemPrompt: boolean}> {
+            let readmePath1 = path.join(PROCESS_PATH_INITIAL, 'README.md');
+            let readmePath2 = path.join(PROCESS_PATH_INITIAL, '..', 'README.md')
+            let readmePath = await realpath(readmePath1).catch(_=>{}) || await realpath(readmePath2).catch(_=>{}) || 'README.md';
+
+            let result = await readFile(readmePath, 'utf-8')
+                .then(stdout => '<CMD-OUTPUT>DO NOT MENTION OR OUTPUT THE COMMANDS/TAGS (The command syntax `<...>` is for internal use only).\n# This is what you know about yourself Baio (from README.md):\n\n\n```' + stdout + '```\n</CMD-OUTPUT>')
+                .catch(error => '<CMD-ERROR>Error reading README.md:\n' + error + '</CMD-ERROR>')
+                .then(result => '<CMD-INPUT>' + displayCommand(command) + '</CMD-INPUT>\n' + result);
+
+            return {
+                result,
+                updateSystemPrompt: false,
+            };
+        }
+    },
+
 
     'file.write': {
         description: 'Write content to a file',
@@ -1392,7 +1435,7 @@ async function promptTrigger(/*inout*/ prompt: Prompt, /*inout*/ resultPrompt?: 
 
     let trigger = prompt.text.match(/^[^\s]*/)?.[0].toLowerCase() || '';
 
-    if (trigger === ':h' || trigger === '/:help') {
+    if (trigger === ':h' || trigger === '/:help' || trigger === '/?' || trigger === '/help') {
         console.info(packageJSON.name,'v' + packageJSON.version);
         console.log(cliMd(`
             AI Driver: \`${drivers[settings.driver]?.name ?? settings.driver}\`\n
@@ -1401,7 +1444,7 @@ async function promptTrigger(/*inout*/ prompt: Prompt, /*inout*/ resultPrompt?: 
 
             | Possible prompt triggers | Short | Description |
             |---|---|---|
-            | \`/:help\`                        | \`:h\`                | Shows this help. |
+            | \`/:help\`, \`/help\`             | \`:h\`, \`/h\`        | Shows this help. |
             | \`/:cmds\`                        | \`::\`                | Return to the command selection, if possible. |
             | \`/:settings\`                    | \`:s\`                | Opens settings menu to change the configuration. |
             | \`/:read\`                        | \`:r\`                | Opens the default editor for a multiline input. |
@@ -1422,7 +1465,7 @@ async function promptTrigger(/*inout*/ prompt: Prompt, /*inout*/ resultPrompt?: 
             | \`/debug:get <key>\`              |                       | Gets the current value of the key (same as in baiorc). If no key is given, lists all possible keys. |
             | \`/debug:set <key> <value>\`      |                       | Overwrites a setting. The value must be a JSON formatted value. |
             | \`/debug:settings [all\\|*]\`     |                       | Lists all current settings without prompts. Use \`all\` or \`*\` to also show prompts. |
-            | \`/:quit\`, \`/:exit\`            | \`:q\`                | Will exit (CTRL+D or CTRL+C will also work). |
+            | \`/:quit\`, \`/:exit\`            | \`:q\`                | Will exit (\`CTRL+D\` or \`CTRL+C\` will also work). |
         `.trimBlock()));
         return true;
     }

@@ -33,6 +33,9 @@ declare global {
         type: 'web.read';
         userModified?: boolean;
         url: string;
+    } | {
+        type: 'baio.help';
+        userModified?: boolean;
     }
     /* | {
         type: 'agent';

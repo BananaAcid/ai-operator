@@ -226,7 +226,7 @@ If you reached the token limit for the current chat, you can:
 
 1. save the current history (context) with the prompt trigger: `/history:export` (could be imported with an LLM that has a larger context)
     - use `/history:export:md` if you want a readable (Markdown) version, that can not be imported.
-2. reduce the current history (context) to the last 6 (user prompt + reponse = 2): `/history:clear 6` (to be able to continue. `/:help` shows you how many entries are stored)
+2. reduce the current history (context) to the last 6 (user prompt + reponse = 2): `/history:clear 6` (to be able to continue. `/help` shows you how many entries are stored)
 
 or 
 
@@ -238,9 +238,11 @@ or
 
 ### If you want specific commands to be automatically executed
 
+... or "auto approve".
+
 It checks if the command in the config's list is in the beginning of the line or one of the inbuild commands (or a tool name => an MCP function).
 
-A predefined set is in the settings "Auto execute if commands match".
+A predefined set is in the settings "Auto approve if commands match".
 
 #### To extend the list with more identifiers
 
@@ -424,10 +426,10 @@ baio [-vhdmtaseifucr] ["prompt string"]
   --open <type>                  Open a file in the default editor or path, type: env, config, agents, history
 
 
-Settings config path: ................../.baiorc
-Environment config path: ................../.baioenvrc
-Agents config path: ................../.baio/agents/
-History config path: ................../.baio/history/
+Settings config path: <home>/.baiorc
+Environment config path: <home>/.baioenvrc
+Agents config path: <home>/.baio/agents/
+History config path: <home>/.baio/history/
 ```
 
 ### Prompt Triggers
@@ -440,13 +442,13 @@ To trigger these, **_if you are not on a prompt_**,
 
 | Trigger | Short | Description |
 |---|---|---|
-| `/:help`                        | `:h`                | Shows this help. |
+| `/:help`, `/help`               | `:h`, `/h`          | Shows this help. |
 | `/:cmds`                        | `::`                | Return to the command selection, if possible. |
 | `/:settings`                    | `:s`                | Opens settings menu to change the configuration. |
 | `/:read`                        | `:r`                | Opens the default editor for a multiline input. |
 | `/:write`                       | `:w`                | Opens the default editor to show the last AI response. Use to save to a file. |
-| `/clip:read`                    | `:r+`, `:cr`      | Read from the clipboard and open the default editor. |
-| `/clip:write`                   | `:w+`, `:cw`      | Write the the last AI response to the clipboard. |
+| `/clip:read`                    | `:r+`, `:cr`        | Read from the clipboard and open the default editor. |
+| `/clip:write`                   | `:w+`, `:cw`        | Write the the last AI response to the clipboard. |
 | `/file:add [<file>]`            | `:f [<file>]`       | Adds a file to the prompt. Or shows a file selection. |
 | `/history:export [<file>]`      | `:he [<file>]`      | Exports the current context to a file with date-time as name or an optional custom filename. |
 | `/history:export:md [<file>]`   | `:he:md [<file>]`   | Exports the current context to a markdown file for easier reading (can not be re-imported). |
@@ -691,3 +693,4 @@ Note: The Git page for the change logs folds the commits with multiple messages.
 | v1.0.40 | **Bugfix** <br> Fixed selecting agents did not work, changed only really edited commands getting marked, added <kbd>esc</kbd> to abort file browsing, did some output cleanup | [1.0.39...1.0.40](https://github.com/BananaAcid/ai-operator/compare/1.0.39...1.0.40) |
 | v1.0.41 | **Navigation, Usability, Bugfix** <br> Added <kbd>s</kbd> to be able to search in AI drivers and AI model list, added <kbd>esc</kbd> to cancel driver and model selection, added option to selectively disable prompt commands (internal MCP functions), added matching more reasoning blocks, fixed get-models to now get all available models, code cleanup | [1.0.40...1.0.41](https://github.com/BananaAcid/ai-operator/compare/1.0.40...1.0.41) |
 | v1.0.42 | **Usability** <br> Increased start up speed, increased runtime speed, removed all execSync code, removed tsx as dependency, changed systemprompt size by removing a lot of spaces, changed to add spaces after ➡️, code cleanup | [1.0.41...1.0.42](https://github.com/BananaAcid/ai-operator/compare/1.0.41...1.0.42) |
+| v1.0.43 WiP | **Usability** <br> Added `/?` and `/help` prompt trigger, added baio.help to be able to ask baio on how to configure or use it, ...... | [1.0.42...1.0.43](https://github.com/BananaAcid/ai-operator/compare/1.0.42...1.0.43) |
