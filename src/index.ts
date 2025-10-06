@@ -1775,7 +1775,7 @@ async function config(options: string[]|undefined, prompt: Prompt): Promise<void
                     { value: 'temperature', name: `AI Temperature: ${settings.temperature !== 0 ? colors.blue(settings.temperature.toString()) : colors.italic(colors.dim('(default)'))}`,
                         description: 'Select a temperature for the models creativity.' },
                     { value: 'useAllSysEnv', name: `Use all system environment variables: ${colors.blue(settings.useAllSysEnv ? colors.green('yes') : colors.red('no'))}`,
-                        description: 'Allow to use all environment variables in the prompt.' },
+                        description: 'Allow to include the complete system environment (all variables) in the prompt for more precise answers.' },
                     { value: 'endIfDone', name: `End if assumed done: ${colors.blue(settings.endIfDone ? colors.green('yes') : colors.red('no'))}`,
                         description: 'End the prompt if the answer is assumed done. Good if you have single tasks to be done.' },
                     { value: 'autoExecKeys', name: `Auto execute if commands match: ${colors.blue(settings.autoExecKeys.join(', '))}`,

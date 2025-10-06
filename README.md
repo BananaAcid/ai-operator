@@ -406,7 +406,7 @@ baio [-vhdmtaseifucr] ["prompt string"]
   -a, --agent <agent-name>, ...  Select an agent or multiple, (a set of prompts for specific tasks)
   -a *, --agent *                Ask for agent with a list, even if it would not
 
-  -s, --sysenv                   Allow to use the complete system environment
+  -s, --sysenv                   Allow to include the complete system environment (all variables)
       --no-sysenv                ... to disable
   -e, --end                      End prompting if assumed done
       --no-end                   ... to disable
