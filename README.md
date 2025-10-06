@@ -242,7 +242,7 @@ or
 
 It checks if the command in the config's list is in the beginning of the line or one of the inbuild commands (or a tool name => an MCP function).
 
-A predefined set is in the settings "Auto approve if commands match".
+A predefined set is in the settings "Auto execute if commands match".
 
 #### To extend the list with more identifiers
 
@@ -267,6 +267,7 @@ For the inbuild commands:
 - `dir.change`
 - `models.getcurrent`
 - `web.read` (if Links2 is missing)
+- `baio.help`
 
 
 ### Wrong shell for suggested commands

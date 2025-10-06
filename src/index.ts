@@ -974,7 +974,7 @@ const promptCommands = {
             let readmePath = await realpath(readmePath1).catch(_=>{}) || await realpath(readmePath2).catch(_=>{}) || 'README.md';
 
             let result = await readFile(readmePath, 'utf-8')
-                .then(stdout => '<CMD-OUTPUT>DO NOT MENTION OR OUTPUT THE COMMANDS/TAGS (The command syntax `<...>` is for internal use only).\n# This is what you know about yourself Baio (from README.md):\n\n\n```' + stdout + '```\n</CMD-OUTPUT>')
+                .then(stdout => '<CMD-OUTPUT>DO NOT MENTION OR OUTPUT THE COMMANDS/TAGS (The command syntax `<...>` is for internal use only).\n\n---\n\n # This is what you know about yourself Baio (from README.md):\n\n\n' + stdout + '\n</CMD-OUTPUT>')
                 .catch(error => '<CMD-ERROR>Error reading README.md:\n' + error + '</CMD-ERROR>')
                 .then(result => '<CMD-INPUT>' + displayCommand(command) + '</CMD-INPUT>\n' + result);
 
@@ -2235,7 +2235,6 @@ async function init(): Promise<Prompt> {
 
 
     //*** args with exit ***
-
 
     if (settingsArgs['version'])
     {
