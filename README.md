@@ -283,10 +283,10 @@ To get data from a **REST API** (json from an url), tell it to get a property fr
 
 #### Website:
 
-To get website text content in a meaningful way (and with a little amount of tokens), install Links2 and let it call the website.
+To get website text content in a meaningful way (and with a little amount of tokens), install **Links2** and let it call the website.
 
-**In case it is not installed, an internal mechanism will be used as fallback, it will not be as efficient as Links2:**
-- ⚠️ producing 1/3 more tokens
+**In case Links2 is not installed, an internal mechanism will be used as fallback, but it will not be as efficient as Links2:**
+- ⚠️ producing +1/3 more tokens
 - ⚠️ has problems with websites that create their content with javascript.
 
 You can ask Baio to install it, or download it manually:
