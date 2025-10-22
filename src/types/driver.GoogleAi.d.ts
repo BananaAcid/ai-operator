@@ -73,6 +73,20 @@ declare global {
             data: string;
         }
     };
+
+    type GoogleAiResultModelMeta = {
+        name: string;
+        version: string;
+        displayName: string;
+        description: string;
+        inputTokenLimit: number;
+        outputTokenLimit: number;
+        supportedGenerationMethods: string[];
+        temperature: number;
+        topP: number;
+        topK: number;
+        maxTemperature: number;
+    }
 }
 
 export {};

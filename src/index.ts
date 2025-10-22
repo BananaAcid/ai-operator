@@ -370,7 +370,13 @@ let settingsDefault: Settings = {
     //* Cached
     version: packageJSON.version,
     modelName: '',
-    
+    modelData: {
+        modelMeta: {
+            architecture: undefined,
+            contextLength: undefined,
+        }
+    },
+
     //* blacklisted - temporary runtime values - do not save
     addedFiles: [],
     agentFiles: [],
@@ -2006,6 +2012,9 @@ async function config(options: string[]|undefined, prompt: Prompt): Promise<void
                 settings.modelName = '';
             }
             settings.model = modelSelected;
+
+            settings.modelData.modelMeta = await driver.getModelMeta(settings.model)
+            DEBUG_APICALLS && console.info('Fetching model meta...', settings.modelData.modelMeta);
         }
 
         if (options.includes('addFile') && prompt) {

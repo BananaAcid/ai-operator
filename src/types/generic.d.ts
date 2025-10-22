@@ -106,6 +106,9 @@ declare global {
     type SettingsChached = {
         version: string;   // for config file compatibility
         modelName: string; // for showing in the settings and help only - no functional use
+        modelData: {
+            modelMeta: ModelMeta;
+        };
     }
     
     // blacklisted - temporary runtime values - do not save

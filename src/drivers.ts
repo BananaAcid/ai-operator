@@ -32,6 +32,7 @@ const drivers = {
         urlTest: 'http://localhost:11434/',
         urlChat: 'http://localhost:11434/v1/chat/completions', // OpenAI comaptible API
         urlModels: 'http://localhost:11434/api/tags',  // more details about the models
+        urlModelMeta: 'http://localhost:11434/api/show',
         defaultModel: 'goekdenizguelmez/JOSIEFIED-Qwen2.5:latest', // default model
         apiKey: () => process.env.OLLAMA_API_KEY, // ollama local does not need a key, but you could use a hosted service, that requires a key
         historyStyle: 'openai',
@@ -72,6 +73,27 @@ const drivers = {
         async getChatResponse(settings: ChatResponseSettings, history: any[], promptText: PromptText, promptAdditions?: PromptAdditions, abortSignal?: AbortSignal): Promise<ChatResponse|ChatResponseError> {
             // just reuse the openai driver in the Ollama driver's context
             return drivers.openai.getChatResponse.call(this, settings, history, promptText, promptAdditions, abortSignal);
+        },
+
+        async getModelMeta(model: string): Promise<ModelMeta> { 
+            const response = await fetch(this.getUrl(this.urlModelMeta), {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                    ...(this.apiKey() ? { 'Authorization': `Bearer ${this.apiKey()}` } : {}),
+                },
+                body: 'name=' + model
+            }).then(response => response.json()).catch(error => console.error(error)) as OllamaResultModelMeta | undefined;
+
+            const model_info = response?.model_info;
+
+            let architecture = model_info?.['general.architecture'] as string | undefined;
+            let context_length = model_info?.[architecture + '.context_length'] as number | undefined;
+
+            return {
+                architecture: architecture,
+                contextLength: context_length,
+            };
         },
     },
 
@@ -194,9 +216,19 @@ const drivers = {
             return {
                 contentRaw: responseMessage.content,
                 history: newHistory,
-            }
+            };
         },
 
+
+        async getModelMeta(model: string): Promise<ModelMeta> {
+
+            let modelInfo = openAIModelsJSON.core_models.find((modelInfo) => modelInfo.name === model);
+
+            return {
+                architecture: modelInfo?.model,
+                contextLength: modelInfo?.context_window_tokens,
+            };
+        },
     },
 
 
@@ -204,9 +236,10 @@ const drivers = {
         // public interfaces of the google ai services: https://github.com/googleapis/googleapis/tree/master/google/ai/generativelanguage
 
         name: 'Google AI',
-        urlTest: 'https://generativelanguage.googleapis.com/v1beta/models/', // unlucky: there is no test endpoint
-        urlChat: 'https://generativelanguage.googleapis.com/v1beta/models/{{model}}:generateContent',
+        urlTest: 'https://generativelanguage.googleapis.com/v1beta/models/', // unlucky: there is no test endpoint without auth
+        urlChat: 'https://generativelanguage.googleapis.com/v1beta/models/{{model}}:generateContent', // https://ai.google.dev/api/models?hl=de
         urlModels: 'https://generativelanguage.googleapis.com/v1beta/models/',
+        urlModelMeta: 'https://generativelanguage.googleapis.com/v1beta/models/{{model}}',
         defaultModel: 'gemini-2.0-flash', // gemini-2.5-flash-preview-04-17
         apiKey: () => process.env.GEMINI_API_KEY,
         historyStyle: 'googleai',
@@ -338,7 +371,27 @@ const drivers = {
             return {
                 contentRaw: responseMessage?.text ?? '',
                 history: newHistory,
-            }
+            };
+        },
+        
+        async getModelMeta(model: string): Promise<ModelMeta> {
+            const response = await fetch(this.getUrl(this.urlModelMeta, model), {
+                method: 'GET',
+                headers: {
+                    'Content-Type': 'application/json',
+                    ...(this.apiKey() ? { 'x-goog-api-key': this.apiKey() } : {}),
+                },
+            }).then(response => response.json()).catch(error => console.error(error)) as GoogleAiResultModelMeta | undefined;
+
+            const model_info = response;
+
+            let architecture = model_info?.name;
+            let context_length = model_info?.inputTokenLimit;
+
+            return {
+                architecture: architecture,
+                contextLength: context_length,
+            };
         },
 
     },

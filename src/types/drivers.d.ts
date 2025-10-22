@@ -32,6 +32,11 @@ declare global {
         historyStyle: 'openai' | 'googleai'; //drivers[any].historyStyle (history style should match the driver's key)
         history: any[];
     }
+
+    type ModelMeta = {
+        architecture: string | undefined;
+        contextLength: number | undefined;
+    }
 }
 
 export {};
