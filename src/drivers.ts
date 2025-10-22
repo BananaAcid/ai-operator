@@ -49,7 +49,7 @@ const drivers = {
                 method: 'GET',
                 headers: {
                     'Content-Type': 'application/json',
-                    ...(this.apiKey ? { 'Authorization': `Bearer ${this.apiKey()}` } : {}),
+                    ...(this.apiKey() ? { 'Authorization': `Bearer ${this.apiKey()}` } : {}),
                 },
             }).then(response => response.json()).catch(error => console.error(error)) as OllamaResultModels | undefined;
 
@@ -97,7 +97,7 @@ const drivers = {
                 method: 'GET',
                 headers: {
                     'Content-Type': 'application/json',
-                    ...(this.apiKey ? { 'Authorization': `Bearer ${this.apiKey()}` } : {}),
+                    ...(this.apiKey() ? { 'Authorization': `Bearer ${this.apiKey()}` } : {}),
                     'HTTP-Referer': 'https://github.com/BananaAcid/ai-operator', // Optional. Site URL for rankings on openrouter.ai.
                     'X-Title': 'Baio', // Optional. Site title for rankings on openrouter.ai.                
                 },
@@ -138,7 +138,7 @@ const drivers = {
                 method: 'POST',
                 headers: {
                     'Content-Type': 'application/json',
-                    ...(this.apiKey ? { 'Authorization': `Bearer ${this.apiKey}` } : {}),
+                    ...(this.apiKey() ? { 'Authorization': `Bearer ${this.apiKey}` } : {}),
                     'HTTP-Referer': 'https://github.com/BananaAcid/ai-operator', // Optional. Site URL for rankings on openrouter.ai.
                     'X-Title': 'Baio', // Optional. Site title for rankings on openrouter.ai.                
                 },
@@ -204,9 +204,9 @@ const drivers = {
         // public interfaces of the google ai services: https://github.com/googleapis/googleapis/tree/master/google/ai/generativelanguage
 
         name: 'Google AI',
-        urlTest: 'https://generativelanguage.googleapis.com/v1beta/models/?key=', // unlucky: there is no test endpoint
-        urlChat: 'https://generativelanguage.googleapis.com/v1beta/models/{{model}}:generateContent?key=',
-        urlModels: 'https://generativelanguage.googleapis.com/v1beta/models/?key=',
+        urlTest: 'https://generativelanguage.googleapis.com/v1beta/models/', // unlucky: there is no test endpoint
+        urlChat: 'https://generativelanguage.googleapis.com/v1beta/models/{{model}}:generateContent',
+        urlModels: 'https://generativelanguage.googleapis.com/v1beta/models/',
         defaultModel: 'gemini-2.0-flash', // gemini-2.5-flash-preview-04-17
         apiKey: () => process.env.GEMINI_API_KEY,
         historyStyle: 'googleai',
@@ -216,11 +216,17 @@ const drivers = {
             if (process.env.GEMINI_URL)
                 url = url.replace('https://generativelanguage.googleapis.com/v1beta', process.env.GEMINI_URL);
 
-            return url.replaceAll('{{model}}', model) + this.apiKey();
+            return url.replaceAll('{{model}}', model);
         },
 
         async getModels(settings: ModelSelectionSettings, showSimple = true): Promise<ModelSelection> {
             const response = await fetch(this.getUrl(this.urlModels), {
+
+                headers: {
+                    'Content-Type': 'application/json',
+                    ...(this.apiKey() ? { 'x-goog-api-key': this.apiKey() } : {}),
+                },
+                
                 method: 'GET',
             }).then(response => response.json()).catch(error => console.error(error)) as GoogleAiResultModels | undefined;
 
@@ -252,6 +258,7 @@ const drivers = {
                 method: 'POST',
                 headers: {
                     'Content-Type': 'application/json',
+                    ...(this.apiKey() ? { 'x-goog-api-key': this.apiKey() } : {}),
                 },
                 body: JSON.stringify<GoogleAiRequest>({
                     generationConfig: {

@@ -95,7 +95,6 @@ import './types/driver.Ollama.d.ts';
 import './types/driver.OpenAi.d.ts';
 import './types/driver.GoogleAi.d.ts';
 import './types/json.d.ts';
-import { describe } from 'node:test';
 type Driver = typeof drivers[keyof typeof drivers];
 
 
@@ -116,7 +115,7 @@ String.prototype.rePadBlock = function (removeLeft = 0, left = 0): string {
 //* defs
 const AUTOEXEC_KEYS = ['links', 'curl', 'wget', 'Invoke-WebRequest', 'iwr', 'web.read', 'baio.help']; // dir, ls, gci, Get-ChildItem -- do not preset any that would get pc info or modify
 const SETTINGS_BLACKLIST: Array<keyof SettingsBlacklisted> = ['addedFiles', 'agentFiles', 'agentNames', 'systemPromptReady']; // keys not to save
-const PROMPT_INDENT = 4*2;
+const PROMPT_INDENT = 4*2; // 2 Tabs (of 4 spaces each)
 
 
 //* TTY input overwrite
@@ -190,26 +189,26 @@ else
 //* default settings
 let settingsDefault: Settings = {
     driver: 'googleai',
-    model: '',              // BEST: gemma3:12b (12.2B)  FASTEST: goekdenizguelmez/JOSIEFIED-Qwen2.5:latest (7.6B)   IS OK: phi4:latest (14.7B)
-    temperature: 0,         // use something like 0.7
+    model: '',                      // BEST: gemma3:12b (12.2B)  FASTEST: goekdenizguelmez/JOSIEFIED-Qwen2.5:latest (7.6B)   IS OK: phi4:latest (14.7B)
+    temperature: 0,                 // use something like 0.7
 
-    useAllSysEnv: false,    // use all system environment variables in the system prompt
-    endIfDone: true,        // don't allow the AI to end the conversation (it would, if it thinks it is done)
+    useAllSysEnv: false,            // use all system environment variables in the system prompt
+    endIfDone: true,                // don't allow the AI to end the conversation (it would, if it thinks it is done)
 
-    saveSettings: false,    // (--update) save settings to the .baiorc file -- if this is true, the settings will not be asked
+    saveSettings: false,            // (--update) save settings to the .baiorc file -- if this is true, the settings will not be asked
 
-    autoExecKeys: AUTOEXEC_KEYS, // allow execution if command is in here
+    autoExecKeys: AUTOEXEC_KEYS,    // allow execution if command is in here
 
-    promptCommandsDisabled: [], // disable native prompts commands (for mixing with MCP commands later on)
+    promptCommandsDisabled: [],     // disable native prompts commands (for mixing with MCP commands later on)
 
     /** Optimizations **/
-    precheckUpdate: true,       // (speedup if false) try to reach the npm registry to check for an update
-    precheckDriverApi: true,    // (speedup if false) try to reach the driver api to check if it is available
+    precheckUpdate: true,           // (speedup if false) try to reach the npm registry to check for an update
+    precheckDriverApi: true,        // (speedup if false) try to reach the driver api to check if it is available
     precheckLinksInstalled: true,   // (speedup if false) try to check if links is installed and if it is available
-    cmdMaxLengthDisplay: 100,   // set the maximum length of a command to display
-    historySaveThinking: false, // save the thinking block to the history
+    cmdMaxLengthDisplay: 100,       // set the maximum length of a command to display
+    historySaveThinking: false,     // save the thinking block to the history
 
-    allowGeneralPrompts: false, // Allow to answer general questions, this will also allow Baio to loose the ultimate focus on creating commands
+    allowGeneralPrompts: false,     // Allow to answer general questions, this will also allow Baio to loose the ultimate focus on creating commands
 
     /** Prompts **/
     defaultPrompt: 'show me a table of all files in the current directory',

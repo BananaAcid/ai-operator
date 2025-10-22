@@ -54,3 +54,10 @@ explain the files in the current folder
 ```
 - gets all files
 - creates a table with an additional discription row explaining the file
+
+```
+backup the savegames of my installed borderlands 4 to d:\bl4-sav.bak.7z
+```
+- get the correct save game folder
+- check if 7zip is installed
+- create the 7z file with the savegame folder (or its files)
