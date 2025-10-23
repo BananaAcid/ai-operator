@@ -374,7 +374,7 @@ let settingsDefault: Settings = {
         modelMeta: {
             architecture: undefined,
             contextLength: undefined,
-        }
+        },
     },
 
     //* blacklisted - temporary runtime values - do not save
@@ -1443,10 +1443,10 @@ async function promptTrigger(/*inout*/ prompt: Prompt, /*inout*/ resultPrompt?: 
     if (trigger === ':h' || trigger === '/:help' || trigger === '/?' || trigger === '/help') {
         console.info(packageJSON.name,'v' + packageJSON.version);
         console.log(cliMd(`
-            AI Driver: \`${drivers[settings.driver]?.name ?? settings.driver}\`\n
-            AI Model: \`${settings.modelData.modelName || (settings.model ?? drivers[settings.model]?.defaultModel)}\`\n
-            AI Model Context Window: \`${settings.modelData?.modelMeta?.contextLength || 'unknown'}\`\n
-            History: \`${history.length} entries\`\n
+            AI Driver: \`${drivers[settings.driver]?.name ?? settings.driver}\`<br/>
+            AI Model: \`${settings.modelData.modelName || (settings.model ?? drivers[settings.model]?.defaultModel)}\`<br/>
+            AI Model Context Window: \`${settings.modelData?.modelMeta?.contextLength || 'unknown'}\`<br/>
+            History: \`${history.length} entries\`<br/>
 
             | Possible prompt triggers | Short | Description |
             |---|---|---|
