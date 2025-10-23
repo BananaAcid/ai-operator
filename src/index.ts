@@ -122,7 +122,7 @@ const PROMPT_INDENT = 4*2; // 2 Tabs (of 4 spaces each)
 let TTY_INTERFACE:any = {};
 
 
-//* get args (partly settings)
+//* get args (partly settings), no windows '/?' supported. only -? or -h or --help
 const args = await new Promise<ReturnType<typeof parseArgs>>(resolve => resolve(parseArgs({
     allowPositionals: true,
     options: {
@@ -369,8 +369,8 @@ let settingsDefault: Settings = {
     
     //* Cached
     version: packageJSON.version,
-    modelName: '',
     modelData: {
+        modelName: '',
         modelMeta: {
             architecture: undefined,
             contextLength: undefined,
@@ -1444,7 +1444,8 @@ async function promptTrigger(/*inout*/ prompt: Prompt, /*inout*/ resultPrompt?: 
         console.info(packageJSON.name,'v' + packageJSON.version);
         console.log(cliMd(`
             AI Driver: \`${drivers[settings.driver]?.name ?? settings.driver}\`\n
-            AI Model: \`${settings.modelName || (settings.model ?? drivers[settings.model]?.defaultModel)}\`\n
+            AI Model: \`${settings.modelData.modelName || (settings.model ?? drivers[settings.model]?.defaultModel)}\`\n
+            AI Model Context Window: \`${settings.modelData?.modelMeta?.contextLength || 'unknown'}\`\n
             History: \`${history.length} entries\`\n
 
             | Possible prompt triggers | Short | Description |
@@ -1775,7 +1776,7 @@ async function config(options: string[]|undefined, prompt: Prompt): Promise<void
 
                     { value: 'driver', name: `AI Driver: ${colors.blue(drivers[settings.driver]?.name ?? 'unknown')}  ${ settings.driver !== 'ollama' ? (colors.italic(drivers[settings.driver]?.apiKey() ? colors.green('(API key found)') : colors.red('(no API key found)'))) : ''}`,
                         description: 'Select an AI driver for your provider. API key and URL are configured with environment variables.' },
-                    { value: 'model', name: `AI Model: ${colors.blue(settings.modelName || settings.model || (drivers[settings.driver]?.defaultModel ? colors.italic(colors.dim('(default: ' + drivers[settings.driver]?.defaultModel + ')')) : undefined) || '')}`,
+                    { value: 'model', name: `AI Model: ${colors.blue(settings.modelData.modelName || settings.model || (drivers[settings.driver]?.defaultModel ? colors.italic(colors.dim('(default: ' + drivers[settings.driver]?.defaultModel + ')')) : undefined) || '')}`,
                         description: 'Select an AI model for your provider.' },
                     { value: 'temperature', name: `AI Temperature: ${settings.temperature !== 0 ? colors.blue(settings.temperature.toString()) : colors.italic(colors.dim('(default)'))}`,
                         description: 'Select a temperature for the models creativity.' },
@@ -1885,7 +1886,7 @@ async function config(options: string[]|undefined, prompt: Prompt): Promise<void
                 if (!settingsArgs['model'] && !canceled) {
                     // force to choose a new one
                     settings.model = ''; 
-                    settings.modelName = '';
+                    settings.modelData.modelName = '';
                     options.push('model');
                 }
             }
@@ -1988,7 +1989,7 @@ async function config(options: string[]|undefined, prompt: Prompt): Promise<void
                     else
                         modelSelected = model!;
                 }
-                settings.modelName = models.find(({value}) => value === modelSelected)?.name || '';
+                settings.modelData.modelName = models.find(({value}) => value === modelSelected)?.name || '';
             }
             // if it was used from select, we do not need to check
             let isModelSelectedInModels = !hasArg || (hasArg && forceSelection) || models.find(({value}) => value === modelSelected) !== undefined;
@@ -2002,14 +2003,14 @@ async function config(options: string[]|undefined, prompt: Prompt): Promise<void
             else if (hasArg && !forceSelection && !isModelSelectedInModels) {
                 console.warn(colors.yellow(figures.warning), `No model named "${modelSelected}" found. Reverting to model: ${settingsSaved?.model || driver.defaultModel}`);
                 modelSelected = settingsSaved?.model || driver.defaultModel;
-                settings.modelName = settingsSaved?.modelName || '';
+                settings.modelData.modelName = settingsSaved?.modelData?.modelName || '';
             }
             // no models in list or no model was selected
             if (!models.length || !modelSelected) {
                 let msg = (settings.driver == 'ollama') ?
                     `⚠️ The model (${colors.italic(modelSelected)}) will be downloaded when used and this process might really take a while. No progress will be shown here (check Ollama).\n  ` : '';
                 modelSelected = await input({ message: msg + 'Enter your model to use:', default: settings.model || driver.defaultModel,  }, OPTS);
-                settings.modelName = '';
+                settings.modelData.modelName = '';
             }
             settings.model = modelSelected;
 
@@ -2191,7 +2192,7 @@ async function makeSystemPromptReady(): Promise<void> {
 
         // AI info
             ['{{currentDriver}}', (drivers[settings.driver]?.name ?? settings.driver) || 'unknown'],
-            ['{{currentModel}}', settings.modelName || (settings.model ?? drivers[settings.model]?.defaultModel) || 'unknown'],
+            ['{{currentModel}}', settings.modelData.modelName || (settings.model ?? drivers[settings.model]?.defaultModel) || 'unknown'],
 
         // apply invoking shell to system prompt
             ['{{invokingShell}}', await getInvokingShell() ?? 'unknown'],
