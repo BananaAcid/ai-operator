@@ -23,6 +23,7 @@ declare global {
     type ChatResponse = {
         contentRaw: string;
         history: any; // driver specific
+        totalTokenUsage: number | null;
     }
 
     type MessageItem = OpenAiMessageItem | GoogleAiMessageItem;

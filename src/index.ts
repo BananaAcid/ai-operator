@@ -413,6 +413,9 @@ let settings: Settings = {
 //* initialize AI history
 let history: MessageItem[] = [];
 
+//* initialize AI context window counter
+let totalTokenUsage: number|null = null;
+
 
 /**
  * Opens a file in the default text editor for the platform. If the default
@@ -538,12 +541,12 @@ async function api(prompt: Prompt): Promise<PromptResult> {
         // error, ask to retry
         if (result instanceof Error) {
             if (result.message === 'aborted')
-                return {answer: '', answerFull: '', commands: [], needMoreInfo: true, isEnd: false};
+                return {answer: '', answerFull: '', commands: [], needMoreInfo: true, isEnd: false, totalTokenUsage: null};
 
             console.error(colors.red(colors.bold(figures.cross)), colors.red(`API Error (${driver.name}): ${result.message}`));
             retry = await toggle({ message: `Do you want to try again?`, default: true }, TTY_INTERFACE);
             if (!retry)
-                return {answer: '', answerFull: '', commands: [], needMoreInfo: true, isEnd: false};
+                return {answer: '', answerFull: '', commands: [], needMoreInfo: true, isEnd: false, totalTokenUsage: null};
         }
 
     } while(retry);
@@ -603,6 +606,7 @@ async function api(prompt: Prompt): Promise<PromptResult> {
         commands,
         needMoreInfo: contentRaw.indexOf('<NEED-MORE-INFO/>') > -1,
         isEnd: contentRaw.indexOf('<END/>') > -1,
+        totalTokenUsage: (result as unknown as ChatResponse).totalTokenUsage || null,
     };
 }
 
@@ -1445,7 +1449,7 @@ async function promptTrigger(/*inout*/ prompt: Prompt, /*inout*/ resultPrompt?: 
         console.log(cliMd(`
             AI Driver: \`${drivers[settings.driver]?.name ?? settings.driver}\`<br/>
             AI Model: \`${settings.modelData.modelName || (settings.model ?? drivers[settings.model]?.defaultModel)}\`<br/>
-            AI Model Context Window: \`${settings.modelData?.modelMeta?.contextLength || 'unknown'}\`<br/>
+            AI Model Context Window: \`${totalTokenUsage || 'unknown'}\` of \`${settings.modelData?.modelMeta?.contextLength || 'unknown'}\`<br/>
             History: \`${history.length} entries\`<br/>
 
             | Possible prompt triggers | Short | Description |
@@ -2536,6 +2540,8 @@ async function init(): Promise<Prompt> {
         while (resultPromptRet === undefined || await promptTrigger(prompt, resultPrompt));
 
         resultPrompt = await doPrompt(prompt);
+
+        totalTokenUsage = resultPrompt.totalTokenUsage ?? totalTokenUsage;
         
         if (settings.endIfDone && resultPrompt.isEnd) break;
     }

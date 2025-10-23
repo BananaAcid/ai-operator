@@ -55,6 +55,7 @@ declare global {
         commands: PromptCommand[];
         needMoreInfo: boolean;
         isEnd: boolean;
+        totalTokenUsage: number | null;
     };
     
     type ArgsKeys = {

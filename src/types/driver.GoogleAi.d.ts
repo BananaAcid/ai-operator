@@ -56,11 +56,25 @@ declare global {
             }>;
         };        
 
+        modelVersion: string;   // the one that was used, like 'gemini-2.5-flash-lite-preview-09-2025'
+        responseId: string;     // some sID.....
+
         candidates: {
             content: {
                 parts: {text:string}[];
             };
         }[];
+
+        usageMetadata: {
+            candidatesTokenCount: number;
+            promptTokenCount: number;
+            totalTokenCount: number;
+            
+            promptTokensDetails: {
+                modality: 'TEXT' | string;
+                tokenCount: number;
+            }[];
+        };
     }
 
     type GoogleAiPromptAddition = {

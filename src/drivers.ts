@@ -199,6 +199,7 @@ const drivers = {
                 return {
                     contentRaw: '',
                     history: history,
+                    totalTokenUsage: null,
                 }
             }
 
@@ -216,6 +217,7 @@ const drivers = {
             return {
                 contentRaw: responseMessage.content,
                 history: newHistory,
+                totalTokenUsage: response.usage?.total_tokens || null,
             };
         },
 
@@ -341,6 +343,7 @@ const drivers = {
                 return {
                     contentRaw: '',
                     history: history,
+                    totalTokenUsage: null,
                 }
             }
 
@@ -371,6 +374,7 @@ const drivers = {
             return {
                 contentRaw: responseMessage?.text ?? '',
                 history: newHistory,
+                totalTokenUsage: response.usageMetadata.totalTokenCount,
             };
         },
         
