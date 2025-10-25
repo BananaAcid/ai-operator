@@ -82,7 +82,9 @@ const drivers = {
                     'Content-Type': 'application/json',
                     ...(this.apiKey() ? { 'Authorization': `Bearer ${this.apiKey()}` } : {}),
                 },
-                body: 'name=' + model
+                body: JSON.stringify({ 
+                    'name': model,
+                }),
             }).then(response => response.json()).catch(error => console.error(error)) as OllamaResultModelMeta | undefined;
 
             const model_info = response?.model_info;
@@ -312,7 +314,7 @@ const drivers = {
                             parts: [
                                 ...(promptAdditions ?? []).map(item => ({ [item.type]: item.content })),
                                 { text: promptText ?? '' },
-                            ]
+                            ],
                         },
                     ],
                 }),
