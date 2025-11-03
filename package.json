@@ -17,7 +17,7 @@
     "url": "git+https://github.com/BananaAcid/ai-operator.git"
   },
   "scripts": {
-    "start": "node --no-warnings=ExperimentalWarning --env-file-if-exists=.env src/index.ts",
+    "start": "echo 'Shell will always be cmd/bash because of NPM' && node --no-warnings=ExperimentalWarning --env-file-if-exists=.env src/index.ts",
     "build": "npx -y pkgroll --src src --dist bin",
     "test": "node ./bin/index.mjs",
     "config:create": "node ./bin/index.mjs --config --update --no-settings",

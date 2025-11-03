@@ -223,11 +223,12 @@ let settingsDefault: Settings = {
         It seems like the GOAL was to output a command. Check if a command was ATTEMPTED, even if it's not correctly formatted.
 
         If a command was attempted, DOUBLE-CHECK the output for the \`<CMD>command_here</CMD>\` formatting:
-            *   Are the <CMD> and </CMD> tags present and correctly spelled?
-            *   Is there any extra text or whitespace inside the tags that should be removed?
-            *   Do not use fenced code blocks (\`\`\`) for executable commands.
-            *   Is the cammand promperly escaped so that it can be executed?
-            If the formatting is incorrect, REWRITE the output with the CORRECT \`<CMD>command_here</CMD>\` formatting. Only output the corrected answer and do not add any additional descriptions.
+            * Are the <CMD> and </CMD> tags present and correctly spelled?
+            * Is there any extra text or whitespace inside the tags that should be removed?
+            * Do not use fenced code blocks (\`\`\`) for executable commands.
+            * Is the cammand promperly escaped so that it can be executed?
+        
+        If the formatting is incorrect, REWRITE the output with the CORRECT \`<CMD>command_here</CMD>\` formatting. Only output the corrected answer and do not add any additional descriptions.
 
         If not:
         Ensure all steps are followed, results are validated, and commands are properly executed.
@@ -238,6 +239,23 @@ let settingsDefault: Settings = {
     generalPrompt: `
         You are also proficient in coding for the commandline and software in general.
         If you are asked for non commandline or coding tasks, you act as a general assistant.
+    `.rePadBlock(PROMPT_INDENT),
+
+    compactPrompt: `
+        Compact the complete context up until now.
+        Condense the entire context window into a single, high-fidelity summary. Maximize token savings while preserving all essential details.
+        - Be concise and keep your answers short, but do not omit important details.
+        - Use bullet points to summarize the context.
+
+        1. List the previous primary objective(s) and any major intermediate goals.
+        2. Create a summary and keep it in the order of the history of each goal.
+            - For files added to the context (not in a command or result): list the **Filename** and **Path** for every file mentioned, followed by a **brief description of its contents** (DO NOT include the full file content).
+                - *Example:* \`/path/to/script.py\`: Script defining the 'process_data' function.
+            - For executed commands: summarize the history of commands and results. For each one, **describe the command's action** and **summarize the outcome/key result**. **Do NOT** include the full command or the full command output. Do not include any command with \`<...>\` under any circumstances.
+                - *Example:* Attempted to install 'requests' but failed with a dependency error for 'urllib3'. (DO NOT include 'pip install requests' or the full traceback).
+            - **Solutions & Status:** Create two lists: "Solutions That Worked" and "Solutions That Failed." Briefly describe the solution/attempt and why it worked or failed. Make sure to check for the results of the executed commands (if it was a \`<CMD>command</CMD>\` and there was no result, the command was not executed).
+        
+        You must add \`<CONTEXT-COMPACT/>\` to the end of your answer.
     `.rePadBlock(PROMPT_INDENT),
 
     systemPrompt: `
@@ -797,14 +815,15 @@ let doCommandsLastResult = '';
  * @param commands The commands to execute
  * @returns The results of the commands as a single string
  */
-async function doCommands(commands: PromptCommand[]): Promise<string> {
+async function doCommands(commands: PromptCommand[]): Promise<DoCommandsResult> {
     let results: string[] = [];
     let updateSystemPrompt = false;
+    let needMoreInfo = false;
 
     let { signal, cleanup } = createAbortSignalForEsc();
 
     for (const command of commands) {
-
+        
         if (signal.aborted) {
             console.log(colors.red(colors.bold(figures.cross)), `Aborted! Not executing: ${displayCommand(command)}`);
             break;
@@ -813,12 +832,14 @@ async function doCommands(commands: PromptCommand[]): Promise<string> {
         spinner.start(`Executing command ${colors.reset(colors.dim('(press <esc> to abort)'))}: ${displayCommand(command)}`);
         
 
-        let ret = await promptCommands[command.type].exec(command as PromptCommandByType<typeof command.type> as any, signal);  // TODO <---- cleanup / fix `any`
+        let ret = await promptCommands[command.type].exec(command as any, signal);  // TODO <---- cleanup / fix `any`
         results.push(ret.result);
         updateSystemPrompt = ret.updateSystemPrompt;
-
+        if (ret.needMoreInfo) needMoreInfo = true;
 
         spinner.success(`Executing command: ${displayCommand(command)}`);
+
+        if (needMoreInfo) break;
     }
 
     await cleanup();
@@ -826,7 +847,12 @@ async function doCommands(commands: PromptCommand[]): Promise<string> {
     if (updateSystemPrompt)
         await makeSystemPromptReady();
 
-    return doCommandsLastResult = results.join('\n<-----/>\n');
+    doCommandsLastResult = results.join('\n<-----/>\n');
+
+    return {
+        answer: doCommandsLastResult,
+        needMoreInfo: needMoreInfo,
+    };
 }
 
 
@@ -855,14 +881,26 @@ async function doPrompt(prompt: Prompt): Promise<PromptResult> {
  * @returns A string caption describing the command.
  */
 function commandContent(command: PromptCommand, content?: string): string {
-    return promptCommands[command.type].content(command as PromptCommandByType<typeof command.type> as any, content);  // TODO <---- cleanup / fix `any`
+    return promptCommands[command.type].content(command as any, content);  // TODO <---- cleanup / fix `any`
 }
 
+
+/**
+ * Returns whether the content of a given command can be edited by the user.
+ * The value is determined by the command's `contentIsEditable` property.
+ *
+ * @param command - The command to check.
+ * @returns Whether the content of the command can be edited by the user, defaults to `true`.
+ */
+function commandContentEditable(command: PromptCommand): boolean {
+    return promptCommands[command.type].contentIsEditable ?? true;
+}
 
 /**
  * Generates a regular expression with named groups for each command.
  * Each group name is in the form of `is_<commandName>`.
  * The regular expression is case-insensitive and matches globally.
+ * ! Order is set by ordering promptCommands[] items
  * @returns The generated regular expression.
  */
 function commandsBuildRegEx(): RegExp {
@@ -898,11 +936,51 @@ async function commandHandleMd(commandName: string, groups: RegExpGroups) {
     return await command.handleMd(groups);
 }
 
+
 /**
  * The `promptCommands` object contains information about different types of commands.
  * Each command is associated with a description, syntax, caption, content, regex, and handleMd function.
  */
-const promptCommands = {
+const promptCommands: PromptCommandObjects = {
+
+    // context.compact should always block command parsing (does it by `exec()` returning `needMoreInfo: true` )
+    'context.compact': {
+        description: 'Save compacted context', //'Replace the context with the compacted response',
+        syntax: '<CONTEXT-COMPACT/>',
+        prompt: undefined, // based on the extra settings.compactPrompt - can not be disabled.
+        
+        caption: (command: PromptCommandByType<'context.compact'>) => 'Compact context',
+
+        contentIsEditable: false,
+
+        content(command: PromptCommandByType<'context.compact'>, content?: string): string {
+            return '';
+        },
+
+        regex: /\`*\ *<CONTEXT-COMPACT\/>\ *\`*/,
+
+        async handleMd(groups: RegExpGroups): Promise<{command: PromptCommandByType<'context.compact'>, replacementString: string}> {
+            DEBUG_OUTPUT && console.log('context.compact');
+
+            return {
+                command: {type: 'context.compact'},
+                replacementString: '\n' + colors.bgBlack(' ▶️&nbsp; Save compacted context') + '\n',
+            };
+        },
+
+        async exec(command: PromptCommandByType<'context.compact'>, signal?: AbortSignal): Promise<{result: string, updateSystemPrompt: boolean, needMoreInfo: boolean}> {
+            
+            history = history.slice(0, history.length - 1);
+            totalTokenUsage = null; //? total token usage => null ...
+
+            return {
+                result: 'The previous content is the sucessfully compacted Context (Baio history).\n<NEED-MORE-INFO/>',
+                updateSystemPrompt: false,
+                needMoreInfo: true,
+            };
+        }
+    },
+
 
     'command': {
         description: 'Execute a shell command (the primary functionality of Baio)',
@@ -911,6 +989,8 @@ const promptCommands = {
         
         caption: (command: PromptCommandByType<'command'>) => command.line,
 
+        contentIsEditable: true,
+
         content(command: PromptCommandByType<'command'>, content?: string): string {
             if (content !== undefined && command.line !== content) { command.userModified = true; command.line = content; }
             return command.line;
@@ -918,7 +998,7 @@ const promptCommands = {
 
         regex: /\`*\ *<CMD>(?<cmdContent>.*?)<\/CMD>\ *\`*/,
 
-        async handleMd(groups: RegExpGroups): Promise<{command: PromptCommand, replacementString: string}> {
+        async handleMd(groups: RegExpGroups): Promise<{command: PromptCommandByType<'command'>, replacementString: string}> {
             let replacementString = '';
 
             // Use fenced code block for commands with backticks or newlines
@@ -935,7 +1015,7 @@ const promptCommands = {
         },
 
 
-        async exec(command: PromptCommandByType<'command'>, signal?: AbortSignal): Promise<{result: string, updateSystemPrompt: boolean}> {
+        async exec(command: PromptCommandByType<'command'>, signal?: AbortSignal): Promise<{result: string, updateSystemPrompt: boolean, needMoreInfo: boolean}> {
             let commandStr = command.line;
 
             // execute command mith node and a promise and wait
@@ -948,27 +1028,31 @@ const promptCommands = {
             return {
                 result,
                 updateSystemPrompt: false,
+                needMoreInfo: false,
             };
         },
     },
 
+
     'baio.help': {
         description: 'Proccess help for Baio',
-        syntax: '<BAIO-HELP />',
+        syntax: '<BAIO-HELP/>',
         prompt: `
-            - To **proccess help for Baio**, you need to use \`<BAIO-HELP />\`.
+            - To **proccess help for Baio** (asking about settings, commands, options and more baio specifics), you need to use \`<BAIO-HELP/>\`.
         `.rePadBlock(4*3),
         
         caption: (command: PromptCommandByType<'baio.help'>) => `Process Baio help`,
+        
+        contentIsEditable: false,
 
         content(command: PromptCommandByType<'baio.help'>, content?: string): string {
             //if (content !== undefined && command.topic !== content) { command.userModified = true; command.topic = content; }
             return ''; //command.topic;
         },
 
-        regex: /\`*\ *<BAIO-HELP \/>\ *\`*/,
+        regex: /\`*\ *<BAIO-HELP\/>\ *\`*/,
 
-        async handleMd(groups: RegExpGroups): Promise<{command: PromptCommand, replacementString: string}> {
+        async handleMd(groups: RegExpGroups): Promise<{command: PromptCommandByType<'baio.help'>, replacementString: string}> {
             DEBUG_OUTPUT && console.log('baio.help');
 
             return {
@@ -977,7 +1061,7 @@ const promptCommands = {
             };
         },
 
-        async exec(command: PromptCommandByType<'baio.help'>, signal?: AbortSignal): Promise<{result: string, updateSystemPrompt: boolean}> {
+        async exec(command: PromptCommandByType<'baio.help'>, signal?: AbortSignal): Promise<{result: string, updateSystemPrompt: boolean, needMoreInfo: boolean}> {
             let readmePath1 = path.join(PROCESS_PATH_INITIAL, 'README.md');
             let readmePath2 = path.join(PROCESS_PATH_INITIAL, '..', 'README.md')
             let readmePath = await realpath(readmePath1).catch(_=>{}) || await realpath(readmePath2).catch(_=>{}) || 'README.md';
@@ -990,6 +1074,7 @@ const promptCommands = {
             return {
                 result,
                 updateSystemPrompt: false,
+                needMoreInfo: false,
             };
         }
     },
@@ -1004,6 +1089,8 @@ const promptCommands = {
 
         caption: (command: PromptCommandByType<'file.write'>) => `Write file: ${colors.italic(command.file.path)}`,
 
+        contentIsEditable: true,
+
         content(command: PromptCommandByType<'file.write'>, content?: string): string {
             if (content !== undefined && command.file.content !== content) { command.userModified = true; command.file.content = content; }
             return command.file.content;
@@ -1011,7 +1098,7 @@ const promptCommands = {
 
         regex: /\`?\ *<WRITE-FILE FILEPATH="(?<filePath>.*?)">(?<fileContent>.*?)<\/WRITE-FILE>\ *\`?/,
 
-        async handleMd(groups: RegExpGroups): Promise<{command: PromptCommand, replacementString: string}> {
+        async handleMd(groups: RegExpGroups): Promise<{command: PromptCommandByType<'file.write'>, replacementString: string}> {
             DEBUG_OUTPUT && console.log('file.write', groups.filePath!, 'mime:', mime.getType(groups.filePath!) ?? 'text', 'content length:', groups.fileContent!.length);
 
             return {
@@ -1020,7 +1107,7 @@ const promptCommands = {
             };
         },
 
-        async exec(command: PromptCommandByType<'file.write'>, signal?: AbortSignal): Promise<{result: string, updateSystemPrompt: boolean}> {
+        async exec(command: PromptCommandByType<'file.write'>, signal?: AbortSignal): Promise<{result: string, updateSystemPrompt: boolean, needMoreInfo: boolean}> {
             let result = await writeFile(command.file.path, command.file.content, 'utf-8')
                 .then(stdout => '<CMD-OUTPUT>File written' + (command.userModified ? ' (user modified the content):\n' + command.file.content : '') + '</CMD-OUTPUT>')
                 .catch(error => '<CMD-ERROR>Error writing file:\n' + error + '</CMD-ERROR>')
@@ -1029,6 +1116,7 @@ const promptCommands = {
             return {
                 result,
                 updateSystemPrompt: false,
+                needMoreInfo: false,
             };
         }
     },
@@ -1046,6 +1134,8 @@ const promptCommands = {
 
         caption: (command: PromptCommandByType<'dir.change'>) => `Change directory to: ${colors.italic(command.dir)}`,
 
+        contentIsEditable: true,
+
         content(command: PromptCommandByType<'dir.change'>, content?: string): string {
             if (content !== undefined && command.dir !== content) { command.userModified = true; command.dir = content; }
             return command.dir;
@@ -1053,7 +1143,7 @@ const promptCommands = {
 
         regex: /\`*\ *<DIR-CHANGE>(?<dirContent>.*?)<\/DIR-CHANGE>\ *\`*/,
 
-        async handleMd(groups: RegExpGroups): Promise<{command: PromptCommand, replacementString: string}> {
+        async handleMd(groups: RegExpGroups): Promise<{command: PromptCommandByType<'dir.change'>, replacementString: string}> {
             DEBUG_OUTPUT && console.log('dir.change', groups.dirContent!);
 
             return {
@@ -1062,7 +1152,7 @@ const promptCommands = {
             };
         },
 
-        async exec(command: PromptCommandByType<'dir.change'>, signal?: AbortSignal): Promise<{result: string, updateSystemPrompt: boolean}> {
+        async exec(command: PromptCommandByType<'dir.change'>, signal?: AbortSignal): Promise<{result: string, updateSystemPrompt: boolean, needMoreInfo: boolean}> {
             let result = await new Promise(resolve => resolve(process.chdir(command.dir)))
                 .then(stdout => '<CMD-OUTPUT>Current directory changed to ' + command.dir + '</CMD-OUTPUT>')
                 .catch(error => '<CMD-ERROR>Error changing directory:\n' + error + '</CMD-ERROR>')
@@ -1071,6 +1161,7 @@ const promptCommands = {
             return {
                 result,
                 updateSystemPrompt: true,
+                needMoreInfo: false,
             };
         }
     },
@@ -1078,21 +1169,23 @@ const promptCommands = {
 
     'models.getcurrent': {
         description: 'Get current models of active AI provider',               // TODO: Add missing filter handling
-        syntax: '<MODELS-GETCURRENT />',
+        syntax: '<MODELS-GETCURRENT/>',
         prompt: `
-            - To get a list of available models for the current AI, use \`<MODELS-GETCURRENT />\`.
+            - To get a list of available models for the current AI, use \`<MODELS-GETCURRENT/>\`.
         `.rePadBlock(4*3),
 
         caption: (command: PromptCommandByType<'models.getcurrent'>) => `Get current models` + (command.filter !== '.*' ? ` with RegEx filter: ${colors.italic(command.filter)}` : ''),
+
+        contentIsEditable: true,
 
         content(command: PromptCommandByType<'models.getcurrent'>, content?: string): string {
             if (content !== undefined && command.filter !== content) { command.userModified = true; command.filter = content; }
             return command.filter;
         },
 
-        regex: /\`*\ *<MODELS-GETCURRENT \/>\ *\`*/,
+        regex: /\`*\ *<MODELS-GETCURRENT\/>\ *\`*/,
 
-        async handleMd(groups: RegExpGroups): Promise<{command: PromptCommand, replacementString: string}> {
+        async handleMd(groups: RegExpGroups): Promise<{command: PromptCommandByType<'models.getcurrent'>, replacementString: string}> {
             DEBUG_OUTPUT && console.log('models.getcurrent');
 
             return {
@@ -1101,7 +1194,7 @@ const promptCommands = {
             };
         },
 
-        async exec(command: PromptCommandByType<'models.getcurrent'>, signal?: AbortSignal): Promise<{result: string, updateSystemPrompt: boolean}> {
+        async exec(command: PromptCommandByType<'models.getcurrent'>, signal?: AbortSignal): Promise<{result: string, updateSystemPrompt: boolean, needMoreInfo: boolean}> {
             let driver = drivers[settings.driver]!;
             let result = await driver.getModels(settings, false) // false => get JSON string
                 .then(models => models.map(model => (new RegExp(command.filter, 'g').test(model.name)) ? JSON.parse(model.name) : false).filter(Boolean)) // change to array of raw model data
@@ -1112,6 +1205,7 @@ const promptCommands = {
             return {
                 result,
                 updateSystemPrompt: false,
+                needMoreInfo: false,
             };
         }
     },
@@ -1126,6 +1220,8 @@ const promptCommands = {
 
         caption: (command: PromptCommandByType<'web.read'>) => `Read web page: ${colors.italic(command.url)}`,
 
+        contentIsEditable: true,
+
         content(command: PromptCommandByType<'web.read'>, content?: string): string {
             if (content !== undefined && command.url !== content) { command.userModified = true; command.url = content; }
             return command.url;
@@ -1133,7 +1229,7 @@ const promptCommands = {
 
         regex: /\`*\ *<WEB-READ>(?<urlContent>.*?)<\/WEB-READ>\ *\`*/,
 
-        async handleMd(groups: RegExpGroups): Promise<{command: PromptCommand, replacementString: string}> {
+        async handleMd(groups: RegExpGroups): Promise<{command: PromptCommandByType<'web.read'>, replacementString: string}> {
             DEBUG_OUTPUT && console.log('web.read', groups.urlContent!);
             
             return {
@@ -1142,7 +1238,7 @@ const promptCommands = {
             };
         },
 
-        async exec(command: PromptCommandByType<'web.read'>, signal?: AbortSignal): Promise<{result: string, updateSystemPrompt: boolean}> {
+        async exec(command: PromptCommandByType<'web.read'>, signal?: AbortSignal): Promise<{result: string, updateSystemPrompt: boolean, needMoreInfo: boolean}> {
             let result = await fetch(command.url).then(response => response.text())
                 .then(text => NodeHtmlMarkdown.translate(text))
                 .then(stdout => '<CMD-OUTPUT>' + stdout + '</CMD-OUTPUT>')
@@ -1152,6 +1248,7 @@ const promptCommands = {
             return {
                 result,
                 updateSystemPrompt: false,
+                needMoreInfo: false,
             };
         }
     },
@@ -1191,6 +1288,7 @@ function displayCommand(command: PromptCommand): string {
  */
 async function doPromptWithCommands(result: PromptResult|undefined): Promise<string|undefined> {
     let resultCommands = "";
+    let needMoreInfo = false;
     
     //* get inital user prompt
     if (result === undefined) {
@@ -1206,25 +1304,6 @@ async function doPromptWithCommands(result: PromptResult|undefined): Promise<str
         await isMakeSystemPromptReady;
     
         resultCommands = prompt;
-    }
-
-    //* no commands
-    if (result && !result.commands.length) {
-        //* check if there was a <NEED-MORE-INFO/> in the response
-        //* if yes, ask the user for more info and do the prompt again
-        if (result.needMoreInfo) {
-            resultCommands = await input({ message: 'Enter more info:' }, TTY_INTERFACE);
-            // ... need to loop back to the prompt ("chat")
-        }
-        //* the main loop decided not to exit (settings.endIfDone == false), so we ask for more info
-        else if(result.isEnd) {
-            resultCommands = await input({ message: 'What do you want to do next:' }, TTY_INTERFACE);
-        }
-        //* do the fixit prompt, because there was no command
-        else {
-            console.log(colors.yellow(figures.warning), 'No commands found in response, no execution will be performed.');
-            resultCommands = settings.fixitPrompt;
-        }
     }
 
     //* there are commands, AND autoExecKeys
@@ -1290,14 +1369,14 @@ async function doPromptWithCommands(result: PromptResult|undefined): Promise<str
         if (canceled || !commands.length)
             //@ts-expect-error somehow the type is not correctly inferred
             if (canceled === 'edit' && activeItem) {
-                let val = await editor({
+                let val = commandContentEditable(activeItem.value) ? await editor({
                     message: 'Waiting for you to close the editor (and you can modify the command).',
                     waitForUseInput: false,
                     theme: { style: { help: () => ``, } },
                     default: commandContent(activeItem.value),
                     postfix: await getShellExt(),
                 }, {...TTY_INTERFACE, clearPromptOnDone: true})
-                .catch(_ => undefined);
+                .catch(_ => undefined) : commandContent(activeItem.value);
 
                 if (val !== undefined)
                     commandContent(result.commands[activeItem.index]!, val);
@@ -1324,13 +1403,36 @@ async function doPromptWithCommands(result: PromptResult|undefined): Promise<str
                 if (canceled) resultCommands = '/:cmds';
             }
         else {
-            resultCommands = await doCommands(commands);
+            let ret = await doCommands(commands);
+
+            resultCommands = ret.answer;
+            needMoreInfo = ret.needMoreInfo;
 
             (DEBUG_OUTPUT || DEBUG_OUTPUT_EXECUTION) && console.info('DEBUG\n', resultCommands);
 
             // ... go and evaluate the commands result
         }
     }
+
+    //* no commands
+    if (result && (!result.commands?.length || needMoreInfo)) {
+        //* check if there was a <NEED-MORE-INFO/> in the response
+        //* if yes, ask the user for more info and do the prompt again
+        if (result.needMoreInfo) {
+            resultCommands = await input({ message: 'Enter more info:' }, TTY_INTERFACE);
+            // ... need to loop back to the prompt ("chat")
+        }
+        //* the main loop decided not to exit (settings.endIfDone == false), so we ask for more info
+        else if(result.isEnd) {
+            resultCommands = await input({ message: 'What do you want to do next:' }, TTY_INTERFACE);
+        }
+        //* do the fixit prompt, because there was no command
+        else {
+            console.log(colors.yellow(figures.warning), 'No commands found in response, no execution will be performed.');
+            resultCommands = settings.fixitPrompt;
+        }
+    }
+
 
     return resultCommands;
 }
@@ -1469,7 +1571,7 @@ async function promptTrigger(/*inout*/ prompt: Prompt, /*inout*/ resultPrompt?: 
             | \`/history:import [<file>]\`      | \`:hi [<file>]\`      | Imports the context from a history file or shows a file selection. |
             | \`/history:clear [<number>]\`     | \`:hc [<number>]\`    | Clears the current context. Optionally: positive number keeps last entries, negative cuts last entries. |
             | \`/:clear\`                       | \`:c\`                | Clears the current context and current prompt (use for changing topics). |
-            | \`/:end [<boolean>]\`             |                       | Toggles end if assumed done, or turns it on (true) or off (false). |
+            | \`/:end [<boolean>]\`             |                       | Toggles end if assumed done, or turns it on (\`true\`) or off (\`false\`). |
             | \`/debug:result\`                 |                       | Shows what the API generated and what the tool understood. |
             | \`/debug:exec\`                   |                       | Shows what the system got returned from the shell. Helps debug strange situations. |
             | \`/debug:get <key>\`              |                       | Gets the current value of the key (same as in baiorc). If no key is given, lists all possible keys. |
@@ -1656,6 +1758,11 @@ async function promptTrigger(/*inout*/ prompt: Prompt, /*inout*/ resultPrompt?: 
             history = [];
             console.log(`🗑️ History cleared.`);
         }
+
+        if (resultPrompt) {     //? TODO  with unified histroy, check total token usage
+            resultPrompt.totalTokenUsage = null;
+        }
+        totalTokenUsage = null; //? TODO  with unified histroy, check total token usage
         return true;
     }
     if (trigger === '/:clear' || trigger === ':c') {
@@ -1668,8 +1775,32 @@ async function promptTrigger(/*inout*/ prompt: Prompt, /*inout*/ resultPrompt?: 
             resultPrompt.commands = [];
             resultPrompt.needMoreInfo = true;
             resultPrompt.isEnd = false;
+            resultPrompt.totalTokenUsage = null;
         }
         console.log(`🗑️ History cleared, current prompt cleared.`);
+
+        totalTokenUsage = null;
+        return true;
+    }
+    if (trigger === '/context:compact' || trigger === ':cc') {
+        
+        prompt.text = settings.compactPrompt;
+        // if (resultPrompt) {
+        //     resultPrompt.answer = 'Compact';
+        //     resultPrompt.answerFull = settings.compactPrompt;
+        //     resultPrompt.commands = [];
+        //     resultPrompt.isCompacting = true;
+        //     resultPrompt.isEnd = false;
+        // }
+
+        console.log(`🗑️  Compacting context (history) ...`);
+        return false;
+    }
+    if (trigger === '/context:size' || trigger === ':cs') {
+        console.log(colors.green(figures.info), cliMd([
+            `AI Model Context Window: \`${totalTokenUsage || 'unknown'}\` of \`${settings.modelData?.modelMeta?.contextLength || 'unknown'}\` ${settings.modelData?.modelMeta?.contextLength && totalTokenUsage ? colors.dim('(' + (Math.ceil(totalTokenUsage / settings.modelData.modelMeta.contextLength * 100)) + '%)') : ''}`,
+            `History: \`${history.length} entries\``,
+        ].join('<br>')).trim());
         return true;
     }
     let pasteContent: string|undefined = undefined;

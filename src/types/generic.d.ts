@@ -36,6 +36,9 @@ declare global {
     } | {
         type: 'baio.help';
         userModified?: boolean;
+    } | {
+        type: 'context.compact';
+        userModified?: boolean;
     }
     /* | {
         type: 'agent';
@@ -48,6 +51,31 @@ declare global {
 
     // utility type to extract a union member based on a property value
     type PromptCommandByType<K extends PromptCommand['type']> = Extract<PromptCommand, { type: K }>;
+
+    // the interface for the internal "MCP"-like commands
+    type PromptCommandObject<T extends PromptCommand> = {
+        description: string;
+        syntax: string;
+        prompt: string | undefined;
+        caption: (command: T) => string;
+        contentIsEditable: boolean;
+        content: (command: T, content?: string) => string;
+        regex: RegExp;
+        handleMd: (groups: RegExpGroups) => Promise<{command: T, replacementString: string}>;
+        exec: (command: T, signal?: AbortSignal) => Promise<{result: string, updateSystemPrompt: boolean, needMoreInfo: boolean}>;
+    }
+
+    // the internal "MCP"-like commands object
+    // only types defined in PromptCommand are allowed as keys!
+    type PromptCommandObjects = {
+        [K in PromptCommand['type']] : PromptCommandObject<PromptCommandByType<K>>;
+    };
+
+    type DoCommandsResult = {
+        answer: string, 
+        needMoreInfo: boolean
+    };
+
 
     type PromptResult = {
         answerFull: string; // for thinking models debugging
@@ -100,6 +128,7 @@ declare global {
         fixitPrompt: string;
         agentPrompt: string;
         fileAddPrompt: string;
+        compactPrompt: string;
         generalPrompt: string;
         systemPrompt: string;
     };
