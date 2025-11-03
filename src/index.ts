@@ -970,8 +970,16 @@ const promptCommands: PromptCommandObjects = {
 
         async exec(command: PromptCommandByType<'context.compact'>, signal?: AbortSignal): Promise<{result: string, updateSystemPrompt: boolean, needMoreInfo: boolean}> {
             
-            history = history.slice(0, history.length - 1);
+            history = history.slice(0, history.length - 1); //! <----  !?!?
             totalTokenUsage = null; //? total token usage => null ...
+
+            //! TODO ... fix
+            console.error('1. history should be reduced, but :ho still shows the full history');
+            console.error('2. result should not get commands parsed from it ... because #3');
+            console.error('3. right after it should ask for info what to do next ( needMoreInfo ) ... needMoreInfo code block was moved to end of FN -> this is a problem?');
+            console.error('4. is return{needMoreInfo} actually picked up (through to the actual needMoreInfo code block)?');
+            debugger;
+
 
             return {
                 result: 'The previous content is the sucessfully compacted Context (Baio history).\n<NEED-MORE-INFO/>',
