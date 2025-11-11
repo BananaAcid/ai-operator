@@ -611,6 +611,7 @@ Methods for accessing the functionality:
 getModels(settings: ModelSelectionSettings, showSimple = true): Promise<ModelSelection>
 makePromptAddition(type: string, content: string, mimeType: string): OpenAiPromptAddition|GoogleAiPromptAddition|PromptAdditionError
 getChatResponse(settings: ChatResponseSettings, history: any[], promptText: PromptText, promptAdditions?: PromptAdditions, abortSignal?: AbortSignal): Promise<ChatResponse|ChatResponseError>
+getModelMeta(model: string): Promise<ModelMeta>
 ```
 
 ## Helper
