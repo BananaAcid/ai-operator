@@ -2045,6 +2045,7 @@ async function config(options: string[]|undefined, prompt: Prompt): Promise<void
                 settings.driver = settingsDefault.driver;
             }
             
+            options.push('updateSystemPrompt');
         }
 
         if (options.includes('model')) {
@@ -2166,6 +2167,8 @@ async function config(options: string[]|undefined, prompt: Prompt): Promise<void
 
             settings.modelData.modelMeta = await driver.getModelMeta(settings.model)
             DEBUG_APICALLS && console.info('Fetching model meta...', settings.modelData.modelMeta);
+
+            options.push('updateSystemPrompt');
         }
 
         if (options.includes('addFile') && prompt) {
