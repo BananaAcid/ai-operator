@@ -2030,8 +2030,14 @@ async function config(options: string[]|undefined, prompt: Prompt): Promise<void
 
                 if (canceled)
                     settings.driver = settings.driver || 'ollama';
-                else
+                else {
+                    //? TODO  with unified history, this FIX should not be needed
+                    if (settings.driver !== driver) { // happens on change (should not trigger from cli arg or init)
+                        history = [];
+                        console.log(`🗑️ History cleared.`);
+                    }
                     settings.driver = driver;
+                }
                 
                 if (!settingsArgs['model'] && !canceled) {
                     // force to choose a new one
@@ -2044,7 +2050,7 @@ async function config(options: string[]|undefined, prompt: Prompt): Promise<void
                 console.warn(colors.yellow(figures.warning), `No driver named "${settings.driver}" found. Reverting to driver: ${settingsSaved?.driver || settingsDefault.driver}`);
                 settings.driver = settingsDefault.driver;
             }
-            
+
             options.push('updateSystemPrompt');
         }
 
