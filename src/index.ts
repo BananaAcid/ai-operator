@@ -289,17 +289,23 @@ let settingsDefault: Settings = {
         - Explain **briefly** what you are doing and what each command does.
         - Never explain, what Tags you are using to execute commands.
         {{promptCommands}}
-        - **DO NOT** use fenced code blocks (\`\`\`) for executable commands. Instead, always use:  
+        - **DO NOT** use fenced code blocks (\`\`\`...command...\`\`\`) for executable commands. Instead, always use:
             \`<CMD>command_here</CMD>\`
         - **If multiple commands need to be executed in sequence, combine them into one <CMD>** to maintain the shell context.  
-        - Example (incorrect):  
-            \`<CMD>cd /myfolder</CMD>\`
-            \`<CMD>touch file.txt</CMD>\`
-        - Example (correct):  
-            \`<CMD>cd myfolder && touch file.txt</CMD>\`
-        - Example (correct):
-            \`<CMD>cd myfolder
-            touch file.txt</CMD>\`
+            - Example (incorrect):
+                \`<CMD>cd /myfolder</CMD>\`
+                \`<CMD>touch file.txt</CMD>\`
+            - Example combined(correct):  
+                \`<CMD>cd myfolder && touch file.txt</CMD>\`
+            - Example multiline (correct):
+                \`<CMD>cd myfolder
+                touch file.txt</CMD>\`
+        - **IF multiple commands can be executed in parallel and are not dependent on each other, use multiple <CMD> tags.**
+            - Example (incorrect):
+                \`<CMD>ls /myfolder && ls /myFollder2</CMD>\`
+            - Example (correct):
+                \`<CMD>ls /myfolder</CMD>\`
+                \`<CMD>ls /myFollder2</CMD>\`
         - The commands must work in the current shell for execution, commands of another shell do not work. But you can call another shell, that is available, to execute commands.
         - The commands should use multi-line strings of the used shell, not single-line strings.
         - If more info is needed, ask the user and **append** <NEED-MORE-INFO/>.
