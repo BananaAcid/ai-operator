@@ -1578,6 +1578,7 @@ async function promptTrigger(/*inout*/ prompt: Prompt, /*inout*/ resultPrompt?: 
             | \`/history:open:md\`              | \`:ho:md\`            | Opens the current context in the default editor to view it as markdown. |
             | \`/history:import [<file>]\`      | \`:hi [<file>]\`      | Imports the context from a history file or shows a file selection. |
             | \`/history:clear [<number>]\`     | \`:hc [<number>]\`    | Clears the current context. Optionally: positive number keeps last entries, negative cuts last entries. |
+            | \`/context:compact\`              | \`:cc\`               | Compact the complete context up until now. |
             | \`/:clear\`                       | \`:c\`                | Clears the current context and current prompt (use for changing topics). |
             | \`/:end [<boolean>]\`             |                       | Toggles end if assumed done, or turns it on (\`true\`) or off (\`false\`). |
             | \`/debug:result\`                 |                       | Shows what the API generated and what the tool understood. |
