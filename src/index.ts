@@ -1768,10 +1768,10 @@ async function promptTrigger(/*inout*/ prompt: Prompt, /*inout*/ resultPrompt?: 
             console.log(`🗑️ History cleared.`);
         }
 
-        if (resultPrompt) {     //? TODO  with unified histroy, check total token usage
+        if (resultPrompt) {     //? TODO  with unified history, check total token usage
             resultPrompt.totalTokenUsage = null;
         }
-        totalTokenUsage = null; //? TODO  with unified histroy, check total token usage
+        totalTokenUsage = null; //? TODO  with unified history, check total token usage
         return true;
     }
     if (trigger === '/:clear' || trigger === ':c') {
@@ -1944,7 +1944,7 @@ async function config(options: string[]|undefined, prompt: Prompt): Promise<void
                     
                     new Separator(),
 
-                    // for each file, there is a prompt about the filename => length / 2  // TODO do not just devide by 2, but check content
+                    // for each file, there is a prompt about the filename => length / 2  // TODO do not just divide by 2, but check content
                     { value: 'addFile', name: `Add a file ${colors.italic(colors.dim(`(currently: ${(prompt?.additions?.length ? prompt.additions.length / 2 : 0)})`))}`, description: 'Add a text or image file to the prompt.' },
 
                     { value: 'importAgent', name: `Select agents${!settings.agentNames.length ? '' : ': ' + colors.blue(settings.agentNames?.join(', ') ?? '')}`, description: 'Select agents to use for the prompt.' },
