@@ -16,6 +16,7 @@ declare global {
         topP?: number;
         topK?: number;
         maxTemperature?: number;
+        thinking?: boolean;
     }
       
     enum GoogleAiResultGenerationMethod {
@@ -25,6 +26,9 @@ declare global {
     type GoogleAiRequest = {
         generationConfig: {
             temperature?: number;
+            thinkingConfig: {
+                thinkingBudget: number;
+            };
         };
         system_instruction: GoogleAiSystemMessageItem;
         contents: GoogleAiMessageItem[];

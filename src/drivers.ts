@@ -271,7 +271,15 @@ const drivers = {
 
             (DEBUG_OUTPUT || DEBUG_OUTPUT_MODELS) && console.log('models', response);
 
-            let modelSelection: ModelSelection = models.map(model => ({ name: showSimple ? `${model.displayName} ${model.name.toLowerCase().includes('think') ? '[THINKING] ' : ''}${model.description && model.description !== model.displayName ? `(${model.description})` : ''}` : JSON.stringify(model), value: model.name.replace(/^models\//, ''), description: model.name.replace(/^models\//, '') }));
+            // old:  model.name.toLowerCase().includes('think')
+            let modelSelection: ModelSelection = models.reduce<ModelSelection>((acc, model) => {
+                let line = (attr?:string) => ({ name: showSimple ? `${model.displayName} ${attr ? '[' + attr.toUpperCase() + '] ' : ''}${model.description && model.description !== model.displayName ? `(${model.description})` : ''}` : JSON.stringify(model), value: model.name.replace(/^models\//, '') + (attr ? `:${attr}` : ''), description: model.name.replace(/^models\//, '') });
+
+                acc.push(line());
+                if (model.thinking) acc.push(line('thinking'));
+
+                return acc;
+            }, []);
 
             return modelSelection;
         },
@@ -291,7 +299,10 @@ const drivers = {
         async getChatResponse(settings: ChatResponseSettings, history: any[], promptText: PromptText, promptAdditions?: PromptAdditions, abortSignal?: AbortSignal): Promise<ChatResponse|ChatResponseError> {
             let resultOrig:any;
 
-            const response = await fetch(this.getUrl(this.urlChat, settings.model || this.defaultModel), {
+            //* TRICK: we append :thinking to the model name to enable/disable thinking
+            let [model, thinking] = settings.model.split(':');
+
+            const response = await fetch(this.getUrl(this.urlChat, model || this.defaultModel), {
                 method: 'POST',
                 headers: {
                     'Content-Type': 'application/json',
@@ -300,6 +311,11 @@ const drivers = {
                 body: JSON.stringify<GoogleAiRequest>({
                     generationConfig: {
                         ...(settings.temperature > 0 ? { temperature: settings.temperature } : {}),
+
+                        //https://ai.google.dev/gemini-api/docs/thinking#set-budget
+                        thinkingConfig: {
+                            thinkingBudget: thinking ? -1 : 0, // 0 = no thinking, -1 = dynamic
+                        },
                     },
 
                     // https://ai.google.dev/gemini-api/docs/text-generation#system-instructions
@@ -381,7 +397,9 @@ const drivers = {
         },
         
         async getModelMeta(model: string): Promise<ModelMeta> {
-            const response = await fetch(this.getUrl(this.urlModelMeta, model), {
+            let [modelName, thinking] = model.split(':');
+
+            const response = await fetch(this.getUrl(this.urlModelMeta, modelName), {
                 method: 'GET',
                 headers: {
                     'Content-Type': 'application/json',
