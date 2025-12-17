@@ -2501,7 +2501,7 @@ async function init(): Promise<Prompt> {
             --reset-prompts                Reset prompts only (use this after an update)
 
             --open <type>                  Open a file in the default editor or path, type: env, config, agents, history
-        `.trimBlock(2);
+        `.rePadBlock(4*3 -2);
         // You can pipe in text (like from a file) to be send to the API before your prompt.
 
         const colorizeHelp = (text: string): string => {
