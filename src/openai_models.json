@@ -1,41 +1,79 @@
 {
-  "created": "2025-05-20T17:08:00Z",
+  "created": "2025-12-17T08:18:00Z",
+  "version": 2,
+  "source": "https://github.com/taylorwilsdon/llm-context-limits/issues/3",
   "core_models": [
     {
-      "model": "gpt-5",
-      "name": "GPT-5",
+      "model": "gpt-5.2-pro",
+      "name": "GPT-5.2 Pro",
       "context_window_tokens": 400000,
       "max_output_tokens": 128000,
       "multimodal_input": {
         "image": true,
-        "audio": true,
-        "video": true
+        "audio": false,
+        "video": false
       },
-      "features": "Flagship model for coding and agentic tasks."
+      "notes": "Version of GPT-5.2 that produces smarter and more precise responses.",
+      "tooling": true,
+      "reasoning": true,
+      "url": "https://platform.openai.com/docs/models/gpt-5.2-pro"
     },
     {
-      "model": "gpt-5-mini",
-      "name": "GPT-5 mini",
+      "model": "gpt-5.2",
+      "name": "GPT-5.2",
       "context_window_tokens": 400000,
       "max_output_tokens": 128000,
       "multimodal_input": {
         "image": true,
-        "audio": true,
-        "video": true
+        "audio": false,
+        "video": false
       },
-      "features": "Faster, cost-efficient GPT-5 variant."
+      "notes": "The best model for coding and agentic tasks across industries",
+      "tooling": true,
+      "reasoning": true,
+      "url": "https://platform.openai.com/docs/models/gpt-5.2"
     },
     {
-      "model": "gpt-5-nano",
-      "name": "GPT-5 nano",
+      "model": "gpt-5.1",
+      "name": "GPT-5.1",
       "context_window_tokens": 400000,
       "max_output_tokens": 128000,
       "multimodal_input": {
         "image": true,
-        "audio": true,
-        "video": true
+        "audio": false,
+        "video": false
       },
-      "features": "Fastest, most cost-efficient GPT-5 variant."
+      "notes": "The best model for coding and agentic tasks with configurable reasoning effort",
+      "tooling": true,
+      "reasoning": true
+    },
+    {
+      "model": "gpt-5.1-codex-max",
+      "name": "GPT-5.1 Codex Max",
+      "context_window_tokens": 400000,
+      "max_output_tokens": 128000,
+      "multimodal_input": {
+        "image": true,
+        "audio": false,
+        "video": false
+      },
+      "notes": "Our most intelligent coding model optimized for long-horizon, agentic coding tasks.",
+      "tooling": false,
+      "reasoning": true
+    },
+    {
+      "model": "gpt-5.1-codex",
+      "name": "GPT-5.1 Codex",
+      "context_window_tokens": 400000,
+      "max_output_tokens": 128000,
+      "multimodal_input": {
+        "image": true,
+        "audio": false,
+        "video": false
+      },
+      "notes": "A version of GPT-5.1 optimized for agentic coding in Codex.",
+      "tooling": false,
+      "reasoning": true
     },
     {
       "model": "gpt-5-codex",
@@ -44,10 +82,62 @@
       "max_output_tokens": 128000,
       "multimodal_input": {
         "image": true,
-        "audio": true,
-        "video": true
+        "audio": false,
+        "video": false
       },
-      "features": "Optimized for agentic coding."
+      "notes": "A version of GPT-5 optimized for agentic coding in Codex",
+      "tooling": false,
+      "reasoning": true
+    },
+    {
+      "model": "gpt-5",
+      "name": "GPT-5",
+      "context_window_tokens": 400000,
+      "max_output_tokens": 128000,
+      "multimodal_input": {
+        "image": true,
+        "audio": false,
+        "video": false
+      },
+      "notes": "Previous intelligent reasoning model for coding and agentic tasks with configurable reasoning effort",
+      "tooling": true,
+      "reasoning": true
+    },
+    {
+      "model": "gpt-5-mini",
+      "name": "GPT-5 mini",
+      "context_window_tokens": 400000,
+      "max_output_tokens": 128000,
+      "multimodal_input": {
+        "image": true,
+        "audio": false,
+        "video": false
+      },
+      "notes": "Faster, cost-efficient GPT-5 variant."
+    },
+    {
+      "model": "gpt-5-nano",
+      "name": "GPT-5 nano",
+      "context_window_tokens": 400000,
+      "max_output_tokens": 128000,
+      "multimodal_input": {
+        "image": true,
+        "audio": false,
+        "video": false
+      },
+      "notes": "Fastest, most cost-efficient GPT-5 variant."
+    },
+    {
+      "model": "gpt-5-codex",
+      "name": "GPT-5 Codex",
+      "context_window_tokens": 400000,
+      "max_output_tokens": 128000,
+      "multimodal_input": {
+        "image": true,
+        "audio": false,
+        "video": false
+      },
+      "notes": "Optimized for agentic coding."
     },
     {
       "model": "gpt-4.1",
@@ -59,7 +149,7 @@
         "audio": false,
         "video": false
       },
-      "features": "Smartest non-reasoning model."
+      "notes": "Smartest non-reasoning model."
     },
     {
       "model": "gpt-4.1-mini",
@@ -71,7 +161,7 @@
         "audio": false,
         "video": false
       },
-      "features": "Smaller, faster version of GPT-4.1."
+      "notes": "Smaller, faster version of GPT-4.1."
     },
     {
       "model": "gpt-4.1-nano",
@@ -83,7 +173,7 @@
         "audio": false,
         "video": false
       },
-      "features": "Fastest, most cost-efficient version of GPT-4.1."
+      "notes": "Fastest, most cost-efficient version of GPT-4.1."
     },
     {
       "model": "gpt-4o",
@@ -92,10 +182,10 @@
       "max_output_tokens": 16000,
       "multimodal_input": {
         "image": true,
-        "audio": true,
-        "video": true
+        "audio": false,
+        "video": false
       },
-      "features": "Omni-modal predecessor to GPT-5."
+      "notes": "Omni-modal predecessor to GPT-5."
     },
     {
       "model": "gpt-4o-mini",
@@ -104,10 +194,10 @@
       "max_output_tokens": 16000,
       "multimodal_input": {
         "image": true,
-        "audio": true,
-        "video": true
+        "audio": false,
+        "video": false
       },
-      "features": "Fast, affordable small model for focused tasks."
+      "notes": "Fast, affordable small model for focused tasks."
     },
     {
       "model": "gpt-4",
@@ -119,7 +209,7 @@
         "audio": false,
         "video": false
       },
-      "features": "Older base GPT-4 (Text-only)."
+      "notes": "Older base GPT-4 (Text-only)."
     },
     {
       "model": "gpt-4-turbo",
@@ -131,7 +221,7 @@
         "audio": false,
         "video": false
       },
-      "features": "An older high-intelligence GPT model, supports images."
+      "notes": "An older high-intelligence GPT model, supports images."
     },
     {
       "model": "gpt-3.5-turbo",
@@ -143,7 +233,7 @@
         "audio": false,
         "video": false
       },
-      "features": "Legacy GPT model for chat and non-chat tasks."
+      "notes": "Legacy GPT model for chat and non-chat tasks."
     },
     {
       "model": "o1",
@@ -155,7 +245,7 @@
         "audio": false,
         "video": false
       },
-      "features": "Previous full o-series reasoning model."
+      "notes": "Previous full o-series reasoning model."
     },
     {
       "model": "o1-mini",
@@ -167,7 +257,7 @@
         "audio": false,
         "video": false
       },
-      "features": "Small model alternative to o1 (Deprecated)."
+      "notes": "Small model alternative to o1 (Deprecated)."
     },
     {
       "model": "o1-preview",
@@ -179,7 +269,7 @@
         "audio": false,
         "video": false
       },
-      "features": "Preview of our first o-series reasoning model (Deprecated)."
+      "notes": "Preview of our first o-series reasoning model (Deprecated)."
     },
     {
       "model": "o1-pro",
@@ -191,7 +281,7 @@
         "audio": false,
         "video": false
       },
-      "features": "Version of o1 with more compute."
+      "notes": "Version of o1 with more compute."
     },
     {
       "model": "o3",
@@ -203,7 +293,7 @@
         "audio": false,
         "video": false
       },
-      "features": "Reasoning model for complex tasks, succeeded by GPT-5."
+      "notes": "Reasoning model for complex tasks, succeeded by GPT-5."
     },
     {
       "model": "o3-mini",
@@ -215,7 +305,7 @@
         "audio": false,
         "video": false
       },
-      "features": "A small model alternative to o3."
+      "notes": "A small model alternative to o3."
     },
     {
       "model": "o4-mini",
@@ -227,7 +317,7 @@
         "audio": false,
         "video": false
       },
-      "features": "Fast, cost-efficient reasoning model, succeeded by GPT-5 mini."
+      "notes": "Fast, cost-efficient reasoning model, succeeded by GPT-5 mini."
     }
   ],
   "specialized_models": [
