@@ -109,4 +109,11 @@ declare global {
     }
 }
 
+declare global {
+    var GEMINI: {
+        keys: string[];
+        keyPos: number;
+    };
+}
+
 export {};

@@ -246,8 +246,23 @@ const drivers = {
         urlModels: 'https://generativelanguage.googleapis.com/v1beta/models/',
         urlModelMeta: 'https://generativelanguage.googleapis.com/v1beta/models/{{model}}',
         defaultModel: 'gemini-2.5-flash',
-        apiKey: () => process.env.GEMINI_API_KEY,
+        apiKey: () => {
+            if ( !('GEMINI' in globalThis) ) {
+                globalThis.GEMINI = {
+                    keys: process.env.GEMINI_API_KEY ? process.env.GEMINI_API_KEY.split(',').map(s => s.trim()).filter(Boolean) : [],
+                    keyPos: 0
+                };
+            }
+
+            return globalThis.GEMINI.keys[globalThis.GEMINI.keyPos] || undefined;
+        },
         historyStyle: 'googleai',
+
+        apiKeyNext(): boolean {
+            let GEMINI = globalThis.GEMINI;
+            GEMINI.keyPos++;
+            return GEMINI.keyPos < GEMINI.keys.length;
+        },
 
 
         getUrl(url: string, model = ''): string {
@@ -373,8 +388,14 @@ const drivers = {
                     settings.modelData.systemInstructionsAsPrompt = true;
                     errMsg = 'System instruction is not enabled for this model.\n  -> Switching to embedding the system instructions as prompt for this session instead.\n  -> Try again.';
                 }
+                else if (response.error.code === 429 && response.error.status === 'RESOURCE_EXHAUSTED' && globalThis.GEMINI.keys.length > 1) {
+                    if (this.apiKeyNext()) 
+                        errMsg = 'API key quota exceeded.\n  -> Switching to next API key.\n  -> Try again.';
+                    else 
+                        errMsg = 'API key quota exceeded.\n  -> No more API keys available.\n  ' + errMsg;
+                }
                 else
-                    (DEBUG_APICALLS || DEBUG_ERROR) && console.error('\n' + response.error);
+                    (DEBUG_APICALLS || DEBUG_ERROR) && console.error('\n', response.error);
 
                 return new Error(errMsg) as ChatResponseError;
             }
