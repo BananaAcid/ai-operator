@@ -27,11 +27,11 @@ declare global {
     type GoogleAiRequest = {
         generationConfig: {
             temperature?: number;
-            thinkingConfig: {
+            thinkingConfig?: {
                 thinkingBudget: number;
             };
         };
-        system_instruction: GoogleAiSystemMessageItem;
+        system_instruction?: GoogleAiSystemMessageItem;
         contents: GoogleAiMessageItem[];
     }
 
@@ -100,11 +100,12 @@ declare global {
         description: string;
         inputTokenLimit: number;
         outputTokenLimit: number;
-        supportedGenerationMethods: string[];
+        supportedGenerationMethods: GoogleAiResultGenerationMethod[];
         temperature: number;
         topP: number;
         topK: number;
         maxTemperature: number;
+        thinking?: boolean;
     }
 }
 

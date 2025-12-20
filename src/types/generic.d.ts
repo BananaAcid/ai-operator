@@ -138,6 +138,8 @@ declare global {
         modelData: {
             modelName: string; // for showing in the settings and help only - no functional use
             modelMeta: ModelMeta;
+            systemInstructionsAsPrompt?: boolean,
+            hasThinking?: boolean,
         };
     }
     

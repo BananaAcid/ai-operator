@@ -316,18 +316,26 @@ const drivers = {
                         ...(settings.temperature > 0 ? { temperature: settings.temperature } : {}),
 
                         //https://ai.google.dev/gemini-api/docs/thinking#set-budget
-                        thinkingConfig: {
-                            thinkingBudget: thinking ? -1 : 0, // 0 = no thinking, -1 = dynamic
-                        },
+                        ...(!settings.modelData.hasThinking ? {} : { // API for GEMMA does not support this
+                            thinkingConfig: {
+                                thinkingBudget: thinking ? -1 : 0, // 0 = no thinking, -1 = dynamic
+                            },
+                        }),
                     },
 
-                    // https://ai.google.dev/gemini-api/docs/text-generation#system-instructions
-                    system_instruction: {
-                        parts: [{ text: settings.systemPromptReady }]
-                    },
+                    // https://ai.google.dev/gemini-api/docs/text-generation#system-instructions --> API for GEMMA does not support this
+                    ...( settings.modelData.systemInstructionsAsPrompt ? {} : {
+                        system_instruction: {
+                            parts: [{ text: settings.systemPromptReady }]
+                        }
+                    }),
 
                     contents: [
                         ...history,
+                        ...( !settings.modelData.systemInstructionsAsPrompt ? [] : [{
+                            role: 'model',
+                            parts: [{ text: 'System instructions:\n\n' + settings.systemPromptReady }]
+                        }]),
                         {
                             role: 'user',
                             parts: [
@@ -354,8 +362,20 @@ const drivers = {
             }
 
             if (response.error) {
-                console.error(response.error);
-                return new Error(response.error.message) as ChatResponseError;
+                let errMsg = response.error.message;
+                /* GEMMA API error
+                    code: 400,
+                    message: 'Developer instruction is not enabled for models/gemma-3-27b-it',
+                    status: 'INVALID_ARGUMENT'
+                */
+                if (response.error.code === 400 && response.error.status === 'INVALID_ARGUMENT' && response.error.message.includes('Developer instruction is not enabled')) {
+                    settings.modelData.systemInstructionsAsPrompt = true;
+                    errMsg = 'System instruction is not enabled for this model, switching to embedding the system instructions as prompt for this session (or until another model is selected).';
+                }
+                else
+                    console.error(response.error);
+
+                return new Error(errMsg) as ChatResponseError;
             }
 
             if (!response.candidates?.[0]) {
@@ -418,6 +438,8 @@ const drivers = {
             return {
                 architecture: architecture,
                 contextLength: context_length,
+                systemInstructionsAsPrompt: false,
+                hasThinking: model_info?.thinking ? true : false,
             };
         },
 

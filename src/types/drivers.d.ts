@@ -1,7 +1,7 @@
 declare global {
     type PromptText = string;
 
-    type ChatResponseSettings = { // Partial<Settings>;
+    type ChatResponseSettings = SettingsChached & { // Partial<Settings>;
         driver: string;
         model: string;
         temperature: number;
@@ -37,6 +37,8 @@ declare global {
     type ModelMeta = {
         architecture: string | undefined;
         contextLength: number | undefined;
+        systemInstructionsAsPrompt?: boolean,
+        hasThinking?: boolean,
     }
 }
 

@@ -399,6 +399,8 @@ let settingsDefault: Settings = {
         modelMeta: {
             architecture: undefined,
             contextLength: undefined,
+            systemInstructionsAsPrompt: undefined,
+            hasThinking: undefined,
         },
     },
 
@@ -2174,7 +2176,7 @@ async function config(options: string[]|undefined, prompt: Prompt): Promise<void
             }
             settings.model = modelSelected;
 
-            settings.modelData.modelMeta = await driver.getModelMeta(settings.model)
+            settings.modelData.modelMeta = await driver.getModelMeta(settings.model);
             DEBUG_APICALLS && console.info('Fetching model meta...', settings.modelData.modelMeta);
 
             options.push('updateSystemPrompt');
