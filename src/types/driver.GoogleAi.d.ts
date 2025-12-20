@@ -19,9 +19,10 @@ declare global {
         thinking?: boolean;
     }
       
-    enum GoogleAiResultGenerationMethod {
-        Array = 'Array',
-    }
+    type GoogleAiResultGenerationMethod =
+        'generateContent' |
+        'countTokens' |
+        string;
 
     type GoogleAiRequest = {
         generationConfig: {
