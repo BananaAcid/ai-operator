@@ -174,6 +174,7 @@ const argsReMap: Record<string, string> = {
 let settingsArgs:Partial<ArgsKeys> = Object.entries(args.values).reduce((acc, [k, v]) => ({ ...acc, [argsReMap[k] || k]: v }), {});
 //* get the prompt, the non-options
 const argsPrompt = args.positionals.join(' ').trim();
+let argsPromptProcessed = false;
 
 // console.log( args, settingsArgs); process.exit(9999);
 
@@ -1308,12 +1309,14 @@ async function doPromptWithCommands(result: PromptResult|undefined): Promise<str
     if (result === undefined) {
         let prompt;
 
-        if (argsPrompt) {
+        if (argsPrompt && !argsPromptProcessed) {
+            // run only once !
             prompt = argsPrompt;
+            argsPromptProcessed = true;
             DEBUG_OUTPUT && console.log(colors.green(figures.tick), 'What do you want to get done:', argsPrompt);
         }
         else
-            prompt = argsPrompt || await input({ message: 'What do you want to get done:', default: settings.defaultPrompt }, TTY_INTERFACE);
+            prompt = await input({ message: 'What do you want to get done:', default: settings.defaultPrompt }, TTY_INTERFACE);
 
         await isMakeSystemPromptReady;
     
