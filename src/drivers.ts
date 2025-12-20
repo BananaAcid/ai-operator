@@ -272,13 +272,13 @@ const drivers = {
             (DEBUG_OUTPUT || DEBUG_OUTPUT_MODELS) && console.log('models', response);
 
             let modelSelection: ModelSelection = models
-            // supportedGenerationMethods: [ 'generateContent', 'countTokens', ... ]
+            // since we use only models that support generateContent ...
             .filter(model => model.supportedGenerationMethods?.includes('generateContent'))
-            // old:  model.name.toLowerCase().includes('think')
             .reduce<ModelSelection>((acc, model) => {
                 let line = (attr?:string) => ({ name: showSimple ? `${model.displayName} ${attr ? '[' + attr.toUpperCase() + '] ' : ''}${model.description && model.description !== model.displayName ? `(${model.description})` : ''}` : JSON.stringify(model), value: model.name.replace(/^models\//, '') + (attr ? `:${attr}` : ''), description: model.name.replace(/^models\//, '') });
 
                 acc.push(line());
+                // we add :thinking (lowercase) to the model name to enable/disable thinking (for using it, we must remove it)
                 if (model.thinking) acc.push(line('thinking'));
 
                 return acc;
