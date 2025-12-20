@@ -9,6 +9,7 @@
  * Yes Ollama could use the same OpenAPI REST call, but would lack infos that could be useful because the models run locally.
  */
 
+const DEBUG_ERROR = !!process.env.DEBUG_ERROR;
 const DEBUG_OUTPUT = !!process.env.DEBUG_OUTPUT;
 const DEBUG_OUTPUT_MODELS = !!process.env.DEBUG_OUTPUT_MODELS;
 const DEBUG_APICALLS = !!process.env.DEBUG_APICALLS;
@@ -370,10 +371,10 @@ const drivers = {
                 */
                 if (response.error.code === 400 && response.error.status === 'INVALID_ARGUMENT' && response.error.message.includes('Developer instruction is not enabled')) {
                     settings.modelData.systemInstructionsAsPrompt = true;
-                    errMsg = 'System instruction is not enabled for this model, switching to embedding the system instructions as prompt for this session (or until another model is selected).';
+                    errMsg = 'System instruction is not enabled for this model.\n  -> Switching to embedding the system instructions as prompt for this session instead.\n  -> Try again.';
                 }
                 else
-                    console.error(response.error);
+                    (DEBUG_APICALLS || DEBUG_ERROR) && console.error('\n' + response.error);
 
                 return new Error(errMsg) as ChatResponseError;
             }
