@@ -41,7 +41,8 @@ Yes, a more reliable way would be to use AIs that support "tooling" (which usual
 ```bash
 npm -g baio
 ```
-*Note: installing a previous version: `npm uninstall -g baio && npm -g baio@1.0.0` where @1.0.0 is the desired version, see below 'Major Changes' for versions*
+> [!NOTE]
+> installing a previous version: `npm uninstall -g baio && npm -g baio@1.0.0` where @1.0.0 is the desired version, see below 'Major Changes' for versions*
 
 Simple setup: set any API key or settings in `.baioenvrc` (see below: Environment Config), run:
 ```bash
@@ -81,9 +82,11 @@ You can also prompt right from the commandline:
 baio "list all files"
 ```
 
-**Careful:** depending on your shell, you can not use specific characters as they have a special meaning (need escaping if possible). In such cases, just run `baio` and enter your prompt in the text field.
+[!IMPORTANT]
+> depending on your shell, you can not use specific characters as they have a special meaning (need escaping if possible). In such cases, just run `baio` and enter your prompt in the text field.
 
-**NOTE:** To not execute the AI provided commands, you can press <kbd>.</kbd> or <kbd>ESC</kbd> (or unselect any command and press enter) to fall back to a **prompt to enter more info or enter a [Prompt Trigger](#prompt-triggers)**.
+> [!TIP]
+> To not execute the AI provided commands, you can press <kbd>.</kbd> or <kbd>ESC</kbd> (or unselect any command and press enter) to fall back to a **prompt to enter more info or enter a [Prompt Trigger](#prompt-triggers)**.
 
 ### Test usage
 
@@ -218,7 +221,8 @@ If you want to add an image before your next prompt,
 
 You can always ask Baio to read a text file, but for images you need to start with the `--file <filename>` param or during prompting the `/file:add [<filename>]` (**short: `:f [<filename>]`**) trigger. If you use the trigger but do not enter a filename, a file picker will show.
 
-**Note:** More details are below in the section about [Prompt Triggers](#prompt-triggers)
+> [!IMPORTANT]
+> More details are below in the section about [Prompt Triggers](#prompt-triggers)
 
 ### Quota exceeded / All tokens used up for current prompt
 
@@ -234,7 +238,8 @@ or
 4. start over, clearing the history (context) and the current prompt: `/:clear`
 
 
-**Note:** More details are below in the section about [Prompt Triggers](#prompt-triggers)
+> [!IMPORTANT]
+> More details are below in the section about [Prompt Triggers](#prompt-triggers)
 
 ### If you want specific commands to be automatically executed
 
@@ -259,7 +264,8 @@ see: [Manual config](#manual-config)
 
 #### Special use
 
-**NOTE:** Adding an item `""` will allow everything = auto accept all commands.
+> [!TIP]
+> Adding an item `""` will allow everything = auto accept all commands.
 
 For the inbuild commands:
 - `command`
@@ -307,7 +313,29 @@ You can modify the system prompt yourself when opening the config (`baio --open 
 All can be used with the OpenAI API.
 But there are also specific drivers for Google and Ollama (model list is specific) for more detailed model infos and in case of google also better handling like system prompts.
 
-Note: To get the correct URL, try finding `cURL` or `REST` or `Bash` examples for `OpenAI API` on the providers website. The correct URL should end with (but doesn't always) `/v1/chat/completions`.
+#### Prefered
+
+- Google: Gemini 3 Flash
+    - great understanding, amazing speed, very good results
+    - Con: Free API keys got limited from 200 to 20 requests per key
+- AiHorde.net: Qwen3, ...
+    - Free for use without an account, faster speed with an account
+    - Free but speed limited API KEY: 0000000000 (10 zeros)
+    - Base OpenAI API Endpoint URL: https://oai.aihorde.net/
+    - Con: Only open source models
+    - Docs: https://oai.aihorde.net/docs
+- Pollinations.ai: Google Gemini 3 Flash, ...
+    - Free with account: 1 pollen/day for free => Pricing/Pollen use: https://enter.pollinations.ai/
+    - Open source and commercial models
+    - Base OpenAI API Endpoint URL: https://text.pollinations.ai/openai/
+    - Docs: https://github.com/pollinations/pollinations/blob/master/APIDOCS.md#advanced-text-generation-openai-compatible
+
+#### More
+
+> [!IMPORTANT]
+> To get the correct URL, try finding `cURL` or `REST` or `Bash` examples for `OpenAI API` on the providers website. The correct URL should end with (but doesn't always) `/v1/models/` or `/v1/chat/completions` (both need to be supported). The part before that, is the OpenAI compatible REST endpoint base Baio needs in `OPENAI_URL`.
+>
+> The listed providers usually require you to to register and create an API key, Baio needs it in `OPENAI_API_KEY`.
 
 - Baseten - https://www.baseten.co/
 - Cloudflare Workers AI - https://developers.cloudflare.com/workers-ai/configuration/open-ai-compatibility/
@@ -364,33 +392,31 @@ These env variables can be set at the user's home folder in `.baioenvrc` and wil
 
 To open the `.baioenvrc` in an editor you can use `baio --open env`
 
-Or Manually:
+Or manually:
 
-bash:
-```bash
-echo "GEMINI_API_KEY=abcdefg1234567" >> $HOME/.baioenvrc
-```
-PowerShell:
-```powershell
-echo "GEMINI_API_KEY=abcdefg1234567" >> $env:USERPROFILE\.baioenvrc
-```
+- bash:
+    ```bash
+    echo "GEMINI_API_KEY=abcdefg1234567" >> $HOME/.baioenvrc
+    ```
+- PowerShell:
+    ```powershell
+    echo "GEMINI_API_KEY=abcdefg1234567" >> $env:USERPROFILE\.baioenvrc
+    ```
 
-**Note:**
-You can set an env temporarily before running baio:
+Or temporarily:
+- You can set an env temporarily before running baio:
+    ```bash
+    # MacOS, Linux
+    OLLAMA_API_KEY=sdfghjk45678 OLLAMA_URL=http://localhost:11434 baio
 
-```bash
-# MacOS, Linux
-OLLAMA_API_KEY=sdfghjk45678 OLLAMA_URL=http://localhost:11434 baio
-
-# PowerShell
-$env:OLLAMA_API_KEY='sdfghjk45678' ; $env:OLLAMA_URL='http://localhost:11434' ; baio
-```
+    # PowerShell
+    $env:OLLAMA_API_KEY='sdfghjk45678' ; $env:OLLAMA_URL='http://localhost:11434' ; baio
+    ```
 
 
 ### Selected settings
-... are saved in the user's home folder in `.baiorc`
 
-This where you are able to modify the system prompt and last selected settings.
+Settings that are changed in the settings menu, are saved in the user's home folder in `.baiorc`
 
 ## Shell arguments
 ```
@@ -469,8 +495,8 @@ To trigger these, **_if you are not on a prompt_**,
 | `/debug:settings [all\\|*]`     |                       | Lists all current settings without prompts. Use `all` or `*` to also show prompts. |
 | `/:quit`, `/:exit`            | `:q`                | Will exit (CTRL+D or CTRL+C will also work). |
 
-
-**Note:** If you want to continue, just press enter without any text, if you want to get the last command selection (if there are commands to execute) enter `::` or press <kbd>ESC</kbd>.
+> [!TIP]
+> If you want to continue, just press enter without any text, if you want to get the last command selection (if there are commands to execute) enter `::` or press <kbd>ESC</kbd>.
 
 
 ## Debugging
@@ -667,9 +693,10 @@ done
 
 ## Major Changes
 
-I am mainly using `GEMINI 2.5 Flash` for prompt engineering. Feel free to send in optimized versions as issues.
+I am mainly using `GEMINI 3 Flash` for prompt engineering. Feel free to send in optimized versions as Github Issue.
 
-Note: The Git page for the change logs folds the commits with multiple messages.
+> [!NOTE]
+> The Github page for the change logs, folds the commits with multiple messages because of newlines wihtin these messages.
 
 | Version | Change Description | change logs |
 |---------|---|---|
