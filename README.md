@@ -341,20 +341,24 @@ But there are also specific drivers for Google and Ollama (model list is specifi
 - Local installations
     - Ollama (Prefered, App + CLI)
         - Open Source and Free to Use models
-        - is directly supported by Baio
+        - is directly supported by Baio (Ollama driver)
         - Download: https://ollama.com/download
+        - Server start: https://docs.ollama.com/quickstart
     - LMStudio (Desktop App)
         - Open Source and Free to Use models
         - Within the app, it shows you its Base OpenAI API Endpoint URL
         - Download: https://lmstudio.ai/download
+        - Manual server start: https://lmstudio.ai/docs/cli/serve/server-start
     - vLLM (Commandline)
         - Open Source and Free to Use models
         - Provides an Base OpenAI API Endpoint URL
         - Installation: https://vllm.ai/
-    - LLaMAcpp (Commandline)
+        - Server start: https://docs.vllm.ai/en/v0.6.0/serving/openai_compatible_server.html
+    - llama.cpp (Commandline)
         - Open Source and Free to Use models
         - Provides an Base OpenAI API Endpoint URL
         - Installation: https://github.com/ggml-org/llama.cpp
+        - Server start: https://github.com/ggml-org/llama.cpp?tab=readme-ov-file#llama-server
 
 #### Other providers, OpenAI Endpoint compatible
 
@@ -371,17 +375,13 @@ But there are also specific drivers for Google and Ollama (model list is specifi
 - Jan - https://jan.ai/docs/api-server
 - Lightning AI - https://lightning.ai/
 - LiteLLM - https://www.litellm.ai/
-- llama.cpp - https://github.com/ggml-org/llama.cpp?tab=readme-ov-file#llama-server
 - llamafile - https://github.com/Mozilla-Ocho/llamafile
 - LlamaIndex - https://www.llamaindex.ai/
-- LM Studio - https://lmstudio.ai/
 - LMDeploy - https://github.com/InternLM/lmdeploy
 - LocalAI - https://localai.io/
 - Mistral AI - https://mistral.ai/
-- Ollama - https://github.com/ollama/ollama/blob/main/docs/openai.md
 - OpenRouter - https://openrouter.ai/
 - Titan ML - https://www.titanml.co/
-- Vllm - https://docs.vllm.ai/en/v0.6.0/index.html
 - and many more...
 
 
