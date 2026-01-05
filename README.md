@@ -115,7 +115,7 @@ You should add the keys to your Profile (Win, MacOS, Linux), or in the `.baioenv
 
 ## Info about API Keys (free)
 
-Google AI Gemini for free (but limited to 20 request per API key): https://aistudio.google.com/apikey (any google account needed) - this is the most powerful option.
+Google AI Gemini for free (but limited to 20 request per API key/day): https://aistudio.google.com/apikey (any google account needed) - this is the most powerful option.
 
 Ollama is free anyways, just install it (https://ollama.com/download) and within this tool, just accept the default model.
 
@@ -325,7 +325,7 @@ But there are also specific drivers for Google and Ollama (model list is specifi
     - Google: Gemini 3 Flash
         - great understanding, amazing speed, very good results
         - is directly supported by Baio
-        - Con: Free API keys got limited from 200 to 20 requests per key
+        - Con: Free API keys got limited from 200 to 20 requests per key/day
     - AiHorde.net: Qwen3, ...
         - Free for use without an account, faster speed with an account, images, text
         - Free but speed limited API KEY: 0000000000 (10 zeros)
