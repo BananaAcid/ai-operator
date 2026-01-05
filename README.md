@@ -30,13 +30,13 @@ It connects directly to the REST API endpoints of Ollama, OpenAI, Google's AI an
 3. Return the execution results as text to the API
     - ... this will work with any AI, as long as it follows the rules for creating commands and processing the results
 
-**Note:**
-
-Yes, a more reliable way would be to use AIs that support "tooling" (which usually means: large AIs/LLMs and not any available LLM)
+> [!NOTE]
+> Yes, a more reliable way would be to use AIs that support "tooling" (which usually means: large AIs/LLMs and only those specifically trained on tooling)
 
 ## Install
 
-⚠️ Make sure, you have Node JS v23.10 or newer installed. ([download, check version](https://nodejs.org/en/download/current))
+> [!CAUTION]
+> Make sure, you have Node JS v23.10 or newer installed. ([download, check version](https://nodejs.org/en/download/current))
 
 ```bash
 npm -g baio
@@ -240,6 +240,8 @@ or
 3. clear the complete history (context): `/history:clear`
 4. start over, clearing the history (context) and the current prompt: `/:clear`
 
+> [!TIP]
+> It is possible to switch the model (if it uses the same driver, i.e. OpenAI) to one with a larger context window or non-exausted request limit.
 
 > [!IMPORTANT]
 > More details are below in the section about [Prompt Triggers](#prompt-triggers)
