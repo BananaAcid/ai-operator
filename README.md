@@ -82,7 +82,7 @@ You can also prompt right from the commandline:
 baio "list all files"
 ```
 
-[!IMPORTANT]
+> [!IMPORTANT]
 > depending on your shell, you can not use specific characters as they have a special meaning (need escaping if possible). In such cases, just run `baio` and enter your prompt in the text field.
 
 > [!TIP]
@@ -114,9 +114,12 @@ You should add the keys to your Profile (Win, MacOS, Linux), or in the `.baioenv
 
 ## Info about API Keys (free)
 
-Google AI gemini for free (and unlimited): https://aistudio.google.com/apikey (any google account needed) - this is the most powerful option.
+Google AI Gemini for free (but limited to 20 request per API key): https://aistudio.google.com/apikey (any google account needed) - this is the most powerful option.
 
 Ollama is free anyways, just install it (https://ollama.com/download) and within this tool, just accept the default model.
+
+> [!IMPORTANT]
+> More providers and free options below: [What providers can Baio be used with?](#what-providers-can-baio-be-used-with)
 
 
 ## FAQ / Usage Notes
@@ -313,33 +316,51 @@ You can modify the system prompt yourself when opening the config (`baio --open 
 All can be used with the OpenAI API.
 But there are also specific drivers for Google and Ollama (model list is specific) for more detailed model infos and in case of google also better handling like system prompts.
 
-#### Prefered
+#### Prefered free options
 
-- Google: Gemini 3 Flash
-    - great understanding, amazing speed, very good results
-    - Con: Free API keys got limited from 200 to 20 requests per key
-- AiHorde.net: Qwen3, ...
-    - Free for use without an account, faster speed with an account
-    - Free but speed limited API KEY: 0000000000 (10 zeros)
-    - Base OpenAI API Endpoint URL: https://oai.aihorde.net/
-    - Con: Only open source models
-    - Docs: https://oai.aihorde.net/docs
-- Pollinations.ai: Google Gemini 3 Flash, ...
-    - Free with account: 1 pollen/day for free => Pricing/Pollen use: https://enter.pollinations.ai/
-    - Open source and commercial models
-    - Base OpenAI API Endpoint URL: https://text.pollinations.ai/openai/
-    - Docs: https://github.com/pollinations/pollinations/blob/master/APIDOCS.md#advanced-text-generation-openai-compatible
+- Providers
+    - Google: Gemini 3 Flash
+        - great understanding, amazing speed, very good results
+        - is directly supported by Baio
+        - Con: Free API keys got limited from 200 to 20 requests per key
+    - AiHorde.net: Qwen3, ...
+        - Free for use without an account, faster speed with an account, images, text
+        - Free but speed limited API KEY: 0000000000 (10 zeros)
+        - Base OpenAI API Endpoint URL: https://oai.aihorde.net/
+        - Con: Only open source models
+        - Docs: https://oai.aihorde.net/docs
+    - Pollinations.ai: Google Gemini 3 Flash, ...
+        - Free with account: 1 pollen/day for free => Pricing/Pollen usage: https://enter.pollinations.ai/
+        - Open source and commercial models, text, images, TTS, STT
+        - Base OpenAI API Endpoint URL: https://text.pollinations.ai/openai/
+        - Docs: https://github.com/pollinations/pollinations/blob/master/APIDOCS.md#advanced-text-generation-openai-compatible
+- Local installations
+    - Ollama (Prefered, App + CLI)
+        - Open Source and Free to Use models
+        - is directly supported by Baio
+        - Download: https://ollama.com/download
+    - LMStudio (Desktop App)
+        - Open Source and Free to Use models
+        - Within the app, it shows you its Base OpenAI API Endpoint URL
+        - Download: https://lmstudio.ai/download
+    - vLLM (Commandline)
+        - Open Source and Free to Use models
+        - Provides an Base OpenAI API Endpoint URL
+        - Installation: https://vllm.ai/
+    - LLaMAcpp (Commandline)
+        - Open Source and Free to Use models
+        - Provides an Base OpenAI API Endpoint URL
+        - Installation: https://github.com/ggml-org/llama.cpp
 
-#### More
+#### Other providers, OpenAI Endpoint compatible
 
 > [!IMPORTANT]
 > To get the correct URL, try finding `cURL` or `REST` or `Bash` examples for `OpenAI API` on the providers website. The correct URL should end with (but doesn't always) `/v1/models/` or `/v1/chat/completions` (both need to be supported). The part before that, is the OpenAI compatible REST endpoint base Baio needs in `OPENAI_URL`.
 >
 > The listed providers usually require you to to register and create an API key, Baio needs it in `OPENAI_API_KEY`.
 
-- Baseten - https://www.baseten.co/
+- Baseten - https://www.baseten.co/resources/changelog/baseten-is-fully-openai-compatible/
 - Cloudflare Workers AI - https://developers.cloudflare.com/workers-ai/configuration/open-ai-compatibility/
-- gpt4all - https://github.com/nomic-ai/gpt4all
 - Google AI Studio - https://ai.google.dev/gemini-api/docs/openai#node.js
 - Groq - https://groq.com/ - https://docs.x.ai/docs/api-reference
 - Hugging Face Inference API - https://huggingface.co/docs/api-inference/tasks/chat-completion
