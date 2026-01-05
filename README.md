@@ -41,13 +41,14 @@ It connects directly to the REST API endpoints of Ollama, OpenAI, Google's AI an
 ```bash
 npm -g baio
 ```
-> [!NOTE]
-> installing a previous version: `npm uninstall -g baio && npm -g baio@1.0.0` where @1.0.0 is the desired version, see below 'Major Changes' for versions*
 
-Simple setup: set any API key or settings in `.baioenvrc` (see below: Environment Config), run:
+**Simple setup:** set any API key or settings in `.baioenvrc` (see below: [Env Config](#env-config) and [Info about API Keys (free)](#info-about-api-keys-free)), run:
 ```bash
 baio --open env
 ```
+
+> [!NOTE]
+> installing a previous version: `npm uninstall -g baio && npm -g baio@1.0.0` where @1.0.0 is the desired version, see below 'Major Changes' for versions*
 
 ### Change the settings / LLM
 
@@ -83,7 +84,7 @@ baio "list all files"
 ```
 
 > [!IMPORTANT]
-> depending on your shell, you can not use specific characters as they have a special meaning (need escaping if possible). In such cases, just run `baio` and enter your prompt in the text field.
+> Depending on your shell, you can not use specific characters as they have a special meaning (need escaping if possible). In such cases, just run `baio` and enter your prompt in the text field.
 
 > [!TIP]
 > To not execute the AI provided commands, you can press <kbd>.</kbd> or <kbd>ESC</kbd> (or unselect any command and press enter) to fall back to a **prompt to enter more info or enter a [Prompt Trigger](#prompt-triggers)**.
