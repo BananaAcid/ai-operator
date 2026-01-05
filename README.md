@@ -330,7 +330,8 @@ But there are also specific drivers for Google and Ollama (model list is specifi
         - Con: Only open source models
         - Docs: https://oai.aihorde.net/docs
     - Pollinations.ai: Google Gemini 3 Flash, ...
-        - Free with account: 1 pollen/day for free => Pricing/Pollen usage: https://enter.pollinations.ai/
+        - Free with account (register with GitHub-Login): 1 pollen/day for free (more are possible)
+            - under *Pricing*, there is the Pollen usage table: https://enter.pollinations.ai/
         - Open source and commercial models, text, images, TTS, STT
         - Base OpenAI API Endpoint URL: https://text.pollinations.ai/openai/
         - Docs: https://github.com/pollinations/pollinations/blob/master/APIDOCS.md#advanced-text-generation-openai-compatible
