@@ -1,6 +1,6 @@
 {
   "name": "baio",
-  "version": "1.0.43",
+  "version": "1.1.0",
   "description": "Simple AI operator for the CLI, for any LLM",
   "type": "module",
   "engines": {
