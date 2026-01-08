@@ -37,6 +37,7 @@ const drivers = {
         defaultModel: 'goekdenizguelmez/JOSIEFIED-Qwen2.5:latest', // default model
         apiKey: () => process.env.OLLAMA_API_KEY, // ollama local does not need a key, but you could use a hosted service, that requires a key
         historyStyle: 'openai',
+        caption: function() {return process.env.OLLAMA_CAPTION || this.name },
 
 
         getUrl(url: string): string {
@@ -108,6 +109,7 @@ const drivers = {
         defaultModel: 'gpt-3.5-turbo',
         apiKey: () => process.env.OPENAI_API_KEY,
         historyStyle: 'openai',
+        caption: function() {return process.env.OPENAI_CAPTION || this.name },
 
 
         getUrl(url: string): string {
@@ -159,11 +161,11 @@ const drivers = {
             //  role developer<-->system, 'developer' not being backward compatible: https://community.openai.com/t/how-is-developer-message-better-than-system-prompt/1062784
             //  ollama compatibility: https://www.ollama.com/blog/openai-compatibility
             //  newer openai models use developer role, but will openai will convert sytem to developer. Ollama does not support developer role, but system role is fine
-            const response = await fetch(this.urlChat, {
+            const response = await fetch(this.getUrl(this.urlChat), {
                 method: 'POST',
                 headers: {
                     'Content-Type': 'application/json',
-                    ...(this.apiKey() ? { 'Authorization': `Bearer ${this.apiKey}` } : {}),
+                    ...(this.apiKey() ? { 'Authorization': `Bearer ${this.apiKey()}` } : {}),
                     'HTTP-Referer': 'https://github.com/BananaAcid/ai-operator', // Optional. Site URL for rankings on openrouter.ai.
                     'X-Title': 'Baio', // Optional. Site title for rankings on openrouter.ai.                
                 },
@@ -190,11 +192,15 @@ const drivers = {
             DEBUG_APICALLS && console.log('DEBUG_APICALLS', 'API response', this.urlChat, response);
 
 
-            // TODO - openai: check for error infos like for googleapi
-            // ...
-
             // TODO - openai: add DEBUG_APICALLS_PRETEND_ERROR to trigger test error
             // ...
+
+            if (response.error) {
+                let errMsg = response.error.message + ' (' + response.status + ' -> ' + response.error.code + ')';
+                (DEBUG_APICALLS || DEBUG_ERROR) && console.error('\n' + response.error);
+
+                return new Error(errMsg) as ChatResponseError;
+            }
 
 
             if (!response.choices?.[0]) {
@@ -248,6 +254,7 @@ const drivers = {
         defaultModel: 'gemini-2.5-flash',
         apiKey: () => process.env.GEMINI_API_KEY,
         historyStyle: 'googleai',
+        caption: function() {return process.env.GEMINI_CAPTION || this.name },
 
 
         getUrl(url: string, model = ''): string {

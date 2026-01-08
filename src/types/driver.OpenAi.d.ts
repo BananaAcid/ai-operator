@@ -1,6 +1,15 @@
 declare global {
 
   type OpenAiChatCompletionResult = {
+
+    error?: {
+      code: string; // 'UNAUTHORIZED' ...
+      message: string;
+      timestamp: string;
+    };
+    status?: number; // HTTP Code --- when error
+    success?: boolean; //         --- when error
+
     id: string;
     object: "chat.completion";
     created: number;

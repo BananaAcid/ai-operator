@@ -278,6 +278,7 @@ let settingsDefault: Settings = {
         - User's Home Directory (user home folder): {{process_env_HOME}}
         - Current Working Directory (cwd, here you are always): {{process_cwd}}
         - Currently active AI Provider ("driver"): {{currentDriver}}
+        - Currently active AI Provider API Base URL: {{currentDriverUrl}}
         - Currently active AI Model: {{currentModel}}
         {{linksIsInstalled}}
         {{useAllSysEnv}}
@@ -557,7 +558,7 @@ async function api(prompt: Prompt): Promise<PromptResult> {
     let result: ChatResponse | Error = new Error('Unknown error');
     let retry = false;
     do {
-        let {signal, cleanup} = createAbortSignalForEscWithSpinner(`Waiting for ${driver.name}\'s response ... ${colors.reset(colors.dim('(press <esc> to abort)'))}`, `Aborted ${driver.name}\'s response`, `Waiting for ${driver.name}\'s response ...`);
+        let {signal, cleanup} = createAbortSignalForEscWithSpinner(`Waiting for ${driver.caption()}\'s response ... ${colors.reset(colors.dim('(press <esc> to abort)'))}`, `Aborted ${driver.caption()}\'s response`, `Waiting for ${driver.caption()}\'s response ...`);
 
         result = await driver.getChatResponse(settings, history, prompt.text, prompt.additions, signal);
         
@@ -570,7 +571,7 @@ async function api(prompt: Prompt): Promise<PromptResult> {
             if (result.message === 'aborted')
                 return {answer: '', answerFull: '', commands: [], needMoreInfo: true, isEnd: false, totalTokenUsage: null};
 
-            console.error(colors.red(colors.bold(figures.cross)), colors.red(`API Error (${driver.name}): ${result.message}`));
+            console.error(colors.red(colors.bold(figures.cross)), colors.red(`API Error (${driver.caption()}): ${result.message}`));
             retry = await toggle({ message: `Do you want to try again?`, default: true }, TTY_INTERFACE);
             if (!retry)
                 return {answer: '', answerFull: '', commands: [], needMoreInfo: true, isEnd: false, totalTokenUsage: null};
@@ -667,17 +668,17 @@ async function getModels(): Promise<ModelSelection> {
 
     let driver:Driver = drivers[settings.driver]!;
 
-    spinner.start(`Getting models from ${driver.name} ...`);
+    spinner.start(`Getting models from ${driver.caption()} ...`);
 
     if (!driver.urlModels) {
-        spinner.error(`${driver.name} config has no models configured!`);
+        spinner.error(`${driver.caption()} config has no models configured!`);
         return [];
     }
 
     let models = await driver.getModels(settings, DEBUG_OUTPUT_MODELNAME ? false : true);
 
     if (models.length > 0)
-        spinner.success(`${driver.name} models found: ${models.length}`);
+        spinner.success(`${driver.caption()} models found: ${models.length}`);
     else
         spinner.error('No models found!');
 
@@ -2356,6 +2357,7 @@ async function makeSystemPromptReady(): Promise<void> {
 
         // AI info
             ['{{currentDriver}}', (drivers[settings.driver]?.name ?? settings.driver) || 'unknown'],
+            ['{{currentDriverUrl}}', drivers[settings.driver] ? drivers[settings.driver]?.getUrl(drivers[settings.driver]!.urlChat) : 'unknown'],
             ['{{currentModel}}', settings.modelData.modelName || (settings.model ?? drivers[settings.model]?.defaultModel) || 'unknown'],
 
         // apply invoking shell to system prompt
@@ -2425,7 +2427,7 @@ async function init(): Promise<Prompt> {
             // https://github.com/yyx990803/launch-editor/issues/93
 
             case 'env':
-                if (!fs.existsSync(RC_ENVFILE)) writeFile(RC_ENVFILE, '# To enable the Google API (GEMINI) key, remove the "#" and enter a correct key\n#GEMINI_API_KEY=abcdefg1234567890', 'utf-8');
+                if (!fs.existsSync(RC_ENVFILE)) writeFile(RC_ENVFILE, '# specific documentation here: https://github.com/BananaAcid/ai-operator?tab=readme-ov-file#env-config\n# To use an API key, remove the "#" and enter a correct key\n#OLLAMA_API_KEY=abcdefg1234567890\n#OPENAI_API_KEY=#GEMINI_API_KEY=', 'utf-8');
                 console.info(colors.green(figures.info), `Opening ${RC_ENVFILE}`);
                 launchEditor(RC_ENVFILE);
                 break;
@@ -2640,7 +2642,7 @@ async function init(): Promise<Prompt> {
 
     {//* api key test
         if (settings.driver !== 'ollama' && !drivers[settings.driver]?.apiKey()) {
-            console.error(colors.red(figures.cross), colors.red(`${drivers[settings.driver]?.name ?? settings.driver} has no API key configured in the environment.`));
+            console.error(colors.red(figures.cross), colors.red(`${drivers[settings.driver]?.caption() ?? settings.driver} has no API key configured in the environment.`));
             console.info(colors.blueBright(figures.info), `You can run '${packageJSON.name} --open env' to open the environment file and enter your API key.`);
             process.exit(1);
         }
@@ -2649,16 +2651,16 @@ async function init(): Promise<Prompt> {
     {//* connection test
         if (settings.precheckDriverApi) {
             let driver:Driver = drivers[settings.driver]!;
-            askSettings && spinner.start(`Connecting to ${driver.name} ...`);
+            askSettings && spinner.start(`Connecting to ${driver.caption()} ...`);
             const connection = await doConnectionTest();
             
             if (!connection) {
                 if (!askSettings) spinner.start(); // otherwise there is nothing shown
-                spinner.error(`Connection to ${driver.name} ( ${driver.getUrl(driver.urlTest)} ) failed!`);
+                spinner.error(`Connection to ${driver.caption()} ( ${driver.getUrl(driver.urlTest)} ) failed!`);
                 process.exit(1);
             }
             else {
-                spinner.success(`Connection to ${driver.name} possible.`);
+                spinner.success(`Connection to ${driver.caption()} possible.`);
             }
         }
     }

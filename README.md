@@ -396,6 +396,10 @@ OLLAMA_URL=
 OPENAI_URL=
 GEMINI_URL=
 
+OLLAMA_NAME=
+OPENAI_NAME=
+GEMINI_NAME=
+
 INVOKING_SHELL=
 ASK_SETTINGS=
 ```
@@ -406,6 +410,9 @@ ASK_SETTINGS=
 - `OLLAMA_URL` defaults to `http://localhost:11434`
 - `OPENAI_URL` defaults to the default server of OpenAI's API ("`https://api.openai.com`", but could be any OpenAI compatible server URL)
 - `GEMINI_URL` defaults to the default server of Google's API `https://generativelanguage.googleapis.com/v1beta` (not v1, because v1 is missing the systemprompt option)
+- `OLLAMA_CAPTION` is optional  and defaults to `Ollama`, can be used to overwrite `<Driver>` in `Waiting for <Driver>'s response ...`
+- `OPENAI_CAPTION` is optional  and defaults to `OpenAI`, can be used to overwrite `<Driver>` in `Waiting for <Driver>'s response ...`
+- `GEMINI_CAPTION` is optional  and defaults to `Google AI`, can be used to overwrite `<Driver>` in `Waiting for <Driver>'s response ...`
 - `INVOKING_SHELL` defaults to the currently used one (from which baio is called) or falls back to the system defined default one.
 - `ASK_SETTINGS` defaults to the true or the selected setting (use this to always force to ask for the setting)
 
@@ -750,4 +757,4 @@ I am mainly using `GEMINI 3 Flash` for prompt engineering. Feel free to send in 
 | v1.0.40 | **Bugfix** <br> Fixed selecting agents did not work, changed only really edited commands getting marked, added <kbd>esc</kbd> to abort file browsing, did some output cleanup | [1.0.39...1.0.40](https://github.com/BananaAcid/ai-operator/compare/1.0.39...1.0.40) |
 | v1.0.41 | **Navigation, Usability, Bugfix** <br> Added <kbd>s</kbd> to be able to search in AI drivers and AI model list, added <kbd>esc</kbd> to cancel driver and model selection, added option to selectively disable prompt commands (internal MCP functions), added matching more reasoning blocks, fixed get-models to now get all available models, code cleanup | [1.0.40...1.0.41](https://github.com/BananaAcid/ai-operator/compare/1.0.40...1.0.41) |
 | v1.0.42 | **Usability** <br> Increased start up speed, increased runtime speed, removed all execSync code, removed tsx as dependency, changed systemprompt size by removing a lot of spaces, changed to add spaces after ➡️, code cleanup | [1.0.41...1.0.42](https://github.com/BananaAcid/ai-operator/compare/1.0.41...1.0.42) |
-| v1.0.43 WiP | **Usability, Bugfix** <br> Added `/?` and `/help` prompt trigger, added baio.help to be able to ask baio on how to configure or use it, added `/context:compact` and `/cc` to compact the prompt (reducing context), fixed gemini model selection for thinking, fixed provider and model was not updated in system prompt after change, fixed incompatible history after provider change (history gets cleared now), added filter to only show usable google ai models, fixed loop bug when using triggers as cli arg, updated OpenAi models details, added support for gemma models using GoogleAI, ...... | [1.0.42...1.0.43](https://github.com/BananaAcid/ai-operator/compare/1.0.42...1.0.43) |
+| v1.0.43 WiP | **Usability, Bugfix** <br> Added `/?` and `/help` prompt trigger, added baio.help to be able to ask baio on how to configure or use it, added `/context:compact` and `/cc` to compact the prompt (reducing context), fixed gemini model selection for thinking, fixed provider and model was not updated in system prompt after change, fixed incompatible history after provider change (history gets cleared now), added filter to only show usable google ai models, fixed loop bug when using triggers as cli arg, updated OpenAi models details, added support for gemma models using GoogleAI, fixed support for alternative OpenAI providers, ...... | [1.0.42...1.0.43](https://github.com/BananaAcid/ai-operator/compare/1.0.42...1.0.43) |
