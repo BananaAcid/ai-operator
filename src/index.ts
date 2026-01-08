@@ -651,7 +651,7 @@ async function doConnectionTest(): Promise<boolean> {
             'Content-Type': 'application/json',
         },
     })
-    .then( async response =>  {DEBUG_APICALLS && console.log('\nDEBUG_APICALLS', 'API response', driver.urlTest,':', await response.text()); return true} )
+    .then( async response =>  {DEBUG_APICALLS && console.log('\nDEBUG_APICALLS', 'API response', driver.getUrl(driver.urlTest),':', await response.text()); return true} )
     .catch( error => false ) as boolean;
 
     return response;
