@@ -404,7 +404,7 @@ ASK_SETTINGS=
 - `OPENAI_API_KEY` is only required, when using OpenAI's API
 - `GEMINI_API_KEY` is only required, when using Google's API
 - `OLLAMA_URL` defaults to `http://localhost:11434`
-- `OPENAI_URL` defaults to the default server of OpenAI's API (but could be any OpenAI compatible server URL)
+- `OPENAI_URL` defaults to the default server of OpenAI's API ("`https://api.openai.com`", but could be any OpenAI compatible server URL)
 - `GEMINI_URL` defaults to the default server of Google's API `https://generativelanguage.googleapis.com/v1beta` (not v1, because v1 is missing the systemprompt option)
 - `INVOKING_SHELL` defaults to the currently used one (from which baio is called) or falls back to the system defined default one.
 - `ASK_SETTINGS` defaults to the true or the selected setting (use this to always force to ask for the setting)

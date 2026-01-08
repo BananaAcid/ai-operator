@@ -132,7 +132,7 @@ const drivers = {
 
             (DEBUG_OUTPUT || DEBUG_OUTPUT_MODELS) && console.log('models', models);
 
-            let modelSelection: ModelSelection = models.map(model => ({ name: showSimple ? `${model.id} (${model.owned_by})` : JSON.stringify(model), value: model.id, description: model.id }));
+            let modelSelection: ModelSelection = models.map(model => ({ name: showSimple ? `${model.id} ${model.owned_by ? '(' + model.owned_by + ')' : ''}` : JSON.stringify(model), value: model.id, description: model.id }));
 
             return modelSelection;
         },
