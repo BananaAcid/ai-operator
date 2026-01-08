@@ -2427,7 +2427,7 @@ async function init(): Promise<Prompt> {
             // https://github.com/yyx990803/launch-editor/issues/93
 
             case 'env':
-                if (!fs.existsSync(RC_ENVFILE)) writeFile(RC_ENVFILE, '# specific documentation here: https://github.com/BananaAcid/ai-operator?tab=readme-ov-file#env-config\n# To use an API key, remove the "#" and enter a correct key\n#OLLAMA_API_KEY=abcdefg1234567890\n#OPENAI_API_KEY=#GEMINI_API_KEY=', 'utf-8');
+                if (!fs.existsSync(RC_ENVFILE)) writeFile(RC_ENVFILE, '# specific documentation here: https://github.com/BananaAcid/ai-operator?tab=readme-ov-file#env-config\n# To use an API key, remove the "#" and enter a correct key\n#OLLAMA_API_KEY=abcdefg1234567890\n#OPENAI_API_KEY=#GEMINI_API_KEY=\n', 'utf-8');
                 console.info(colors.green(figures.info), `Opening ${RC_ENVFILE}`);
                 launchEditor(RC_ENVFILE);
                 break;
