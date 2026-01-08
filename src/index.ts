@@ -1987,7 +1987,7 @@ async function config(options: string[]|undefined, prompt: Prompt): Promise<void
             delete settingsArgs['driver'];
             if (settings.driver === '*') settings.driver = settingsSaved?.driver || ''; // allow default
 
-            let driverChoices = Object.keys(drivers).map(key => ({ name: drivers[key]?.name, value: key }));
+            let driverChoices = Object.keys(drivers).map(key => ({ name: drivers[key]?.name + ( drivers[key]?.name !== drivers[key]?.caption() ? ` (${drivers[key]?.caption()})` : '' ), value: key }));
             if (!hasArg || forceSelection) {
                 let canceled = false;
                 let driver;
