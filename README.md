@@ -551,6 +551,8 @@ DEBUG_APICALLS_PRETEND_ERROR=<boolean>
 
 `DEBUG_SYSTEMPROMPT` prompts you to optionally overwrite the system prompt. And it outputs it (all of it). And it would be saved if modified and `automatically use settings next time` is selected.
 
+`DEBUG_OUTPUT_MODELNAME` if true will always show the details as model name - the same info that can be used by switching to model details (space).
+
 Setting these in Powershell, here is an example: `$env:DEBUG_OUTPUT = $true ; baio ...`
 
 They can also be set in `.baioenvrc` to active on each start of Baio.

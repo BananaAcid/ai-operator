@@ -71,15 +71,15 @@ const PROCESS_PATH_INITIAL = process.cwd();
 
 
 //* set DEBUG consts
-const DEBUG_ERROR = !!process.env.DEBUG_ERROR;
-const DEBUG_OUTPUT = !!process.env.DEBUG_OUTPUT;
-const DEBUG_APICALLS = !!process.env.DEBUG_APICALLS;
-const DEBUG_SYSTEMPROMPT = !!process.env.DEBUG_SYSTEMPROMPT;
-const DEBUG_OUTPUT_MODELS = !!process.env.DEBUG_OUTPUT_MODELS;
-const DEBUG_OUTPUT_MODELNAME = !!process.env.DEBUG_OUTPUT_MODELNAME;
-const DEBUG_OUTPUT_EXECUTION = !!process.env.DEBUG_OUTPUT_EXECUTION;
-const DEBUG_OUTPUT_SYSTEMPROMPT = !!process.env.DEBUG_OUTPUT_SYSTEMPROMPT;
-const DEBUG_APICALLS_PRETEND_ERROR = !!process.env.DEBUG_APICALLS_PRETEND_ERROR;
+const DEBUG_ERROR = process.env.DEBUG_ERROR?.toLowerCase() === 'true';
+const DEBUG_OUTPUT = process.env.DEBUG_OUTPUT?.toLowerCase() === 'true';
+const DEBUG_APICALLS = process.env.DEBUG_APICALLS?.toLowerCase() === 'true';
+const DEBUG_SYSTEMPROMPT = process.env.DEBUG_SYSTEMPROMPT?.toLowerCase() === 'true';
+const DEBUG_OUTPUT_MODELS = process.env.DEBUG_OUTPUT_MODELS?.toLowerCase() === 'true';
+const DEBUG_OUTPUT_MODELNAME = process.env.DEBUG_OUTPUT_MODELNAME?.toLowerCase() === 'true';
+const DEBUG_OUTPUT_EXECUTION = process.env.DEBUG_OUTPUT_EXECUTION?.toLowerCase() === 'true';
+const DEBUG_OUTPUT_SYSTEMPROMPT = process.env.DEBUG_OUTPUT_SYSTEMPROMPT?.toLowerCase() === 'true';
+const DEBUG_APICALLS_PRETEND_ERROR = process.env.DEBUG_APICALLS_PRETEND_ERROR?.toLowerCase() === 'true';
 
 
 //* project imports

@@ -9,11 +9,11 @@
  * Yes Ollama could use the same OpenAPI REST call, but would lack infos that could be useful because the models run locally.
  */
 
-const DEBUG_ERROR = !!process.env.DEBUG_ERROR;
-const DEBUG_OUTPUT = !!process.env.DEBUG_OUTPUT;
-const DEBUG_OUTPUT_MODELS = !!process.env.DEBUG_OUTPUT_MODELS;
-const DEBUG_APICALLS = !!process.env.DEBUG_APICALLS;
-const DEBUG_APICALLS_PRETEND_ERROR = !!process.env.DEBUG_APICALLS_PRETEND_ERROR;
+const DEBUG_ERROR = process.env.DEBUG_ERROR?.toLowerCase() === 'true';
+const DEBUG_OUTPUT = process.env.DEBUG_OUTPUT?.toLowerCase() === 'true';
+const DEBUG_OUTPUT_MODELS = process.env.DEBUG_OUTPUT_MODELS?.toLowerCase() === 'true';
+const DEBUG_APICALLS = process.env.DEBUG_APICALLS?.toLowerCase() === 'true';
+const DEBUG_APICALLS_PRETEND_ERROR = process.env.DEBUG_APICALLS_PRETEND_ERROR?.toLowerCase() === 'true';
 
 //* import types
 import './types/generic.d.ts';
