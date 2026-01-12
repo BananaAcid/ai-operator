@@ -2567,18 +2567,18 @@ async function init(): Promise<Prompt> {
             });
 
             if (additionalContentData) {
-                //***! NEEDS FIXING */
+                //***! NEEDS FIXING: Piping fucks the inputs up */
                 // issue:  https://github.com/SBoudrias/Inquirer.js/issues/1721
-                console.error(colors.red(figures.warning + ' Piping files into Baio will cause problems with the prompt.'));
+                console.warn(colors.red(figures.warning + ' Piping files into Baio will cause problems with the interactive mode. It is only intended to be used with a prompt as shell argument.'));
                 if (askSettings) {
-                    console.error(colors.yellow(figures.warning), 'Editing settings is disabled.');
+                    console.warn(colors.yellow(figures.warning), 'Editing settings is disabled.');
                     askSettings = false;
                 }
 
                 prompt.additions = [ ...(prompt.additions ?? []), { type: 'text', content: additionalContentData }];
             }
 
-            //* restore input capability
+            //* try to restore input capability
             const fd = process.platform === 'win32' ? '\\\\.\\CON' : '/dev/tty';
             let stdinNew = (await fsOpen(fd, 'r')).createReadStream();
             // const readLineNew = createInterface({
