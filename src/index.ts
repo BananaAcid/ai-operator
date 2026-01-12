@@ -1570,6 +1570,7 @@ async function promptTrigger(/*inout*/ prompt: Prompt, /*inout*/ resultPrompt?: 
         console.info(packageJSON.name,'v' + packageJSON.version);
         console.log(cliMd(`
             AI Driver: \`${drivers[settings.driver]?.name ?? settings.driver}\`<br/>
+            AI Provider: \`${drivers[settings.driver]?.caption()}\`<br/>
             AI Model: \`${settings.modelData.modelName || (settings.model ?? drivers[settings.model]?.defaultModel)}\`<br/>
             AI Model Context Window: \`${totalTokenUsage || 'unknown'}\` of \`${settings.modelData?.modelMeta?.contextLength || 'unknown'}\` ${settings.modelData?.modelMeta?.contextLength && totalTokenUsage ? colors.dim('(' + (Math.ceil(totalTokenUsage / settings.modelData.modelMeta.contextLength * 100)) + '%)') : ''}<br/>
             History: \`${history.length} entries\`<br/>
