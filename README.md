@@ -321,42 +321,43 @@ But there are also specific drivers for Google and Ollama (model list is specifi
 
 #### Prefered free options
 
-- Providers
-    - Google: Gemini 3 Flash
+- **Providers**
+    - Google: Gemini 3 Flash, Gemma, ...
         - great understanding, amazing speed, very good results
-        - is directly supported by Baio (Google AI driver)
+        - is directly supported by Baio (**Google AI API** driver)
         - Con: Free API keys got limited from 200 to 20 requests per key/day
     - AiHorde.net: Qwen3, ...
-        - Free for use without an account, faster speed with an account, images, text
-        - Free but speed limited API KEY: 0000000000 (10 zeros)
-        - Base OpenAI API Endpoint URL: https://oai.aihorde.net/
+        - Free for use without an account, speed varies a lot, faster speed with an account, allows text + images
+        - Free but last in request queue API KEY: <code>0000000000</code> (10 zeros)
+        - Base **OpenAI API** Endpoint URL: https://oai.aihorde.net/
         - Con: Only open source models
         - Docs: https://oai.aihorde.net/docs
-    - Pollinations.ai: Google Gemini 3 Flash, ...
+    - Pollinations.ai: Google Gemini 3 Flash, GPT 4.5 Turbo, ...
         - Free with account (register with GitHub-Login): 1 pollen/day for free (more are possible)
             - under *Pricing*, there is the Pollen usage table: https://enter.pollinations.ai/
         - Open source and commercial models, text, images, TTS, STT
-        - Base OpenAI API Endpoint URL: https://text.pollinations.ai/openai/
+        - Base **OpenAI API** Endpoint URL: https://text.pollinations.ai/openai/
         - Docs: https://github.com/pollinations/pollinations/blob/master/APIDOCS.md#advanced-text-generation-openai-compatible
-- Local installations
+- **Local installations**
     - Ollama (Prefered, App + CLI)
         - Open Source and Free to Use models
-        - is directly supported by Baio (Ollama driver)
+        - is directly supported by Baio (*Ollama driver*)
+        - Within starting to tool, it shows you its Base **Ollama API** Endpoint URL (http://localhost:11434)
         - Download: https://ollama.com/download
         - Server start: https://docs.ollama.com/quickstart
     - LMStudio (Desktop App)
         - Open Source and Free to Use models
-        - Within the app, it shows you its Base OpenAI API Endpoint URL
+        - Within the app, it shows you its Base **OpenAI API** Endpoint URL (http://localhost:1234)
         - Download: https://lmstudio.ai/download
         - Manual server start: https://lmstudio.ai/docs/cli/serve/server-start
     - vLLM (Commandline)
         - Open Source and Free to Use models
-        - Provides an Base OpenAI API Endpoint URL
+        - Provides an Base **OpenAI API** Endpoint URL (http://localhost:8000)
         - Installation: https://vllm.ai/
         - Server start: https://docs.vllm.ai/en/v0.6.0/serving/openai_compatible_server.html
     - llama.cpp (Commandline)
         - Open Source and Free to Use models
-        - Provides an Base OpenAI API Endpoint URL
+        - Provides an Base **OpenAI API** Endpoint URL (http://localhost:8000)
         - Installation: https://github.com/ggml-org/llama.cpp
         - Server start: https://github.com/ggml-org/llama.cpp?tab=readme-ov-file#llama-server
 

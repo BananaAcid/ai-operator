@@ -251,7 +251,7 @@ const drivers = {
         urlChat: 'https://generativelanguage.googleapis.com/v1beta/models/{{model}}:generateContent', // https://ai.google.dev/api/models?hl=de
         urlModels: 'https://generativelanguage.googleapis.com/v1beta/models/',
         urlModelMeta: 'https://generativelanguage.googleapis.com/v1beta/models/{{model}}',
-        defaultModel: 'gemini-2.5-flash',
+        defaultModel: 'gemini-flash-latest',
         apiKey: () => process.env.GEMINI_API_KEY,
         historyStyle: 'googleai',
         caption: function() {return process.env.GEMINI_CAPTION || this.name },
