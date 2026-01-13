@@ -47,11 +47,15 @@ npm -g baio
 baio --open env
 ```
 
+**next steps:**
+- see [Change the settings / LLM](#change-the-settings--llm) to set the LLM model and provider
+- use [Prompt triggers](#prompt-triggers) to for what you can tell Baio to do
+- see [FAQ / Usage Notes](#faq--usage-notes) for helpful info
+
 > [!NOTE]
 > Installing a previous version: `npm -g baio@1.0.0 --force` where @1.0.0 is the desired version, see below [Major Changes](#major-changes) for versions
-
-> [!TIP]
-> Installing the latest, possibly unreleased version: `npm -g BananaAcid/ai-operator --force`
+>
+> 💡 Installing the latest, possibly unreleased version: `npm -g BananaAcid/ai-operator --force`
 
 ### Change the settings / LLM
 
@@ -114,7 +118,8 @@ $env:GEMINI_API_KEY='abcdefg1234567890' ; npx -y baio "list all files"
 
 *Setting the api key before running the command, will only work until the terminal is closed again.*
 
-You should add the keys to your Profile (Win, MacOS, Linux), or in the `.baioenvrc` (see below: Env Config). To open the `.baioenvrc` in an editor you can use `baio --open env`
+> [!Note]
+> You should add the keys in the `.baioenvrc` (see below: [Env Config](#env-config)). To open the `.baioenvrc` in an editor you can use `baio --open env`. Alternatively add them to your user profile as environment variables (Win, MacOS, Linux).
 
 ## Info about API Keys (free)
 
