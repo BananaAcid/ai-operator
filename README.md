@@ -48,9 +48,10 @@ baio --open env
 ```
 
 **next steps:**
-- see [Change the settings / LLM](#change-the-settings--llm) to set the LLM model and provider
-- use [Prompt triggers](#prompt-triggers) to for what you can tell Baio to do
-- see [FAQ / Usage Notes](#faq--usage-notes) for helpful info
+1. see [Change the settings / LLM](#change-the-settings--llm) to set the LLM model and provider
+2. see [Usage](#usage) on how to use baio
+3. see [FAQ / Usage Notes](#faq--usage-notes) for helpful info
+4. use [Prompt triggers](#prompt-triggers) to for what you can tell Baio to do
 
 > [!NOTE]
 > Installing a previous version: `npm -g baio@1.0.0 --force` where @1.0.0 is the desired version, see below [Major Changes](#major-changes) for versions
