@@ -234,7 +234,7 @@ let settingsDefault: Settings = {
         If not:
         Ensure all steps are followed, results are validated, and commands are properly executed.
         Reevaluate the goal after each action and make sure to append <END/> only when the task is fully completed.
-        Try again with a different approach, and if more information is needed, request it.
+        Try again with a different approach, and if more information is needed, request it with <NEED-MORE-INFO/>.
     `.rePadBlock(PROMPT_INDENT),
 
     generalPrompt: `
@@ -245,18 +245,20 @@ let settingsDefault: Settings = {
     compactPrompt: `
         Compact the complete context up until now.
         Condense the entire context window into a single, high-fidelity summary. Maximize token savings while preserving all essential details.
-        - Be concise and keep your answers short, but do not omit important details.
-        - Use bullet points to summarize the context.
+            - Be concise and keep your answers short, but do not omit important details.
+            - Use bullet points to summarize the context.
 
-        1. List the previous primary objective(s) and any major intermediate goals.
-        2. Create a summary and keep it in the order of the history of each goal.
+        **Rules:**
+        1. Explain, that the context is a summary of the previous history of the conversation with Baio.
+        2. List the previous primary objective(s) and any major intermediate goals.
+        3. Create a summary and keep it in the order of the history of each goal.
             - For files added to the context (not in a command or result): list the **Filename** and **Path** for every file mentioned, followed by a **brief description of its contents** (DO NOT include the full file content).
                 - *Example:* \`/path/to/script.py\`: Script defining the 'process_data' function.
-            - For executed commands: summarize the history of commands and results. For each one, **describe the command's action** and **summarize the outcome/key result**. **Do NOT** include the full command or the full command output. Do not include any command with \`<...>\` under any circumstances.
+            - For executed commands: summarize the history of commands and results. For each one, **describe the command's action** and **summarize the outcome/key result**, but **do NOT** include the full command or the full command output, and do not include any of these commands with \`<...>\` under any circumstances.
                 - *Example:* Attempted to install 'requests' but failed with a dependency error for 'urllib3'. (DO NOT include 'pip install requests' or the full traceback).
-            - **Solutions & Status:** Create two lists: "Solutions That Worked" and "Solutions That Failed." Briefly describe the solution/attempt and why it worked or failed. Make sure to check for the results of the executed commands (if it was a \`<CMD>command</CMD>\` and there was no result, the command was not executed).
-        
-        You must add \`<CONTEXT-COMPACT/>\` to the end of your answer.
+            - **Solutions & Status:** Create two lists: "Solutions That Worked" and "Solutions That Failed." Briefly describe the solution/attempt and why it worked or failed. Make sure to check for the results of the executed commands (if it was a \`<CMD>command</CMD>\` but there was no result, the command was not executed).
+            - **Open goals:** List any open goals that have not been met yet.
+        4. You must add the command \`<CONTEXT-COMPACT/>\` to the end of your answer, to indicate that you want to save the compacted context.
     `.rePadBlock(PROMPT_INDENT),
 
     systemPrompt: `
@@ -953,7 +955,11 @@ async function commandHandleMd(commandName: string, groups: RegExpGroups) {
  */
 const promptCommands: PromptCommandObjects = {
 
-    // context.compact should always block command parsing (does it by `exec()` returning `needMoreInfo: true` )
+    //! context.compact should always block command parsing (does it by `exec()` returning `needMoreInfo: true` )
+    /**
+     * context.compact is triggered by a solo prompt, requesting to compact the context and requesting to save the compacted context with <CONTEXT-COMPACT/>.
+     * After replacing the history, it should ask for what to do next.
+     */
     'context.compact': {
         description: 'Save compacted context', //'Replace the context with the compacted response',
         syntax: '<CONTEXT-COMPACT/>',
@@ -980,19 +986,24 @@ const promptCommands: PromptCommandObjects = {
 
         async exec(command: PromptCommandByType<'context.compact'>, signal?: AbortSignal): Promise<{result: string, updateSystemPrompt: boolean, needMoreInfo: boolean}> {
             
-            history = history.slice(0, history.length - 1); //! <----  !?!?
-            totalTokenUsage = null; //? total token usage => null ...
+            // reduce to last (or more?) history entry
+            history = history.slice(history.length - 1 /*, to end*/);
+            // remove context.compact command, since it was executed and this history is the new context start
+            history = JSON.parse(JSON.stringify(history).replaceAll('<CONTEXT-COMPACT/>', ''));
+            totalTokenUsage = null; //? set total token usage => null (or recalc later) ...
 
             //! TODO ... fix
-            console.error('1. history should be reduced, but :ho still shows the full history');
-            console.error('2. result should not get commands parsed from it ... because #3');
-            console.error('3. right after it should ask for info what to do next ( needMoreInfo ) ... needMoreInfo code block was moved to end of FN -> this is a problem?');
-            console.error('4. is return{needMoreInfo} actually picked up (through to the actual needMoreInfo code block)?');
+            /*
+             3. right after it should ask for info what to do next ( needMoreInfo ) ... needMoreInfo code block was moved to end of FN -> this is a problem?
+             4. is return{needMoreInfo} actually picked up (through to the actual needMoreInfo code block)?
+
+             -> needMoreInfo is not picked up
+            */
             debugger;
 
 
             return {
-                result: 'The previous content is the sucessfully compacted Context (Baio history).\n<NEED-MORE-INFO/>',
+                result: 'The previous content is the sucessfully compacted Context (Baio history).',
                 updateSystemPrompt: false,
                 needMoreInfo: true,
             };
@@ -1699,7 +1710,7 @@ async function promptTrigger(/*inout*/ prompt: Prompt, /*inout*/ resultPrompt?: 
         let content = '';
         if (exportType == 'json') {
             if (!filename.toLowerCase().endsWith('.json')) filename += '.json';
-            content = JSON.stringify({ version: settings.version, historyStyle: drivers[settings.driver]!.historyStyle, history}, null, 2);
+            content = JSON.stringify({ version: settings.version, historyStyle: drivers[settings.driver]!.historyStyle, history, systemPrompt: settings.systemPrompt }, null, 2);
         }
         else if (exportType == 'md') {
             if (!filename.toLowerCase().endsWith('.json')) filename += '.md';
@@ -1806,6 +1817,8 @@ async function promptTrigger(/*inout*/ prompt: Prompt, /*inout*/ resultPrompt?: 
     }
     if (trigger === '/context:compact' || trigger === ':cc') {
         
+        //! context.compact
+
         prompt.text = settings.compactPrompt;
         // if (resultPrompt) {
         //     resultPrompt.answer = 'Compact';
