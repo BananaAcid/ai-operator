@@ -48,7 +48,10 @@ baio --open env
 ```
 
 > [!NOTE]
-> installing a previous version: `npm uninstall -g baio && npm -g baio@1.0.0` where @1.0.0 is the desired version, see below 'Major Changes' for versions*
+> Installing a previous version: `npm -g baio@1.0.0 --force` where @1.0.0 is the desired version, see below [Major Changes](#major-changes) for versions
+
+> [!TIP]
+> Installing the latest, possibly unreleased version: `npm -g BananaAcid/ai-operator --force`
 
 ### Change the settings / LLM
 
@@ -280,6 +283,7 @@ For the inbuild commands:
 - `models.getcurrent`
 - `web.read` (if Links2 is missing)
 - `baio.help`
+- `context.compact`
 
 
 ### Wrong shell for suggested commands
