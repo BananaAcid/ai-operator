@@ -82,6 +82,10 @@ const DEBUG_OUTPUT_SYSTEMPROMPT = process.env.DEBUG_OUTPUT_SYSTEMPROMPT?.toLower
 const DEBUG_APICALLS_PRETEND_ERROR = process.env.DEBUG_APICALLS_PRETEND_ERROR?.toLowerCase() === 'true';
 
 
+//* set the 'DEBUG' string output color
+const $_DEBUG = colors.bgCyanBright(colors.black(' DEBUG ▼ ')) + '\n';
+
+
 //* project imports
 import drivers from './drivers.ts';  // ext .ts is required by NodeJS (with TS support)
 
@@ -111,6 +115,7 @@ declare global { interface String { rePadBlock(removeLeft: number, left?: number
 String.prototype.rePadBlock = function (removeLeft = 0, left = 0): string {
     return this.split('\n').map(line => ' '.repeat(left) + line.replace( new RegExp(`^ {0,${removeLeft}}`), '' )).join('\n');
 };
+
 
 //* defs
 const AUTOEXEC_KEYS = ['links', 'curl', 'wget', 'Invoke-WebRequest', 'iwr', 'web.read', 'baio.help']; // dir, ls, gci, Get-ChildItem -- do not preset any that would get pc info or modify
@@ -712,7 +717,7 @@ async function getInvokingShell(overwriteInvokingShell = process.env.INVOKING_SH
             parentProcess = (await execAsync(`ps -o comm= -p ${parentPID}`)).stdout.toString().trim();
         }
         
-        DEBUG_OUTPUT && console.log('DEBUG\n', 'Invoking shell:', parentProcess);
+        DEBUG_OUTPUT && console.log($_DEBUG, 'Invoking shell:', parentProcess);
 
         return invokingShell = parentProcess;
     } catch (err) {
@@ -879,8 +884,8 @@ async function doPrompt(prompt: Prompt): Promise<PromptResult> {
     // output to the user
     console.log(result.answer);
 
-    DEBUG_OUTPUT && console.info('DEBUG\n', 'answer:', result.answerFull);
-    DEBUG_OUTPUT && console.info('DEBUG\n', 'commands:', result.commands);
+    DEBUG_OUTPUT && console.info($_DEBUG, 'answer:', result.answerFull);
+    DEBUG_OUTPUT && console.info($_DEBUG, 'commands:', result.commands);
 
     return result;
 }
@@ -1439,7 +1444,7 @@ async function doPromptWithCommands(result: PromptResult|undefined): Promise<str
             resultCommands = ret.answer;
             needMoreInfo = ret.needMoreInfo;
 
-            (DEBUG_OUTPUT || DEBUG_OUTPUT_EXECUTION) && console.info('DEBUG\n', resultCommands);
+            (DEBUG_OUTPUT || DEBUG_OUTPUT_EXECUTION) && console.info($_DEBUG, resultCommands);
 
             // ... go and evaluate the commands result
         }
@@ -2406,7 +2411,7 @@ async function makeSystemPromptReady(): Promise<void> {
         else
             settings.systemPromptReady = settings.systemPromptReady.replaceAll('{{linksIsInstalled}}', '- links2 is not available.');
 
-        DEBUG_OUTPUT_SYSTEMPROMPT && console.log('DEBUG\n', 'systemPrompt:', settings.systemPromptReady);
+        DEBUG_OUTPUT_SYSTEMPROMPT && console.log($_DEBUG, 'systemPrompt:', settings.systemPromptReady);
     }
 }
 

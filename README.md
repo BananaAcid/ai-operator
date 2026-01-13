@@ -553,10 +553,20 @@ DEBUG_APICALLS_PRETEND_ERROR=<boolean>
 
 `DEBUG_OUTPUT_MODELNAME` if true will always show the details as model name - the same info that can be used by switching to model details (space).
 
+`DEBUG_APICALLS_PRETEND_ERROR` will prevent api calls and trigger the error handling for testing.
+
 Setting these in Powershell, here is an example: `$env:DEBUG_OUTPUT = $true ; baio ...`
 
 They can also be set in `.baioenvrc` to active on each start of Baio.
 
+### A helpful debugging set could be
+```env
+DEBUG_ERROR=true
+DEBUG_OUTPUT=true
+DEBUG_APICALLS=true
+DEBUG_OUTPUT_EXECUTION=true
+DEBUG_OUTPUT_SYSTEMPROMPT=true
+```
 
 ## Manual config
 
