@@ -81,7 +81,9 @@
   },
   "providerDSNs": {
     "PollinationsAI": "openai://v1@gen.pollinations.ai?default=gemini",
+    "AiHorde": "openai://v1:0000000000@oai.aihorde.net?default=google/gemma-3-27b-it",
     "Ollama Local": "ollama://localhost:11434?default=goekdenizguelmez/JOSIEFIED-Qwen2.5:latest",
+    "Ollama Cloud": "ollama://ollama.com?default=kimi-k2:1t-cloud",
     "LMStudio": "openai://v1@localhost:1234?default=goekdenizguelmez/JOSIEFIED-Qwen2.5:latest",
     "Google AI": "googleai://generativelanguage.googleapis.com/v1beta?default=gemini-flash-latest",
     "OpenAI": "openai://v1@api.openai.com?default=gpt-3.5-turbo"
