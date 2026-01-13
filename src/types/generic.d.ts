@@ -54,15 +54,15 @@ declare global {
 
     // the interface for the internal "MCP"-like commands
     type PromptCommandObject<T extends PromptCommand> = {
-        description: string;
-        syntax: string;
-        prompt: string | undefined;
-        caption: (command: T) => string;
-        contentIsEditable: boolean;
-        content: (command: T, content?: string) => string;
-        regex: RegExp;
-        handleMd: (groups: RegExpGroups) => Promise<{command: T, replacementString: string}>;
-        exec: (command: T, signal?: AbortSignal) => Promise<{result: string, updateSystemPrompt: boolean, needMoreInfo: boolean}>;
+        description: string;                                // internal short description
+        syntax: string;                                     // internal example of the commmand usage
+        prompt: string | undefined;                         // the prompt to integrate into the systemPrompt which is send to the AI to make it use the command, undefined means no prompt == internal command
+        caption: (command: T) => string;                    // what caption to use for the command, when asking to user to execute
+        contentIsEditable: boolean;                         // allow editing the content or params of the command, when asking to user to execute
+        content: (command: T, content?: string) => string;  // what content to use for editing the command
+        regex: RegExp;                                      // what to test the AI result for to find the command
+        handleMd: (groups: RegExpGroups) => Promise<{command: T, replacementString: string}>;   // what to replace the syntax with in the AI result before showing to the user
+        exec: (command: T, signal?: AbortSignal) => Promise<{result: string, updateSystemPrompt: boolean, needMoreInfo: boolean}>;  // how to execute the command
     }
 
     // the internal "MCP"-like commands object
