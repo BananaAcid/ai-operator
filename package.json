@@ -79,14 +79,35 @@
     "open": "^10.1.2",
     "yocto-spinner": "^1.0.0"
   },
-  "providerDSNs_info": " baio-driver-Id :// version-if-needed-or-if-key-present-use-underscore : free-key @ host ? default=default-model & name=overwriteProviderDisplayName",
+  "providerDSNs_info": " baio-driver-Id :// api-version :optional-free-key @ host / required-path ? default=default-model & name=overwriteProviderDisplayName & test=optional-alive-endpoint",
   "providerDSNs": {
-    "PollinationsAI": "openai://v1@gen.pollinations.ai?default=gemini-fast",
-    "AiHorde": "openai://v1:0000000000@oai.aihorde.net?default=google/gemma-3-27b-it",
-    "Ollama Local": "ollama://localhost:11434?default=goekdenizguelmez/JOSIEFIED-Qwen2.5:latest",
-    "Ollama Cloud": "ollama://ollama.com?default=kimi-k2:1t-cloud",
-    "LMStudio": "openai://v1@localhost:1234?default=goekdenizguelmez/JOSIEFIED-Qwen2.5:latest",
-    "Google AI": "googleai://generativelanguage.googleapis.com/v1beta?default=gemini-flash-latest",
-    "OpenAI": "openai://v1@api.openai.com?default=gpt-3.5-turbo"
+    "# free": "no registration required, ready to use with API key provided",
+    "OpenCode": "openai://v1:sk-FAKEAPIKEY@opencode.ai/zen/v1?default=big-pickle",
+    "AiHorde": "openai://v1:0000000000@oai.aihorde.net/v1/?default=google/gemma-4-31b&test=GET:/hearbeat",
+
+    "# local instances": "",
+    "Ollama Local": "ollama://localhost:11434/v1?default=gemma4:e4b",
+    "LMStudio": "openai://v1@localhost:1234/v1?default=gemma4:e4b",
+    "Docker Model Runner": "openai://v1@localhost:12434/engines/v1?default=ai/gemma4:e4b",
+    "Docker Model Runner (Internal)": "openai://v1@model-runner.docker.internal/engines/v1?default=ai/gemma4:e4b",
+
+    "# some free": "after account and api key creation, some free reatelimited models",
+    "Ollama Cloud": "ollama://ollama.com/v1?default=kimi-k2:1t-cloud",
+
+    "# limited": "after account and api creation, free is limited to 200 requests per day",
+    "Google AI": "googleai://v1beta@generativelanguage.googleapis.com/v1beta?default=gemini-flash-latest",
+
+    "# deposit": "after $10 deposit, many free models",
+    "OpenRouter": "openai://v1@openrouter.ai/api/v1?default=google/gemma-4-26b-a4b-it:free",
+
+    "# some free credits": "after account and api key creation, some free credits (no automatic free refill anymore)",
+    "PollinationsAI": "openai://v1@gen.pollinations.ai/v1?default=gemma-4-26b",
+
+    "# providers": "require account and api key, and paid subscription",
+    "OpenAI": "openai://v1@api.openai.com/v1?default=openai/gpt-5.3-codex"
+  },
+  "providerList": {
+    "format": "models.dev-JSON",
+    "url": "https://models.dev/api.json"
   }
 }
